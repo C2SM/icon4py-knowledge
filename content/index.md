@@ -1,0 +1,33 @@
+---
+title: icon4py Knowledge Base
+---
+
+Design ideas and proposals for [icon4py](https://github.com/C2SM/icon4py). Drop
+an idea, cross-check it against what already exists, and surface conflicts early.
+
+This index is the map of everything here. Each entry lists **keywords** for the
+topics a document discusses — scan them to find overlapping or conflicting ideas.
+See `AGENTS.md` in the repository root for how to add a proposal and keep this
+index current. (Keep entries and their keywords in sync with each document's `tags`.)
+
+## Shared
+
+Proposals the group broadly agrees are implementation-ready.
+
+_None yet._
+
+<!-- Entry format:
+- [[shared/<slug>|Title]] — keywords: keyword1, keyword2, keyword3
+-->
+
+## Personal
+
+Work-in-progress proposals, organized by contributor.
+
+<!-- Add new contributor subsections here as needed.
+
+### <github-handle>
+
+- [[personal/<handle>/<slug>|Title]] — keywords: keyword1, keyword2
+
+-->
