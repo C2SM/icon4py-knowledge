@@ -24,6 +24,10 @@ _None yet._
 
 Work-in-progress proposals, organized by contributor.
 
+### havogt
+
+- [[personal/havogt/declarative-testing-harness/declarative-testing-harness|Declarative testing harness]] — keywords: testing, verification, serialbox, stencil-tests, datatests, pytest, tolerances, benchmarking
+
 <!-- Add new contributor subsections here as needed.
 
 ### <github-handle>
