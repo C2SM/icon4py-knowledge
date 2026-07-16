@@ -34,7 +34,7 @@ Work-in-progress proposals, organized by contributor.
 
 ### msimberg
 
-- [[personal/msimberg/revive-components|Revive components]] — keywords: components, model-state, protocol, interface, design
+- [[personal/msimberg/revive-components/revive-components|Revive components]] — keywords: components, model-state, protocol, interface, design
 - [[personal/msimberg/cleanup-distributed-computation|Cleanup the "decomposition" directory]] — keywords: decomposition, distributed-computation, mpi, halo-exchange, reductions, naming, refactoring
 
 <!-- Add new contributor subsections here as needed.
