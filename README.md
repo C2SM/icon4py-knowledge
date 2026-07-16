@@ -48,3 +48,8 @@ rm -rf /tmp/quartz-preview/content/* && cp -r content/* /tmp/quartz-preview/cont
 cp quartz.config.ts quartz.layout.ts /tmp/quartz-preview/
 cd /tmp/quartz-preview && npx quartz build --serve   # http://localhost:8080
 ```
+
+## Automation
+
+- **Weekly Slack summary**:— `.github/workflows/weekly-slack-summary.yml` posts a
+  Monday-morning summary of the last calendar week's activity to Slack.

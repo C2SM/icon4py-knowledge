@@ -1,0 +1,4 @@
+{
+  "defaultProvider": "cscs-inference",
+  "defaultModel": "moonshotai/Kimi-K2.7-Code"
+}

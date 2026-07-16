@@ -1,0 +1,48 @@
+name: Weekly Slack summary
+
+on:
+  schedule:
+    # Every Monday at 08:00 UTC
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  weekly-summary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install pi
+        run: npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+
+      - name: Configure pi for CSCS inference
+        run: |
+          mkdir -p ~/.pi/agent
+          cp .github/workflows/weekly-slack-summary/settings.json ~/.pi/agent/settings.json
+          cp .github/workflows/weekly-slack-summary/models.json ~/.pi/agent/models.json
+
+      - name: Generate weekly summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSCS_INFERENCE_API_KEY: ${{ secrets.CSCS_INFERENCE_API_KEY }}
+        run: |
+          pi -p --approve \
+            --tools read,bash,edit,write,grep,find,ls \
+            --skill .github/workflows/weekly-slack-summary \
+            "Generate the weekly Slack activity summary for icon4py-knowledge and write it to weekly_slack_summary.md"
+          test -s weekly_slack_summary.md
+
+      - name: Post summary to Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: ./scripts/post-slack-summary.py weekly_slack_summary.md
