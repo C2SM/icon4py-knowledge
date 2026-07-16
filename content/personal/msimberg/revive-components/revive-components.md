@@ -34,4 +34,4 @@ Not yet evaluated. This is a placeholder to start the discussion.
 
 ## Appendices
 
-None yet.
+- [[personal/msimberg/revive-components/revive-components_spec|SPEC reference]] — frozen specification from one exploration of a concrete `Component` interface, included as an additional starting point. **Unreviewed; not yet agreed.**

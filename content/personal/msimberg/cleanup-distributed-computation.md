@@ -35,4 +35,4 @@ The directory name and file names (e.g. `mpi_decomposition.py`, `definitions.py`
 
 - What is the right top-level name? `distributed`? `parallel`? `distributed_runtime`?
 - Should halo construction live with grid utilities or with distributed communication?
-- How much of this overlaps with planned component / model-state cleanup? See [[personal/msimberg/revive-components|Revive components]].
+- How much of this overlaps with planned component / model-state cleanup? See [[personal/msimberg/revive-components/revive-components|Revive components]].
