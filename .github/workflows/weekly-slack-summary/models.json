@@ -1,0 +1,18 @@
+{
+  "providers": {
+    "cscs-inference": {
+      "name": "CSCS Inference",
+      "api": "openai-completions",
+      "baseUrl": "https://api.inference.cscs.ch/v1",
+      "apiKey": "$CSCS_INFERENCE_API_KEY",
+      "models": [
+        {
+          "id": "moonshotai/Kimi-K2.7-Code",
+          "name": "Kimi K2.7 Code",
+          "contextWindow": 262144,
+          "maxTokens": 32768
+        }
+      ]
+    }
+  }
+}
