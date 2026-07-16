@@ -28,6 +28,10 @@ Work-in-progress proposals, organized by contributor.
 
 - [[personal/havogt/declarative-testing-harness/declarative-testing-harness|Declarative testing harness]] — keywords: testing, verification, serialbox, stencil-tests, datatests, pytest, tolerances, benchmarking
 
+### iomaganaris
+
+- [[personal/iomaganaris/standalone-driver-startup-opt|Optimize the startup of the standalone-driver]] — keywords: standalone-driver, driver, GPU, optimization
+
 ### msimberg
 
 - [[personal/msimberg/revive-components|Revive components]] — keywords: components, model-state, protocol, interface, design
