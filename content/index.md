@@ -33,6 +33,10 @@ Work-in-progress proposals, organized by contributor.
 - [[personal/iomaganaris/standalone-driver-startup-opt|Optimize the startup of the standalone-driver]] — keywords: standalone-driver, driver, GPU, optimization
 - [[personal/iomaganaris/domain-minimalization.md|Verify that the domains of all the GT4Py programs are as minimal as possible using an LLM]] - keywords: dycore, diffusion, tracer_advection, autoresearch
 
+### jcanton
+
+- [[personal/jcanton/stencil-domain-audit|Systematic stencil-domain over-computation audit]] — keywords: dycore, diffusion, tracer_advection, domains, halo-exchange, skip-values, overcomputation
+
 ### msimberg
 
 - [[personal/msimberg/revive-components/revive-components|Revive components]] — keywords: components, model-state, protocol, interface, design
