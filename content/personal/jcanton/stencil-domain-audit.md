@@ -73,6 +73,45 @@ branch — master verdict table (one row per invocation) + per-finding detail
 (producer file:line, W, consumers file:line, R, delta, risk class, grid
 classes affected, backend sensitivity, suggested fix shape) + evidence files.
 
+## Results (branch `stencils_domains_analysis`)
+
+72 invocations audited; every finding adversarially verified from two
+independent lenses (missed-consumer + hazard-mechanism).
+
+**Headline — 4 confirmed out-of-bounds reads (class i), all in the PPM 3rd-order
+vertical tracer-advection scheme.** They are the PR#1378 defect *transposed to
+the vertical axis*: a fixed `Koff` shift `field(KDim ± n)` is written eagerly
+over the whole column `[1, num_levels)` while only the value selection is
+`where`-masked. GT4Py's `where` evaluates both branches, so the shift is
+materialized where `k ± n` falls outside the `num_levels` buffer. The OOB value
+is masked out (numerics correct — datatests pass on gtfn) but the access is
+real: deterministic `IndexError` on embedded, unchecked read past the buffer on
+gtfn/GPU. ICON's Fortran clamps the index (`MIN(jk,nlev)` / `CYCLE`); icon4py
+does not. Grid- and backend-independent.
+
+- `compute_ppm4gpu_courant_number` — `p_cellmass_now(KDim+1..+4 / -1..-5)`
+- `compute_ppm4gpu_fractional_flux` — same shifts on 4 fields
+- `compute_ppm4gpu_integer_flux` — same on 2 fields
+- `limit_vertical_slope_semi_monotonically` — `p_cc(KDim+1)` at top level
+
+Fix (per-stencil PRs): replace the value-mask `where` with a `concat_where`
+**domain split on `KDim`** (as the sibling `compute_ppm_slope` already does), or
+allocate the extra column halo levels.
+
+**No second PR#1378-style *horizontal* skip-value bug exists in dycore or
+diffusion** — everything there is correct or benign. Other findings: 4
+benign wasted-compute (class ii; some Fortran-parity, leave as-is), 1 latent
+undercompute (dycore→advection `prep_adv` lateral-boundary tracer flux, not
+wired in current drivers, filled from the parent domain in ICON), 9 by-design
+halo redundancies.
+
+**Test-coverage gap surfaced:** the two Python drivers construct grids with
+`keep_skip_values=True` (raw `-1`), but all datatests and stencil tests use
+`False` (replaced). The configurations most exposed to raw-`-1` indexing are the
+ones the test suites do not cover; serial CI additionally has empty halo zones,
+and embedded silently wraps `-1` — so green CI is not evidence of skip-value
+safety.
+
 ## Alternatives considered
 
 - Fix-as-you-go on a single branch: rejected — findings need review one by
