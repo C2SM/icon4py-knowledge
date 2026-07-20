@@ -1,3 +1,12 @@
+---
+title: Physics driver and component design
+author: Ong Chia Rui
+tags: [components, physics driver, protocol, design]
+created: 2026-07-20
+status: draft
+---
+
+
 # Physics Driver Design Document
 
 ## Introduction
