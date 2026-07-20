@@ -6,6 +6,9 @@ created: 2026-07-20
 status: draft
 ---
 
+> **TL;DR** Design and implement a **physics driver** for icon4py that orchestrates pluggable **components** (physics parameterizations, forcings, boundary condition updates) within the model time loop. Components implement the existing `Component` Protocol from `components.py` — declaring CF-standard-name inputs/outputs and a `__call__` — and are responsible for deriving any secondary fields they need, guided by per-field freshness metadata provided through a `StateView`. The driver runs consistency checks (completeness, units, dimensions) before each component call, supports user-controlled call ordering and frequency, and Jacobi or Gauss-Seidel state update modes.
+
+> **Disclaimer:** This document reflects one person's perspective and should not be taken as a consensus design. The final shape of the physics driver and component interface will require broader discussion, additional input, and critical review from the team.
 
 # Physics Driver Design Document
 
