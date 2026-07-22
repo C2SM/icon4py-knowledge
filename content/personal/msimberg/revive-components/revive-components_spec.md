@@ -437,6 +437,7 @@ named fields. Scientists access `state.dz`, `state.rho`, `state.te` — dot
 notation that reads like physics, not framework plumbing. The Protocol
 gains an `InputT` TypeVar (the per-component input state type).
 
+```python
 @dataclasses.dataclass(frozen=True)
 class MuphysInput:
     dz: fa.CellKField[ta.wpfloat]
@@ -591,7 +592,7 @@ class PhysicsState(Protocol[InputT]):
     def store_diagnostics(
         self, diagnostics: dict[str, DataField],
     ) -> None: ...
-``n
+```
 `PhysicsProcess` becomes `PhysicsProcess[InputT]` (Generic), tying component
 and state adapter together by `InputT`. mypy verifies that
 `state.as_component_input()` produces what `component.run(state, ...)`
