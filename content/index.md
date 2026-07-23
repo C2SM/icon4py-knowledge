@@ -32,6 +32,7 @@ Work-in-progress proposals, organized by contributor.
 
 - [[personal/iomaganaris/standalone-driver-startup-opt|Optimize the startup of the standalone-driver]] — keywords: standalone-driver, driver, GPU, optimization
 - [[personal/iomaganaris/domain-minimalization.md|Verify that the domains of all the GT4Py programs are as minimal as possible using an LLM]] - keywords: dycore, diffusion, tracer_advection, autoresearch
+- [[personal/iomaganaris/specialize-domain-bounds.md|Specialize GT4Py programs with runtime-varying domain bounds via the variants parameter]] - keywords: dycore, diffusion, tracer_advection, setup_program, gt4py, performance, specialization
 
 ### jcanton
 
