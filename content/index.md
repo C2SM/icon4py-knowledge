@@ -42,6 +42,7 @@ Work-in-progress proposals, organized by contributor.
 
 - [[personal/msimberg/revive-components/revive-components|Revive components]] — keywords: components, model-state, protocol, interface, design
 - [[personal/msimberg/cleanup-distributed-computation|Cleanup the "decomposition" directory]] — keywords: decomposition, distributed-computation, mpi, halo-exchange, reductions, naming, refactoring
+- [[personal/msimberg/checkpoint-restart/checkpoint-restart|Checkpoint/restart]] — keywords: checkpoint, restart, io, state, serialization, netcdf, dycore, distributed
 
 ### OngChia
 
