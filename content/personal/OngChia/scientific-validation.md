@@ -1,5 +1,5 @@
 ---
-title: Scientific Test Cases for icon4py
+title: Scientific test cases for icon4py
 author: OngChia
 tags: [testing, test-cases, scientific-validation, dycore, physics, benchmarking]
 created: 2026-07-27

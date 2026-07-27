@@ -46,6 +46,8 @@ Work-in-progress proposals, organized by contributor.
 ### OngChia
 
 - [[personal/OngChia/physics-driver-and-components|Physics driver and component design]] — keywords: components, physics-driver, protocol, design
+- [[personal/OngChia/scientific-validation|Scientific test cases for icon4py]] — keywords: testing, test-cases, scientific-validation, dycore, physics, benchmarking
+
 
 <!-- Add new contributor subsections here as needed.
 
