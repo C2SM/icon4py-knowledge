@@ -10,7 +10,7 @@ status: draft
 
 ## Problem / motivation
 
-The icon4py driver has been progressing steadily, with configuration and I/O both under active development. Now is the right time to decide which simulation test cases to create in order to scientifically validate the model.
+This is based on the [documentation](https://hackmd.io/3TOCNIQ4R8qHZnCYEMu4RA) prepared by Jacopo. I would like to add my perspective to it. The icon4py driver has been progressing steadily, with configuration and I/O both under active development. Now is the right time to decide which simulation test cases to create in order to scientifically validate the model.
 
 ## Proposal
 
@@ -20,11 +20,11 @@ I propose two categories of test cases: those without a reference solution, used
 
 These test cases probe the qualitative numerical behavior of the model. Listed in approximate order of implementation complexity:
 
-1. **Dynamical core:** Jablonowski–Williamson baroclinic wave. Reference: [Jablonowski and Williamson 2007](https://rmets.onlinelibrary.wiley.com/doi/abs/10.1256/qj.06.12)
-2. **Dynamical core:** 3D mountain waves.
+1. **Dynamical core:** Jablonowski–Williamson baroclinic wave. Reference: [Jablonowski and Williamson 2007](https://rmets.onlinelibrary.wiley.com/doi/abs/10.1256/qj.06.12). We can compare the baroclinic waves (such as the location of peaks and troughs and spectral frequencies) to existing numerical results in the paper.
+2. **Dynamical core:** 3D mountain waves. We can compare the gravity-wave trains with existing numerical results by examining the locations of the peaks and troughs and their spectral frequencies.
 3. **Dynamical core:** [Held–Suarez setup](https://journals.ametsoc.org/view/journals/bams/75/10/1520-0477_1994_075_1825_apftio_2_0_co_2.xml)
 4. **Dynamical core + Microphysics + Turbulence:** Weisman–Klemp warm bubble. As has been done in ICON, this test can also be used to check whether mass and energy conservation is correctly satisfied with basic physics parameterizations and without any energy or mass input from the boundary. It also allows a qualitative assessment of the model's ability to reproduce supercell growth. Reference: [Weisman and Klemp 1982](https://journals.ametsoc.org/view/journals/mwre/110/6/1520-0493_1982_110_0504_tdonsc_2_0_co_2.xml)
-5. **Dynamical core + Microphysics + Turbulence + Radiation:** Radiative–convective equilibrium and self-aggregation of convection. Reference: [Muller and Held 2012](https://journals.ametsoc.org/view/journals/atsc/69/8/jas-d-11-0257.1.xml)
+5. **Dynamical core + Microphysics + Turbulence + Radiation:** Radiative–convective equilibrium and self-aggregation of convection. We can investigate the critical resolution required for convective self-aggregation. Reference: [Muller and Held 2012](https://journals.ametsoc.org/view/journals/atsc/69/8/jas-d-11-0257.1.xml)
 6. **Dynamical core + Microphysics + Turbulence + Radiation:** Aqua-planet simulation.
 
 ### With analytic or laboratory reference solution
