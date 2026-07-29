@@ -38,6 +38,7 @@ Work-in-progress proposals, organized by contributor.
 
 - [[personal/jcanton/stencil-domain-audit|Systematic stencil-domain over-computation audit]] — keywords: dycore, diffusion, tracer_advection, domains, halo-exchange, skip-values, overcomputation
 - [[personal/jcanton/jsbach-port/jsbach-port|Porting ICON-Land (JSBACH) to icon4py / GT4Py — plan & scope]] — keywords: jsbach, icon-land, land-surface, gt4py, port, tmx, aes, validation, oracle, sse
+- [[personal/jcanton/model-state/model-state|Model state — requirements and design options]] — keywords: state, model-state, components, fields, registry, metadata, duplication, allocation, lazy-evaluation, labels, halo-exchange, prior-art
 
 ### msimberg
 
