@@ -25,10 +25,11 @@ status: draft
 
 This port was scouted twice, independently, before any code was written:
 
-- **@muellch's investigation** (`HANDOFF.md` + `field_catalog.csv` +
-  `extract_catalog.py`, in `~/projects/`). Broad, framework-level, whole-JSBACH.
-  Its lasting assets: a quantified codebase map, a machine-readable requirements
-  spec (1152 variables), and a bit-reproducibility / oracle strategy.
+- **@muellch's investigation** (bundled alongside this doc:
+  [[personal/jcanton/jsbach-port/HANDOFF|HANDOFF.md]] + `field_catalog.csv` +
+  `extract_catalog.py`). Broad, framework-level, whole-JSBACH. Its lasting
+  assets: a quantified codebase map, a machine-readable requirements spec (1152
+  variables), and a bit-reproducibility / oracle strategy.
 - **jcanton's investigation** (prior Claude session; superseded plan drafts).
   Narrow and deep on the *actual* minimal in-ICON target: the exact usecase, the
   validation experiment, the tmx coupling seam, and the serialization gap.
@@ -47,9 +48,10 @@ They are complementary, not contradictory. This doc is the merge.
   `calc_surface_hydrology_land` (`src/hydrology/mo_hydro_process.f90:56`) takes
   `REAL(wp) :: steepness(:), t_soil_sl1(:), …`. Tile→array unpacking lives in the
   `interface` layer. So: feed arrays, capture arrays, diff.
-- **`field_catalog.csv`** — every `Add_var` from 25 `*_memory_class.f90` files,
-  1152 rows (process / name / dim / vgrid / state / output / units / long-name),
-  regenerable via `extract_catalog.py`. Headline findings:
+- **`field_catalog.csv`** (in this folder) — every `Add_var` from 25
+  `*_memory_class.f90` files, 1152 rows (process / name / dim / vgrid / state /
+  output / units / long-name), regenerable via `extract_catalog.py` (also here).
+  Headline findings:
   - **State is ~⅓:** 363 prognostic + 68 conditional vs 721 diagnostic (63%,
     recomputed each step). GT4Py state need carry only ~360–430 fields.
   - **72% have no vertical axis** (831 2D / 321 3D). Vertical axes are a small
@@ -350,14 +352,15 @@ runs ICON + serialization on a separate machine, so any Fortran-side capture
 4. Extract the SSE-only slice of `field_catalog.csv` (25 rows) as the concrete
    requirements list; attach per-field aggregation call (all `weighted_by_fract`).
 5. Decide base branch (§7).
-6. Commit @muellch's bundle (`HANDOFF.md`, `field_catalog.csv`,
-   `extract_catalog.py`) somewhere durable — currently only in `~/projects/`.
+6. Keep the SSE slice / aggregation map next to the bundle in this folder as it's
+   extracted.
 
 ---
 
 ## References / bundle
 
-- @muellch's handoff bundle (`~/projects/`): `HANDOFF.md`, `field_catalog.csv`
+- @muellch's handoff bundle (in this folder):
+  [[personal/jcanton/jsbach-port/HANDOFF|HANDOFF.md]], `field_catalog.csv`
   (1152 vars, machine-readable requirements spec), `extract_catalog.py`
   (regenerator; `JSBACH_SRC=… python3 extract_catalog.py`).
 - ICON-Land docs: <https://jsbach.gitlab-pages.dkrz.de/jsbach>

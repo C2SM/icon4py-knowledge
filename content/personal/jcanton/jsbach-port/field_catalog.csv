@@ -1,0 +1,1153 @@
+process,name,dim,vgrid,state,output,output_level,units,long,file
+anthropogenic_lcc,cf_target_year,3D,pft_vgrid,diagnostic,yes,,,Target cover fractions read from forcing.,mo_alcc_memory_class.f90
+anthropogenic_lcc,cf_delta,3D,pft_vgrid,prognostic,yes,FULL,,Change in cover fractions (daily or annually).,mo_alcc_memory_class.f90
+assimilation,gross_assimilation_ca,2D,surface,diagnostic,yes,FULL,,,mo_assimi_memory_class.f90
+assimilation,gross_assimilation,2D,surface,diagnostic,yes,BASIC,mol(CO2)/m^2 (tile area) / s,Gross photosynthesis on tile area,mo_assimi_memory_class.f90
+assimilation,dark_respiration_ca,2D,surface,diagnostic,yes,FULL,mol(CO2)/m^2(canopy ground) / s,Dark_respiration on canopy ground area,mo_assimi_memory_class.f90
+assimilation,dark_respiration,2D,surface,diagnostic,yes,BASIC,mol(CO2)/m^2 (tile area) / s,Dark_respiration on tile area,mo_assimi_memory_class.f90
+assimilation,npp_pot_rate_ca,2D,surface,prognostic,yes,FULL,mol(CO2)/(m^2 (canopy ground) / s),NPP_pot_rate_ca,mo_assimi_memory_class.f90
+assimilation,npp_sum_year,2D,surface,prognostic,yes,,mol(CO2)/(m^2 (canopy ground) / s),NPP_sum_year,mo_assimi_memory_class.f90
+assimilation,npp_mean_5year,2D,surface,prognostic,yes,MEDIUM,mol(CO2)/(m^2 (canopy ground) / s),NPP_mean_5year,mo_assimi_memory_class.f90
+assimilation,land_cover_class,2D,surface,prognostic,yes,,,land_cover_class,mo_assimi_memory_class.f90
+assimilation,bclimit_min_cold_mmtemp,2D,surface,diagnostic,yes,MEDIUM,,bclimit_min_cold_mmtemp,mo_assimi_memory_class.f90
+assimilation,bclimit_max_cold_mmtemp,2D,surface,diagnostic,yes,MEDIUM,,bclimit_max_cold_mmtemp,mo_assimi_memory_class.f90
+assimilation,bclimit_max_warm_mmtemp,2D,surface,diagnostic,yes,MEDIUM,,bclimit_max_warm_mmtemp,mo_assimi_memory_class.f90
+assimilation,bclimit_min_temprange,2D,surface,diagnostic,yes,MEDIUM,,bclimit_min_temprange,mo_assimi_memory_class.f90
+assimilation,bclimit_min_gdd,2D,surface,diagnostic,yes,MEDIUM,,bclimit_min_gdd,mo_assimi_memory_class.f90
+assimilation,tau_c_woods,2D,surface,diagnostic,yes,,,tau_c_woods,mo_assimi_memory_class.f90
+assimilation,scaling_fact_cl,3D,canopy_layer,diagnostic,yes,,-,assimilation scaling factors per canopy layer,mo_assimi_memory_class.f90
+assimilation,canopy_cond_cl,3D,canopy_layer,diagnostic,yes,,-,Canopy cond. per canopy layer and per leaf area,mo_assimi_memory_class.f90
+assimilation,gross_assimilation_cl,3D,canopy_layer,diagnostic,yes,,mol(CO2)/m^2(leaf area) / s,Gross photosynthesis per canopy layer on leaf area,mo_assimi_memory_class.f90
+assimilation,dark_respiration_cl,3D,canopy_layer,diagnostic,yes,,mol(CO2)/m^2(leaf area) / s,Dark respiration of leaf per canopy layer on leaf area,mo_assimi_memory_class.f90
+assimilation,carbox_rate_max_cl,3D,canopy_layer,diagnostic,yes,,mol(CO2)/m^2(leaf area) / s,Maximum carboxylation rate per canopy layer,mo_assimi_memory_class.f90
+assimilation,e_transport_rate_max_cl,3D,canopy_layer,diagnostic,yes,,dimensionen,Maximum electron transport rate per canopy layer,mo_assimi_memory_class.f90
+assimilation,carbox_rate_cl,3D,canopy_layer,diagnostic,yes,,mol(CO2)/m^2(leaf area) / s,Actual carboxylation rate per canopy layer,mo_assimi_memory_class.f90
+assimilation,e_transport_rate_cl,3D,canopy_layer,diagnostic,yes,,mol(CO2)/m^2(leaf area) / s,Actual electron transport rate per canopy layer,mo_assimi_memory_class.f90
+assimilation,co2_conc_leaf_cl,3D,canopy_layer,diagnostic,yes,,dimensionen,CO2 concentration inside leaf per canopy layer,mo_assimi_memory_class.f90
+assimilation,canopy_cond_unlimited,2D,surface,diagnostic,yes,,,,mo_assimi_memory_class.f90
+assimilation,canopy_cond_limited,2D,surface,diagnostic,yes,,,,mo_assimi_memory_class.f90
+assimilation,cover_fract_pot,2D,surface,diagnostic,yes,,fract,,mo_assimi_memory_class.f90
+atmland,DEBUG_VAR,2D,surface,diagnostic,yes,,,,mo_atm2land_memory_class.f90
+atmland,co2_air,2D,surface,diagnostic,yes,,[kg(CO2)/kg(air)],CO2 mass mixing ratio of lowest atmosphere level,mo_atm2land_memory_class.f90
+atmland,co2_air_mol,2D,surface,diagnostic,yes,BASIC,[mol(CO2)/mol(air)],CO2 mol mixing ratio of lowest atmosphere level,mo_atm2land_memory_class.f90
+atmland,co2_mixing_ratio,2D,surface,prognostic,yes,FULL,ppm,surface air co2 mixing ratio,mo_atm2land_memory_class.f90
+atmland,co2_mixing_ratio_c13,2D,surface,prognostic,yes,FULL,ppm,surface air 13co2 mixing ratio,mo_atm2land_memory_class.f90
+atmland,co2_mixing_ratio_C14,2D,surface,prognostic,yes,FULL,scaled,surface air 14co2 mixing ratio,mo_atm2land_memory_class.f90
+atmland,t_air,2D,surface,diagnostic,yes,BASIC,K,,mo_atm2land_memory_class.f90
+atmland,q_air,2D,surface,diagnostic,yes,BASIC,kg kg-1,Specific humidity of air at surface.,mo_atm2land_memory_class.f90
+atmland,rain,2D,surface,diagnostic,yes,BASIC,kg/m2/s,,mo_atm2land_memory_class.f90
+atmland,snow,2D,surface,diagnostic,yes,BASIC,kg/m2/s,,mo_atm2land_memory_class.f90
+atmland,wind_air,2D,surface,diagnostic,yes,BASIC,m/s,,mo_atm2land_memory_class.f90
+atmland,wind_10m,2D,surface,diagnostic,yes,BASIC,m/s,,mo_atm2land_memory_class.f90
+atmland,lw_srf_down,2D,surface,diagnostic,yes,BASIC,W/m2,,mo_atm2land_memory_class.f90
+atmland,swvis_srf_down,2D,surface,diagnostic,yes,BASIC,W/m2,,mo_atm2land_memory_class.f90
+atmland,swnir_srf_down,2D,surface,diagnostic,yes,BASIC,W/m2,,mo_atm2land_memory_class.f90
+atmland,swpar_srf_down,2D,surface,diagnostic,yes,BASIC,W/m2,,mo_atm2land_memory_class.f90
+atmland,fract_par_diffuse,2D,surface,diagnostic,yes,BASIC,,,mo_atm2land_memory_class.f90
+atmland,press_srf,2D,surface,diagnostic,yes,,N/m2,,mo_atm2land_memory_class.f90
+atmland,press_air,2D,surface,diagnostic,yes,BASIC,N m-2,Pressure at lowest level,mo_atm2land_memory_class.f90
+atmland,dz_srf,2D,surface,diagnostic,yes,FULL,m,,mo_atm2land_memory_class.f90
+atmland,rho_srf,2D,surface,diagnostic,yes,BASIC,,,mo_atm2land_memory_class.f90
+atmland,drag_srf,2D,surface,conditional,yes,FULL,,,mo_atm2land_memory_class.f90
+atmland,pch,2D,surface,diagnostic,yes,,,,mo_atm2land_memory_class.f90
+atmland,t_acoef,2D,surface,diagnostic,yes,,,,mo_atm2land_memory_class.f90
+atmland,t_bcoef,2D,surface,diagnostic,yes,,,,mo_atm2land_memory_class.f90
+atmland,q_acoef,2D,surface,diagnostic,yes,,,,mo_atm2land_memory_class.f90
+atmland,q_bcoef,2D,surface,diagnostic,yes,,,,mo_atm2land_memory_class.f90
+atmland,cos_zenith_angle,2D,surface,diagnostic,yes,,,,mo_atm2land_memory_class.f90
+atmland,drag_wtr,2D,surface,diagnostic,yes,FULL,,,mo_atm2land_memory_class.f90
+atmland,drag_ice,2D,surface,diagnostic,yes,FULL,,,mo_atm2land_memory_class.f90
+atmland,t_acoef_wtr,2D,surface,diagnostic,yes,,,,mo_atm2land_memory_class.f90
+atmland,t_bcoef_wtr,2D,surface,diagnostic,yes,,,,mo_atm2land_memory_class.f90
+atmland,q_acoef_wtr,2D,surface,diagnostic,yes,,,,mo_atm2land_memory_class.f90
+atmland,q_bcoef_wtr,2D,surface,diagnostic,yes,,,,mo_atm2land_memory_class.f90
+atmland,t_acoef_ice,2D,surface,diagnostic,yes,,,,mo_atm2land_memory_class.f90
+atmland,t_bcoef_ice,2D,surface,diagnostic,yes,,,,mo_atm2land_memory_class.f90
+atmland,q_acoef_ice,2D,surface,diagnostic,yes,,,,mo_atm2land_memory_class.f90
+atmland,q_bcoef_ice,2D,surface,diagnostic,yes,,,,mo_atm2land_memory_class.f90
+atmland,nhx_deposition,2D,surface,prognostic,yes,BASIC,mumol m-2 sec-1,surface downward reduced nitrogen deposition velocity,mo_atm2land_memory_class.f90
+atmland,noy_deposition,2D,surface,prognostic,yes,BASIC,mumol m-2 sec-1,surface downward oxidised nitrogen deposition velocity,mo_atm2land_memory_class.f90
+atmland,nhx_n15_deposition,2D,surface,prognostic,yes,,mumol m-2 sec-1,surface downward reduced nitrogen-15 deposition velocity,mo_atm2land_memory_class.f90
+atmland,noy_n15_deposition,2D,surface,prognostic,yes,,mumol m-2 sec-1,surface downward oxidised nitrogen-15 deposition velocity,mo_atm2land_memory_class.f90
+atmland,p_deposition,2D,surface,prognostic,yes,,mumol m-2 sec-1,surface downward reduced phosphorus deposition velocity,mo_atm2land_memory_class.f90
+atmland,daytime_counter,2D,surface,prognostic,no,FULL,,number of timesteps of current day with light available,mo_atm2land_memory_class.f90
+atmland,daylength_prev_day,2D,surface,prognostic,no,FULL,s,time of previous day with light available,mo_atm2land_memory_class.f90
+atmland,local_time_day_seconds,2D,surface,prognostic,yes,FULL,s,local time of this grid-cell,mo_atm2land_memory_class.f90
+atmland,slow_sb_pool_accelerator_execution_counter,2D,surface,prognostic,yes,FULL, ,the number of executions of spin-up accelerator,mo_atm2land_memory_class.f90
+atmland,slow_sb_pool_accelerator_execute,2D,surface,prognostic,yes,FULL, ,logical to determine if executing the spin-up acclerator or not,mo_atm2land_memory_class.f90
+atmland,nhx_deposition_acc,2D,surface,prognostic,no,,mumol m-2 sec-1,accumulate input value of nhx_deposition,mo_atm2land_memory_class.f90
+atmland,noy_deposition_acc,2D,surface,prognostic,no,,mumol m-2 sec-1,accumulate input value of noy_deposition,mo_atm2land_memory_class.f90
+atmland,p_deposition_acc,2D,surface,prognostic,no,,mumol m-2 sec-1,accumulate input value of p_deposition,mo_atm2land_memory_class.f90
+atmland,co2_mixing_ratio_acc,2D,surface,prognostic,no,,ppm,accumulate input value of co2_mixing_ratio,mo_atm2land_memory_class.f90
+atmland,co2_dC13_acc,2D,surface,prognostic,no,,ppm,accumulate input value of co2_dC13,mo_atm2land_memory_class.f90
+atmland,co2_DC14_acc,2D,surface,prognostic,no,,scaled,accumulate input value of co2_DC14,mo_atm2land_memory_class.f90
+atmland,const_input_timestep_counter,2D,surface,prognostic,no,,unitless,count number of timesteps since simulation start,mo_atm2land_memory_class.f90
+atmland,nhx_deposition_const,2D,surface,prognostic,no,,mumol m-2 sec-1,avrg of 1st year input of nhx_deposition,mo_atm2land_memory_class.f90
+atmland,noy_deposition_const,2D,surface,prognostic,no,,mumol m-2 sec-1,avrg of 1st year input of noy_deposition,mo_atm2land_memory_class.f90
+atmland,p_deposition_const,2D,surface,prognostic,no,,mumol m-2 sec-1,avrg of 1st year input of p_deposition,mo_atm2land_memory_class.f90
+atmland,co2_mixing_ratio_const,2D,surface,prognostic,no,,ppm,avrg of 1st year input of co2_mixing_ratio,mo_atm2land_memory_class.f90
+atmland,co2_dC13_const,2D,surface,prognostic,no,,ppm,avrg of 1st year input of co2_dC13,mo_atm2land_memory_class.f90
+atmland,co2_DC14_const,2D,surface,prognostic,no,,scaled,avrg of 1st year input of co2_DC14,mo_atm2land_memory_class.f90
+atmland,t_srf,2D,surface,diagnostic,yes,,K,surface temperature,mo_land2atm_memory_class.f90
+atmland,t_eff_srf,2D,surface,diagnostic,yes,,K,effective surface temperature,mo_land2atm_memory_class.f90
+atmland,qsat_srf,2D,surface,diagnostic,yes,,g g-1,surface saturated specific humidity,mo_land2atm_memory_class.f90
+atmland,zh_srf,2D,surface,diagnostic,yes,,m,roughnesslength for heat transfer,mo_land2atm_memory_class.f90
+atmland,zm_srf,2D,surface,diagnostic,yes,,m,roughnesslength for momentum transfer,mo_land2atm_memory_class.f90
+atmland,alb_vis_dif,2D,surface,diagnostic,yes,,unitless,surface albedo for diffuse radiation in the visible band,mo_land2atm_memory_class.f90
+atmland,alb_nir_dif,2D,surface,diagnostic,yes,,unitless,surface albedo for diffuse radiation in the near infrared band,mo_land2atm_memory_class.f90
+atmland,alb_vis_dir,2D,surface,diagnostic,yes,,unitless,surface albedo for direct radiation in the visible band,mo_land2atm_memory_class.f90
+atmland,alb_nir_dir,2D,surface,diagnostic,yes,,unitless,surface albedo for direct radiation in the near infrared band,mo_land2atm_memory_class.f90
+atmland,q_total_c,2D,surface,prognostic,yes,BASIC,[mol m-2],"total C, sum of all quincy carbon pools",mo_land2atm_memory_class.f90
+atmland,q_c_conservation_test,2D,surface,prognostic,yes,BASIC,[mol m-2 timestep-1],difference in change in quincy total C and nbp,mo_land2atm_memory_class.f90
+atmland,carbon_conservation_test,2D,surface,prognostic,yes,BASIC,,Carbon conservation test,mo_land2atm_memory_class.f90
+atmland,yday_c_state_sum,2D,surface,prognostic,yes,,,yday c state sum required for carbon conservation test,mo_land2atm_memory_class.f90
+atmland,latent_hflx_wtr,2D,surface,diagnostic,yes,,W m-2,latent heat flux over water,mo_land2atm_memory_class.f90
+atmland,sensible_hflx_wtr,2D,surface,diagnostic,yes,,W m-2,sensible heat flux over water,mo_land2atm_memory_class.f90
+atmland,latent_hflx_ice,2D,surface,diagnostic,yes,,W m-2,latent heat flux over ice,mo_land2atm_memory_class.f90
+atmland,sensible_hflx_ice,2D,surface,diagnostic,yes,,W m-2,sensible heat flux over ice,mo_land2atm_memory_class.f90
+base,_,2D,vgrid_2d,prognostic,yes,output_level,,,mo_jsb_memory_class.f90
+base,_,3D,vgrid_3d,prognostic,yes,output_level,,,mo_jsb_memory_class.f90
+base,_,2D,vgrid_2d,conditional,yes,output_level,,,mo_jsb_memory_class.f90
+carbon,pseudo_temp,2D,surface,prognostic,yes,MEDIUM,K,Pseudo-mean air temperature over previous 15 days,mo_carbon_memory_class.f90
+carbon,pseudo_temp_yDay,2D,surface,prognostic,yes,,K,Yesterdays pseudo-mean air temperature over previous 15 days,mo_carbon_memory_class.f90
+carbon,pseudo_precip,2D,surface,prognostic,yes,MEDIUM,Kg m-2 s-1,Pseudo-mean precipitation rate over previous 15 days,mo_carbon_memory_class.f90
+carbon,pseudo_precip_yDay,2D,surface,prognostic,yes,,Kg m-2 s-1,Yesterdays pseudo-mean precipitation rate over previous 15 days,mo_carbon_memory_class.f90
+carbon,c_greenwood2litter,2D,surface,prognostic,yes,FULL,mol(CO2) m-2(canopy) s-1,Total litter flux entering the soil pools.,mo_carbon_memory_class.f90
+carbon,c_green,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for green parts of vegetation.,mo_carbon_memory_class.f90
+carbon,c_woods,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for structural material/parts of vegetation.,mo_carbon_memory_class.f90
+carbon,c_reserve,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),"C-Pool for reserve carbohydrates (starches, sugars) of vegetation.",mo_carbon_memory_class.f90
+carbon,c_crop_harvest,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for Harvested Material from Crops.,mo_carbon_memory_class.f90
+carbon,c_acid_ag1,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for acid-soluble litter in Yasso (aboveground).,mo_carbon_memory_class.f90
+carbon,c_water_ag1,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for water-soluble litter in Yasso (aboveground).,mo_carbon_memory_class.f90
+carbon,c_ethanol_ag1,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for ethanol-soluble litter in Yasso (aboveground).,mo_carbon_memory_class.f90
+carbon,c_nonsoluble_ag1,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for nonsoluble litter in Yasso (aboveground).,mo_carbon_memory_class.f90
+carbon,c_acid_bg1,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for acid-soluble litter in Yasso (belowground).,mo_carbon_memory_class.f90
+carbon,c_water_bg1,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for water-soluble litter in Yasso (belowground).,mo_carbon_memory_class.f90
+carbon,c_ethanol_bg1,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for ethanol-soluble litter in Yasso (belowground),mo_carbon_memory_class.f90
+carbon,c_nonsoluble_bg1,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for nonsoluble litter in Yasso (belowground).,mo_carbon_memory_class.f90
+carbon,c_humus_1,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for humus in Yasso.,mo_carbon_memory_class.f90
+carbon,c_acid_ag2,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for acid-soluble litter in Yasso (aboveground).,mo_carbon_memory_class.f90
+carbon,c_water_ag2,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for water-soluble litter in Yasso (aboveground).,mo_carbon_memory_class.f90
+carbon,c_ethanol_ag2,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for ethanol-soluble litter in Yasso (aboveground).,mo_carbon_memory_class.f90
+carbon,c_nonsoluble_ag2,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for nonsoluble litter in Yasso (aboveground).,mo_carbon_memory_class.f90
+carbon,c_acid_bg2,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for acid-soluble litter in Yasso (belowground).,mo_carbon_memory_class.f90
+carbon,c_water_bg2,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for water-soluble litter in Yasso (belowground).,mo_carbon_memory_class.f90
+carbon,c_ethanol_bg2,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for ethanol-soluble litter in Yasso (belowground),mo_carbon_memory_class.f90
+carbon,c_nonsoluble_bg2,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for nonsoluble litter in Yasso (belowground).,mo_carbon_memory_class.f90
+carbon,c_humus_2,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),C-Pool for humus in Yasso.,mo_carbon_memory_class.f90
+carbon,max_green_bio,2D,surface,prognostic,yes,FULL,mol(C) m-2(canopy),annual maximum content of green C-Pool.,mo_carbon_memory_class.f90
+carbon,sla,2D,surface,prognostic,yes,FULL,m2(leave)/mol(C),specific leave area.,mo_carbon_memory_class.f90
+carbon,lai_sum,2D,surface,prognostic,yes,,-,Used to accumulate LAI over a day.,mo_carbon_memory_class.f90
+carbon,npp_pot_sum,2D,surface,prognostic,yes,,mol(C) m-2(canopy) s-1,Used to accumulate NPP over a day.,mo_carbon_memory_class.f90
+carbon,gpp_sum,2D,surface,prognostic,yes,,mol(C) m-2(canopy) s-1,Used to accumulate GPP over a day.,mo_carbon_memory_class.f90
+carbon,soil_respiration,2D,surface,prognostic,yes,,mol(C) m-2(canopy) s-1,Soil respiration.,mo_carbon_memory_class.f90
+carbon,npp_flux_correction,2D,surface,prognostic,yes,,,,mo_carbon_memory_class.f90
+carbon,excess_npp,2D,surface,diagnostic,yes,,mol(C) m-2 (canopy) s-1,NPP that could not be not stored in vegetation carbon pools.,mo_carbon_memory_class.f90
+carbon,lai_yydaymean,2D,surface,prognostic,yes,,-,Previous previous day mean.,mo_carbon_memory_class.f90
+carbon,lai_ydaymean,2D,surface,prognostic,yes,,-,Previous day mean.,mo_carbon_memory_class.f90
+carbon,npp_pot_ydaymean,2D,surface,prognostic,yes,,mol(C) m-2(canopy) s-1,Mean NPP Rate of the previous day.,mo_carbon_memory_class.f90
+carbon,npp_act_ydaymean,2D,surface,prognostic,yes,,mol(C) m-2(canopy) s-1,Actual NPP Rate of the previous day.,mo_carbon_memory_class.f90
+carbon,gpp_ydaymean,2D,surface,prognostic,yes,,mol(C) m-2(canopy) s-1,Mean GPP Rate of the previous day.,mo_carbon_memory_class.f90
+carbon,root_exudates,2D,surface,diagnostic,yes,,mol(C) m-2(canopy) s-1,Root exudates,mo_carbon_memory_class.f90
+carbon,cflux_c_green_2_herb,2D,surface,diagnostic,yes,,mol(C) m-2(canopy) s-1,Total carbon flux from C pool green to herbivory.,mo_carbon_memory_class.f90
+carbon,cflux_c_green_2_herb_lg,2D,surface,diagnostic,yes,,,,mo_carbon_memory_class.f90
+carbon,cflux_herb_2_atm,2D,surface,prognostic,yes,,,,mo_carbon_memory_class.f90
+carbon,cflux_dist_green_2_soil,2D,surface,diagnostic,yes,MEDIUM,,,mo_carbon_memory_class.f90
+carbon,cflux_dist_woods_2_soil,2D,surface,diagnostic,yes,MEDIUM,,,mo_carbon_memory_class.f90
+carbon,co2flux_fire_all_2_atm,2D,surface,diagnostic,yes,MEDIUM,kg(CO2) m-2(canopy) s-1,CO2 flux into atmosphere due to fire.,mo_carbon_memory_class.f90
+carbon,c_greenwood2litter_ta,2D,surface,diagnostic,yes,MEDIUM,mol(CO2) m-2 s-1,Total litter flux entering the soil pools.,mo_carbon_memory_class.f90
+carbon,c_green_ta,2D,surface,diagnostic,yes,BASIC,mol(C) m-2,C-Pool for green parts of vegetation.,mo_carbon_memory_class.f90
+carbon,c_woods_ta,2D,surface,diagnostic,yes,BASIC,mol(C) m-2,C-Pool for structural material/parts of vegetation.,mo_carbon_memory_class.f90
+carbon,c_reserve_ta,2D,surface,diagnostic,yes,BASIC,mol(C) m-2,"C-Pool for reserve carbohydrates (starches, sugars) of vegetation.",mo_carbon_memory_class.f90
+carbon,c_crop_harvest_ta,2D,surface,diagnostic,yes,BASIC,mol(C) m-2,C-Pool for Harvested Material from Crops.,mo_carbon_memory_class.f90
+carbon,c_acid_ag1_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for acid-soluble litter in Yasso (aboveground).,mo_carbon_memory_class.f90
+carbon,c_water_ag1_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for water-soluble litter in Yasso (aboveground).,mo_carbon_memory_class.f90
+carbon,c_ethanol_ag1_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for ethanol-soluble litter in Yasso (aboveground).,mo_carbon_memory_class.f90
+carbon,c_nonsoluble_ag1_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for nonsoluble litter in Yasso (aboveground).,mo_carbon_memory_class.f90
+carbon,c_acid_bg1_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for acid-soluble litter in Yasso (belowground).,mo_carbon_memory_class.f90
+carbon,c_water_bg1_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for water-soluble litter in Yasso (belowground).,mo_carbon_memory_class.f90
+carbon,c_ethanol_bg1_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for ethanol-soluble litter in Yasso (belowground),mo_carbon_memory_class.f90
+carbon,c_nonsoluble_bg1_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for nonsoluble litter in Yasso (belowground).,mo_carbon_memory_class.f90
+carbon,c_humus_1_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for humus in Yasso.,mo_carbon_memory_class.f90
+carbon,c_acid_ag2_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for acid-soluble litter in Yasso (aboveground).,mo_carbon_memory_class.f90
+carbon,c_water_ag2_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for water-soluble litter in Yasso (aboveground).,mo_carbon_memory_class.f90
+carbon,c_ethanol_ag2_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for ethanol-soluble litter in Yasso (aboveground).,mo_carbon_memory_class.f90
+carbon,c_nonsoluble_ag2_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for nonsoluble litter in Yasso (aboveground).,mo_carbon_memory_class.f90
+carbon,c_acid_bg2_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for acid-soluble litter in Yasso (belowground).,mo_carbon_memory_class.f90
+carbon,c_water_bg2_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for water-soluble litter in Yasso (belowground).,mo_carbon_memory_class.f90
+carbon,c_ethanol_bg2_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for ethanol-soluble litter in Yasso (belowground),mo_carbon_memory_class.f90
+carbon,c_nonsoluble_bg2_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for nonsoluble litter in Yasso (belowground).,mo_carbon_memory_class.f90
+carbon,c_humus_2_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2,C-Pool for humus in Yasso.,mo_carbon_memory_class.f90
+carbon,c_sum_veg_ta,2D,surface,prognostic,yes,BASIC,mol(C) m-2,Sum of all vegetation C pools.,mo_carbon_memory_class.f90
+carbon,c_sum_litter_ag_ta,2D,surface,prognostic,yes,BASIC,mol(C) m-2,Sum of all above ground litter C pools.,mo_carbon_memory_class.f90
+carbon,c_sum_litter_bg_ta,2D,surface,prognostic,yes,BASIC,mol(C) m-2,Sum of all below ground litter C pools.,mo_carbon_memory_class.f90
+carbon,c_sum_humus_ta,2D,surface,prognostic,yes,BASIC,mol(C) m-2,Sum of all humus C pools.,mo_carbon_memory_class.f90
+carbon,c_sum_natural_ta,2D,surface,prognostic,yes,BASIC,mol(C) m-2,Sum of all natural C pools.,mo_carbon_memory_class.f90
+carbon,soil_respiration_ta,2D,surface,diagnostic,yes,BASIC,mol(C) m-2 s-1,Soil respiration.,mo_carbon_memory_class.f90
+carbon,npp_flux_corr_ta,2D,surface,diagnostic,yes,,,,mo_carbon_memory_class.f90
+carbon,excess_npp_ta,2D,surface,diagnostic,yes,,mol(C) m-2  s-1,NPP that could not be not stored in vegetation carbon pools.,mo_carbon_memory_class.f90
+carbon,lai_yydaymean_ta,2D,surface,diagnostic,yes,,-,Previous previous day mean.,mo_carbon_memory_class.f90
+carbon,lai_ydaymean_ta,2D,surface,diagnostic,yes,BASIC,-,Previous day mean.,mo_carbon_memory_class.f90
+carbon,npp_pot_ydaymean_ta,2D,surface,diagnostic,yes,BASIC,mol(C) m-2 s-1,Mean NPP Rate of the previous day.,mo_carbon_memory_class.f90
+carbon,npp_act_ydaymean_ta,2D,surface,diagnostic,yes,BASIC,mol(C) m-2 s-1,Actual NPP Rate of the previous day.,mo_carbon_memory_class.f90
+carbon,gpp_ydaymean_ta,2D,surface,diagnostic,yes,BASIC,mol(C) m-2 s-1,Mean GPP Rate of the previous day.,mo_carbon_memory_class.f90
+carbon,root_exudates_ta,2D,surface,diagnostic,yes,,mol(C) m-2 s-1,Root exudates,mo_carbon_memory_class.f90
+carbon,cflux_c_green_2_herb_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2 s-1,Total carbon flux from C pool green to herbivory.,mo_carbon_memory_class.f90
+carbon,c2greenlitter_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2 s-1,Carbon flux to green litter.,mo_carbon_memory_class.f90
+carbon,c2woodlitter_ta,2D,surface,diagnostic,yes,MEDIUM,mol(C) m-2 s-1,Carbon flux to woody litter.,mo_carbon_memory_class.f90
+carbon,co2_l2a_fire_ta,2D,surface,diagnostic,yes,BASIC,kg(CO2) m-2 s-1,CO2 flux from C pools to atmosphere due to fire.,mo_carbon_memory_class.f90
+carbon,co2_l2a_npp_ta,2D,surface,prognostic,yes,BASIC,kg(CO2) m-2 s-1,Net CO2 fluxes between biosphere and atmosphere due to NPP.,mo_carbon_memory_class.f90
+carbon,co2_l2a_resp_ta,2D,surface,diagnostic,yes,BASIC,,,mo_carbon_memory_class.f90
+carbon,co2_l2a_herb_ta,2D,surface,diagnostic,yes,BASIC,,,mo_carbon_memory_class.f90
+carbon,co2_l2a_npp_yday_ta,2D,surface,diagnostic,yes,,kg(CO2) m-2 s-1,"Net daily CO2 flux, only needed for conservation test.",mo_carbon_memory_class.f90
+carbon,ccons_calccpools,2D,surface,prognostic,yes,,,,mo_carbon_memory_class.f90
+carbon,c_decomp_humus_1_sum,2D,surface,diagnostic,no,,mol(C) m-2(canopy),annual sum of carbon decomposed from YASSO humus (leaf),mo_carbon_memory_class.f90
+carbon,c_decomp_humus_2_sum,2D,surface,diagnostic,no,,mol(C) m-2(canopy),annual sum of carbon decomposed from YASSO humus (wood),mo_carbon_memory_class.f90
+carbon,c_into_humus_1_sum,2D,surface,diagnostic,no,,mol(C) m-2(canopy),annual sum of carbon flux to humus pool in YASSO (leaf),mo_carbon_memory_class.f90
+carbon,c_into_humus_2_sum,2D,surface,diagnostic,no,,mol(C) m-2(canopy),annual sum of carbon flux to humus pool in YASSO (wood),mo_carbon_memory_class.f90
+carbon,c_decomp_humus_1_sum_ta,2D,surface,conditional,no,,mol(C) m-2,annual sum of carbon decomposed from YASSO humus (leaf),mo_carbon_memory_class.f90
+carbon,c_decomp_humus_2_sum_ta,2D,surface,conditional,no,,mol(C) m-2,annual sum of carbon decomposed from YASSO humus (wood),mo_carbon_memory_class.f90
+carbon,c_into_humus_1_sum_ta,2D,surface,conditional,no,,mol(C) m-2,annual sum of carbon flux to humus pool in YASSO (leaf),mo_carbon_memory_class.f90
+carbon,c_into_humus_2_sum_ta,2D,surface,conditional,no,,mol(C) m-2,annual sum of carbon flux to humus pool in YASSO (wood),mo_carbon_memory_class.f90
+carbon,max_green,2D,surface,prognostic,yes,,mol(C) m-2(canopy),Running maximum of the green pool,mo_carbon_memory_class.f90
+carbon,max_green_veg_c,2D,surface,prognostic,yes,,mol(C) m-2(canopy),Total vegetation carbon at green pool maximum,mo_carbon_memory_class.f90
+carbon,c_sum_veg_gsum,2D,surface,diagnostic,yes,,PgC,Global sum of all vegetation C pools.,mo_carbon_memory_class.f90
+carbon,c_sum_litter_ag_gsum,2D,surface,diagnostic,yes,,PgC,Global sum of all above ground litter C pools,mo_carbon_memory_class.f90
+carbon,c_sum_litter_bg_gsum,2D,surface,diagnostic,yes,,PgC,Global sum of all below ground litter C pools.,mo_carbon_memory_class.f90
+carbon,c_sum_humus_gsum,2D,surface,diagnostic,yes,,PgC,Global sum of all humus C pools.,mo_carbon_memory_class.f90
+carbon,c_sum_natural_gsum,2D,surface,diagnostic,yes,,PgC,Global sum of all natural C pools.,mo_carbon_memory_class.f90
+carbon,npp_act_ydaymean_gsum,2D,surface,diagnostic,yes,,PgC yr-1,Global actual NPP rate of the previous day,mo_carbon_memory_class.f90
+carbon,gpp_ydaymean_gsum,2D,surface,diagnostic,yes,,PgC yr-1,Global GPP rate of the previous day,mo_carbon_memory_class.f90
+carbon,soil_respiration_gsum,2D,surface,diagnostic,yes,,PgC yr-1,Global soil respiration rate,mo_carbon_memory_class.f90
+disturbance,burned_fract,2D,surface,prognostic,yes,BASIC,frac,Fraction of tile that is burned.,mo_disturbance_memory_class.f90
+disturbance,damaged_fract,2D,surface,prognostic,yes,BASIC,frac,Fraction of tile that is damaged by windbreak.,mo_disturbance_memory_class.f90
+disturbance,q_air_clim,2D,surface,prognostic,yes,MEDIUM,-,Relative humiditiy of lowest air layer smoothed in time.,mo_disturbance_memory_class.f90
+disturbance,q_air_clim_yday,2D,surface,diagnostic,yes,,-,Relative humiditiy of lowest air layer smoothed in time                                                    & at the end of the last day.,mo_disturbance_memory_class.f90
+disturbance,prev_day_max_wind_10m,2D,surface,diagnostic,yes,,-,Previous day maximum wind speed.,mo_disturbance_memory_class.f90
+disturbance,max_wind_10m,2D,surface,prognostic,yes,MEDIUM,-,Maximum wind speed smoothed in time at the end of the last day..,mo_disturbance_memory_class.f90
+disturbance,max_wind_10m_act,2D,surface,prognostic,yes,MEDIUM,-,This days maximum wind speed.,mo_disturbance_memory_class.f90
+disturbance,cconservation_wind,2D,surface,diagnostic,yes,,,,mo_disturbance_memory_class.f90
+disturbance,cconservation_fire,2D,surface,diagnostic,yes,,,,mo_disturbance_memory_class.f90
+disturbance,fuel,2D,surface,prognostic,yes,BASIC,mol(C) m-2,Amount of carbon fuel,mo_fuel_memory_class.f90
+forest_age,mean_age,2D,surface,diagnostic,yes,BASIC,y,Mean age of this tile (avg of area per age),mo_fage_memory_class.f90
+forest_age,fract_per_age,3D,forest_age,prognostic,yes,FULL,-,Area fraction per age,mo_fage_memory_class.f90
+hd,hd_mask,2D,surface,diagnostic,yes,,,"HD_ mask: -1 ocean, 0 ocean inflow, 1 land, 2 internal drainage",mo_hd_memory_class.f90
+hd,coast_ocean,2D,surface,diagnostic,yes,,,coastal grid cells of the ocean ,mo_hd_memory_class.f90
+hd,ret_overlflow,2D,surface,diagnostic,yes,,day,overland flow retention constant,mo_hd_memory_class.f90
+hd,ret_baseflow,2D,surface,diagnostic,yes,,day,baseflow retention constant,mo_hd_memory_class.f90
+hd,ret_riverflow,2D,surface,diagnostic,yes,,day,riverflow retention constant,mo_hd_memory_class.f90
+hd,nres_overlflow,2D,surface,diagnostic,yes,,,number of overland flow reservoirs,mo_hd_memory_class.f90
+hd,nres_baseflow,2D,surface,diagnostic,yes,,,number of baseflow reservoirs,mo_hd_memory_class.f90
+hd,nres_riverflow,2D,surface,diagnostic,yes,,,number of riverflow reservoirs,mo_hd_memory_class.f90
+hd,nsplit,2D,surface,diagnostic,yes,,,number of channels river splits into,mo_hd_memory_class.f90
+hd,outflow_runoff,2D,surface,diagnostic,yes,,m3/s,grid cell outflow due to runoff,mo_hd_memory_class.f90
+hd,outflow_drainage,2D,surface,diagnostic,yes,,m3/s,grid cell outflow due to drainage,mo_hd_memory_class.f90
+hd,outflow_rivers,2D,surface,diagnostic,yes,,m3/s,grid cell outflow due to rivers,mo_hd_memory_class.f90
+hd,outflow_resid,2D,surface,diagnostic,yes,,m3/s,grid cell outflow residual: should be zero.,mo_hd_memory_class.f90
+hd,outflow_count,2D,surface,diagnostic,yes,,m3/s,count of outflows from grid cell,mo_hd_memory_class.f90
+hd,overlflow_res,3D,hd_o,diagnostic,yes,,,content of the overland flow reservoir,mo_hd_memory_class.f90
+hd,baseflow_res,3D,hd_b,diagnostic,yes,,,content of the baseflow reservoir,mo_hd_memory_class.f90
+hd,riverflow_res,3D,hd_r,diagnostic,yes,,,content of the riverflow reservoir,mo_hd_memory_class.f90
+hd,local_budget,2D,surface,diagnostic,yes,,m3/s,Total HD reservoir content,mo_hd_memory_class.f90
+hd,local_fluxes,2D,surface,diagnostic,yes,,m3/s,Fluxes for local water balance check,mo_hd_memory_class.f90
+hd,local_wbal_error,2D,surface,diagnostic,yes,BASIC,m3,Local water balance error,mo_hd_memory_class.f90
+hd,water_budget,2D,surface,prognostic,yes,,m3,HD water budget,mo_hd_memory_class.f90
+hd,water_budget_change,2D,surface,diagnostic,yes,,m3/timestep,HD water budget change within time step,mo_hd_memory_class.f90
+hd,water_error_gsum,2D,surface,diagnostic,yes,,m3,Total HD water imbalance during time step,mo_hd_memory_class.f90
+hydrology,fract_snow,2D,surface,diagnostic,yes,BASIC,-,Snow area fraction,mo_hydro_memory_class.f90
+hydrology,weq_snow,2D,surface,diagnostic,yes,BASIC,m (water equivalent),Snow amount,mo_hydro_memory_class.f90
+hydrology,evapotrans,2D,surface,prognostic,yes,BASIC,kg m-2 s-1,"Evapotranspiration, including sublimation",mo_hydro_memory_class.f90
+hydrology,evapopot,2D,surface,prognostic,yes,,kg m-2 s-1,Potential evaporation (including sublimation),mo_hydro_memory_class.f90
+hydrology,evapo_snow,2D,surface,diagnostic,yes,,kg m-2 s-1,Evaporation from snow,mo_hydro_memory_class.f90
+hydrology,snowmelt,2D,surface,diagnostic,yes,,kg m-2 s-1,Snow melt,mo_hydro_memory_class.f90
+hydrology,infilt,2D,surface,diagnostic,yes,BASIC,kg m-2 s-1,Water infiltrating into the soil,mo_hydro_memory_class.f90
+hydrology,runoff,2D,surface,diagnostic,yes,BASIC,kg m-2 s-1,Total surface runoff,mo_hydro_memory_class.f90
+hydrology,runoff_horton,2D,surface,diagnostic,yes,,kg m-2 s-1,Horton component of surface runoff,mo_hydro_memory_class.f90
+hydrology,runoff_dunne,2D,surface,diagnostic,yes,,kg m-2 s-1,Dunne component of surface runoff,mo_hydro_memory_class.f90
+hydrology,drainage,2D,surface,diagnostic,yes,BASIC,kg m-2 s-1,Total drainage,mo_hydro_memory_class.f90
+hydrology,wtr_transp_down_sl,3D,soil_w,diagnostic,yes,,,,mo_hydro_memory_class.f90
+hydrology,discharge,2D,surface,diagnostic,yes,BASIC,m3 s-1,Local discharge,mo_hydro_memory_class.f90
+hydrology,discharge_ocean,2D,surface,diagnostic,yes,BASIC,m3 s-1,Discharge to the ocean,mo_hydro_memory_class.f90
+hydrology,internal_drain,2D,surface,diagnostic,yes,,kg m-2 s-1,Internal drainage,mo_hydro_memory_class.f90
+hydrology,weq_fluxes,2D,surface,diagnostic,yes,,,,mo_hydro_memory_class.f90
+hydrology,weq_land,2D,surface,diagnostic,yes,,m3,Total land water and ice content,mo_hydro_memory_class.f90
+hydrology,weq_balance_err,2D,surface,diagnostic,yes,FULL,m3/(time step),Land water balance error,mo_hydro_memory_class.f90
+hydrology,weq_balance_err_count,2D,surface,diagnostic,yes,,,,mo_hydro_memory_class.f90
+hydrology,elevation,2D,surface,diagnostic,yes,,m,Mean orography,mo_hydro_memory_class.f90
+hydrology,oro_stddev,2D,surface,diagnostic,yes,,m,Orographic standard deviation,mo_hydro_memory_class.f90
+hydrology,steepness,2D,surface,diagnostic,yes,,/,subgrid slope distribution shape parameter,mo_hydro_memory_class.f90
+hydrology,heating_snow_cpy_melt,2D,surface,diagnostic,yes,,W m-2,Heating due to snow melt on canopy,mo_hydro_memory_class.f90
+hydrology,fract_snow_soil,2D,surface,diagnostic,yes,BASIC,-,Snow fraction on soil,mo_hydro_memory_class.f90
+hydrology,weq_snow_soil,2D,surface,diagnostic,yes,BASIC,m (water equivalent),Snow amount on soil,mo_hydro_memory_class.f90
+hydrology,snow_soil_dens,2D,surface,diagnostic,yes,,kg m-3,Density of snow on soil,mo_hydro_memory_class.f90
+hydrology,evapotrans_lnd,2D,surface,diagnostic,yes,BASIC,kg m-2 s-1,Evapotranspiration from land surface w/o lakes,mo_hydro_memory_class.f90
+hydrology,le_pc_remain,2D,surface,diagnostic,yes,MEDIUM,,,mo_hydro_memory_class.f90
+hydrology,q_snocpymlt,2D,surface,diagnostic,yes,,W m-2,Heating due to snow melt on canopy,mo_hydro_memory_class.f90
+hydrology,fract_wet,2D,surface,diagnostic,yes,BASIC,-,Wet surface fraction,mo_hydro_memory_class.f90
+hydrology,fract_skin,2D,surface,diagnostic,yes,,-,Wet skin reservoir fraction,mo_hydro_memory_class.f90
+hydrology,soil_depth,2D,surface,diagnostic,yes,,m,Depth of soil until bedrock,mo_hydro_memory_class.f90
+hydrology,num_sl_above_bedrock,2D,surface,prognostic,yes,BASIC,[unitless],number of soil layers above bedrock,mo_hydro_memory_class.f90
+hydrology,soil_depth_sl,3D,soil_w,diagnostic,yes,,m,Thickness of each soil layer,mo_hydro_memory_class.f90
+hydrology,fract_org_sl,3D,soil_w,prognostic,yes,,-,Fraction of organic material in soil layer,mo_hydro_memory_class.f90
+hydrology,soil_lay_width_sl,3D,soil_w,prognostic,yes,BASIC,m,"Width of each soil layer that can be saturated with water, until bedrock",mo_hydro_memory_class.f90
+hydrology,soil_lay_depth_center_sl,3D,soil_w,prognostic,no,NONE,m,"Depth at the center of each soil layer, until bedrock",mo_hydro_memory_class.f90
+hydrology,soil_lay_depth_ubound_sl,3D,soil_w,prognostic,no,NONE,m,"Depth at the upper boundary of each soil layer, until bedrock",mo_hydro_memory_class.f90
+hydrology,soil_lay_depth_lbound_sl,3D,soil_w,prognostic,no,NONE,m,"Depth at the lower boundary of each soil layer, until bedrock",mo_hydro_memory_class.f90
+hydrology,wpi_rootzone_max,2D,surface,diagnostic,yes,,m,Maximum amount of water/ice in root zone,mo_hydro_memory_class.f90
+hydrology,vol_field_cap,2D,surface,diagnostic,yes,,m/m,Volumetric soil field capacity,mo_hydro_memory_class.f90
+hydrology,vol_field_cap_sl,3D,soil_w,diagnostic,yes,,m/m,Volumetric soil field capacity,mo_hydro_memory_class.f90
+hydrology,vol_p_wilt,2D,surface,diagnostic,yes,,m/m,Volumetric permanent wilting point,mo_hydro_memory_class.f90
+hydrology,vol_p_wilt_sl,3D,soil_w,diagnostic,yes,,m/m,Volumetric permanent wilting point,mo_hydro_memory_class.f90
+hydrology,vol_porosity,2D,surface,diagnostic,yes,,m/m,Volumetric soil porosity,mo_hydro_memory_class.f90
+hydrology,vol_porosity_sl,3D,soil_w,diagnostic,yes,,m/m,Volumetric soil porosity,mo_hydro_memory_class.f90
+hydrology,vol_wres,2D,surface,diagnostic,yes,,m/m,Volumetric residual water content,mo_hydro_memory_class.f90
+hydrology,vol_wres_sl,3D,soil_w,diagnostic,yes,,m/m,Volumetric residual water content,mo_hydro_memory_class.f90
+hydrology,pore_size_index,2D,surface,diagnostic,yes,,,Soil pore size distribution index,mo_hydro_memory_class.f90
+hydrology,pore_size_index_sl,3D,soil_w,diagnostic,yes,,,Soil pore size distribution index,mo_hydro_memory_class.f90
+hydrology,bclapp,2D,surface,diagnostic,yes,,,Clapp and Hornberger (1978) exponent b,mo_hydro_memory_class.f90
+hydrology,bclapp_sl,3D,soil_w,diagnostic,yes,,,Clapp and Hornberger (1978) exponent b,mo_hydro_memory_class.f90
+hydrology,matric_pot,2D,surface,diagnostic,yes,,m,Soil saturated matric potential,mo_hydro_memory_class.f90
+hydrology,matric_pot_sl,3D,soil_w,prognostic,yes,,m,Soil saturated matric potential,mo_hydro_memory_class.f90
+hydrology,wtr_soil_pot_sl,3D,soil_w,diagnostic,yes,BASIC,MPa,Soil water potential per layer,mo_hydro_memory_class.f90
+hydrology,hyd_cond_sat,2D,surface,diagnostic,yes,,m s-1,Hydraulic conductivity at saturation,mo_hydro_memory_class.f90
+hydrology,hyd_cond_sat_sl,3D,soil_w,diagnostic,yes,,m s-1,Hydraulic conductivity at saturation,mo_hydro_memory_class.f90
+hydrology,wtr_skin,2D,surface,diagnostic,yes,BASIC,m,Water content of soil and canopy skin reservoir,mo_hydro_memory_class.f90
+hydrology,snow_accum,2D,surface,diagnostic,yes,,,,mo_hydro_memory_class.f90
+hydrology,evapotrans_soil,2D,surface,diagnostic,yes,BASIC,,,mo_hydro_memory_class.f90
+hydrology,evapo_skin,2D,surface,diagnostic,yes,,kg m-2 s-1,Evaporation from skin reservoir,mo_hydro_memory_class.f90
+hydrology,evapo_deficit,2D,surface,diagnostic,yes,,m,Water which evaporated from other sources               &/soillayers then intented,mo_hydro_memory_class.f90
+hydrology,water_to_soil,2D,surface,diagnostic,yes,,m,Amount of water entering the soil,mo_hydro_memory_class.f90
+hydrology,tpe_overflow,2D,surface,diagnostic,yes,,m,Terra planet soil water overflow pool,mo_hydro_memory_class.f90
+hydrology,wtr_soilhyd_res,2D,surface,diagnostic,yes,,m3/(time step),Vertical transport residual,mo_hydro_memory_class.f90
+hydrology,wtr_rootzone,2D,surface,diagnostic,yes,BASIC,m,Liquid water content of the root zone,mo_hydro_memory_class.f90
+hydrology,ice_rootzone,2D,surface,diagnostic,yes,BASIC,m,Ice content (column) in the root zone,mo_hydro_memory_class.f90
+hydrology,wtr_soil_sl,3D,soil_w,diagnostic,yes,BASIC,m,Water content of soil layers,mo_hydro_memory_class.f90
+hydrology,ice_soil_sl,3D,soil_w,diagnostic,yes,BASIC,m,Ice content of soil layers,mo_hydro_memory_class.f90
+hydrology,vol_weq_soil_sl,3D,soil_w,diagnostic,yes,,m,Volumetric water equivalent of soil layers,mo_hydro_memory_class.f90
+hydrology,wtr_freeze_sl,3D,soil_w,diagnostic,yes,,kg m-2 s-1,Freezing water flux in soil layers,mo_hydro_memory_class.f90
+hydrology,ice_melt_sl,3D,soil_w,diagnostic,yes,,kg m-2 s-1,Melting ice flux in soil layers,mo_hydro_memory_class.f90
+hydrology,drainage_sl,3D,soil_w,diagnostic,yes,,kg m-2 s-1,Subsurface drainage on soil layers,mo_hydro_memory_class.f90
+hydrology,wtr_soil_sat_sl,3D,soil_w,diagnostic,yes,,m,Water content in soil layers at saturation,mo_hydro_memory_class.f90
+hydrology,wtr_soil_fc_sl,3D,soil_w,diagnostic,yes,,m,Water content in soil layers at field capacity,mo_hydro_memory_class.f90
+hydrology,wtr_soil_pwp_sl,3D,soil_w,diagnostic,yes,,,,mo_hydro_memory_class.f90
+hydrology,wtr_soil_res_sl,3D,soil_w,diagnostic,yes,,,,mo_hydro_memory_class.f90
+hydrology,wtr_soil_pot_scool_sl,3D,soil_w,prognostic,yes,,m,Potentially supercooled water on soil layers,mo_hydro_memory_class.f90
+hydrology,wtr_latflow_res_sl,3D,soil_w,conditional,yes,,m,Water content of latflow res. on soil layers,mo_hydro_memory_class.f90
+hydrology,wtr_latflow_sl,3D,soil_w,diagnostic,yes,,kg m-2 s-1,Outflow from latflow res. on soil layers,mo_hydro_memory_class.f90
+hydrology,wtr_latflow_res_srf,2D,surface,conditional,yes,,m,Water content of latflow res. srf.,mo_hydro_memory_class.f90
+hydrology,wtr_latflow_srf,2D,surface,diagnostic,yes,,kg m-2 s-1,Outflow from latflow res. srf,mo_hydro_memory_class.f90
+hydrology,wtr_rootzone_rel,2D,surface,diagnostic,yes,BASIC,-,Relative root zone moisture,mo_hydro_memory_class.f90
+hydrology,fract_pond,2D,surface,conditional,yes,,-,Inundated surface fraction,mo_hydro_memory_class.f90
+hydrology,weq_pond,2D,surface,conditional,yes,,m (water equivalent),Surface pond reservoir,mo_hydro_memory_class.f90
+hydrology,wtr_pond,2D,surface,conditional,yes,,m (water equivalent),Liquid water in pond reservoir,mo_hydro_memory_class.f90
+hydrology,ice_pond,2D,surface,conditional,yes,,m (water equivalent),Frozen water in pond reservoir,mo_hydro_memory_class.f90
+hydrology,pond_melt,2D,surface,diagnostic,yes,,kg m-2 s-1,Melting of pond ice,mo_hydro_memory_class.f90
+hydrology,pond_freeze,2D,surface,diagnostic,yes,,kg m-2 s-1,Freezing of pond water,mo_hydro_memory_class.f90
+hydrology,wtr_pond_net_flx,2D,surface,diagnostic,yes,,,,mo_hydro_memory_class.f90
+hydrology,fract_pond_max,2D,surface,diagnostic,yes,,-,Maximum surface fraction available for inundation,mo_hydro_memory_class.f90
+hydrology,weq_pond_max,2D,surface,diagnostic,yes,,m (water equivalent),Maximum surface pond reservoir,mo_hydro_memory_class.f90
+hydrology,evapo_pond,2D,surface,diagnostic,yes,,,,mo_hydro_memory_class.f90
+hydrology,root_depth,2D,surface,diagnostic,yes,,m,Rooting depth,mo_hydro_memory_class.f90
+hydrology,root_depth_sl,3D,soil_w,diagnostic,yes,,m,Rooting depth within the soil layer,mo_hydro_memory_class.f90
+hydrology,fract_snow_can,2D,surface,diagnostic,yes,MEDIUM,-,Snow fraction on canopy,mo_hydro_memory_class.f90
+hydrology,weq_snow_can,2D,surface,diagnostic,yes,MEDIUM,m (water equivalent),Snow amount on canopy,mo_hydro_memory_class.f90
+hydrology,wtr_rootzone_scool_pot,2D,surface,prognostic,yes,,m,Potentially supercooled water content in root zone,mo_hydro_memory_class.f90
+hydrology,wtr_rootzone_scool_act,2D,surface,diagnostic,yes,,m,Supercooled water content in root zone,mo_hydro_memory_class.f90
+hydrology,wtr_rootzone_avail,2D,surface,diagnostic,yes,FULL,m,Plant available water content in root zone,mo_hydro_memory_class.f90
+hydrology,wtr_rootzone_avail_max,2D,surface,diagnostic,yes,FULL,m,Maximum plant available water content in root zone,mo_hydro_memory_class.f90
+hydrology,water_stress,2D,surface,diagnostic,yes,BASIC,-,Water stress factor,mo_hydro_memory_class.f90
+hydrology,canopy_cond_unlimited,2D,surface,diagnostic,yes,,,,mo_hydro_memory_class.f90
+hydrology,canopy_cond_limited,2D,surface,diagnostic,yes,,,,mo_hydro_memory_class.f90
+hydrology,transpiration,2D,surface,diagnostic,yes,BASIC,kg m-2 s-1,Transpiration,mo_hydro_memory_class.f90
+hydrology,wtr_plant_avail_rel,2D,surface,prognostic,no,NONE,,relative plant available soil moisture in root zone,mo_hydro_memory_class.f90
+hydrology,w_soil_root_fc,2D,surface,prognostic,no,NONE,m,Water content at field capacity in root zone of the soil,mo_hydro_memory_class.f90
+hydrology,w_soil_root_pwp,2D,surface,prognostic,no,NONE,m,Water content at permanent wilting point in root zone of the soil,mo_hydro_memory_class.f90
+hydrology,frac_w_lat_loss_sl,3D,soil_w,diagnostic,no,NONE,,fraction of lateral (horizontal) water loss of w_soil_sl_old,mo_hydro_memory_class.f90
+hydrology,frac_wtr_transp_down_sl,3D,soil_w,diagnostic,yes,FULL,fraction s-1,fraction of mass transferred to below layer,mo_hydro_memory_class.f90
+hydrology,fract_snow_glac,2D,surface,diagnostic,yes,,-,Snow fraction on glacier,mo_hydro_memory_class.f90
+hydrology,weq_glac,2D,surface,diagnostic,yes,BASIC,m (water equivalent),Glacier depth (including snow),mo_hydro_memory_class.f90
+hydrology,runoff_glac,2D,surface,diagnostic,yes,,kg m-2 s-1,Runoff from glacier (rain + melt),mo_hydro_memory_class.f90
+hydrology,evapo_wtr,2D,surface,diagnostic,yes,,kg m-2 s-1,Evaporation from lake water,mo_hydro_memory_class.f90
+hydrology,evapo_ice,2D,surface,diagnostic,yes,,kg m-2 s-1,Evaporation from lake ice,mo_hydro_memory_class.f90
+hydrology,fract_snow_lice,2D,surface,diagnostic,yes,MEDIUM,,,mo_hydro_memory_class.f90
+hydrology,weq_snow_lice,2D,surface,diagnostic,yes,MEDIUM,m water equivalent,Snow amount on lake ice,mo_hydro_memory_class.f90
+hydrology,trans_gmean,2D,surface,diagnostic,yes,,kg m-2 s-1,Global mean transpiration,mo_hydro_memory_class.f90
+hydrology,evapotrans_gmean,2D,surface,diagnostic,yes,,kg m-2 s-1,Global land evapotranspiration,mo_hydro_memory_class.f90
+hydrology,weq_land_gsum,2D,surface,diagnostic,yes,,km3,Global amount of land water and ice,mo_hydro_memory_class.f90
+hydrology,discharge_ocean_gsum,2D,surface,diagnostic,yes,,Sv,Global water discharge to the oceans,mo_hydro_memory_class.f90
+hydrology,wtr_rootzone_rel_gmean,2D,surface,diagnostic,yes,,-,Global mean relative rootzone moisture,mo_hydro_memory_class.f90
+hydrology,fract_snow_gsum,2D,surface,diagnostic,yes,,Mio km2,Global snow area (including glaciers),mo_hydro_memory_class.f90
+hydrology,weq_snow_gsum,2D,surface,diagnostic,yes,,Gt,Global snow amount on non-glacier land,mo_hydro_memory_class.f90
+hydrology,weq_balance_err_gsum,2D,surface,diagnostic,yes,,m3/(time step),Global land water balance error,mo_hydro_memory_class.f90
+natural_lcc,temp_sum_day,2D,surface,diagnostic,yes,NONE,sum of air temperature in day,temperature sum day,mo_nlcc_memory_class.f90
+natural_lcc,temp_sum_month,2D,surface,diagnostic,yes,NONE,sum of air temperature in month,temperature sum month,mo_nlcc_memory_class.f90
+natural_lcc,min_mmtemp_of_yr,2D,surface,diagnostic,yes,NONE,min temperature of year,temperature min,mo_nlcc_memory_class.f90
+natural_lcc,max_mmtemp_of_yr,2D,surface,diagnostic,yes,NONE,max temperature of year,temperature max,mo_nlcc_memory_class.f90
+natural_lcc,min_mmtemp20,2D,surface,diagnostic,yes,FULL,min temperature climatology,temp min climate,mo_nlcc_memory_class.f90
+natural_lcc,max_mmtemp20,2D,surface,diagnostic,yes,FULL,max temperature climatology,temp max climate,mo_nlcc_memory_class.f90
+natural_lcc,gdd_sum_year,2D,surface,diagnostic,yes,NONE,gdd current year,gdd sum year,mo_nlcc_memory_class.f90
+natural_lcc,gdd_prev_year,2D,surface,diagnostic,yes,FULL,gdd previous year,gdd prev year,mo_nlcc_memory_class.f90
+natural_lcc,act_fpc,3D,pft_vgrid,diagnostic,yes,MEDIUM,actual foliage projective cover,act fpc,mo_nlcc_memory_class.f90
+natural_lcc,bare_fpc,2D,surface,diagnostic,yes,BASIC,bare foliage projective cover,bare fpc,mo_nlcc_memory_class.f90
+natural_lcc,pot_fpc,3D,pft_vgrid,diagnostic,yes,MEDIUM,potential foliage projective cover,pot fpc,mo_nlcc_memory_class.f90
+natural_lcc,cover_fract_pot,3D,pft_vgrid,diagnostic,yes,BASIC,potential cover fractions,cover fract pot,mo_nlcc_memory_class.f90
+natural_lcc,bio_exist,3D,pft_vgrid,diagnostic,yes,MEDIUM,bio-climatic limits,bio exist,mo_nlcc_memory_class.f90
+natural_lcc,sum_green_bio_memory,2D,surface,diagnostic,yes,NONE,desert memory,sum_green_bio_memory,mo_nlcc_memory_class.f90
+natural_lcc,desert_fpc,2D,surface,diagnostic,yes,BASIC,desert foliage projective cover,desert fpc,mo_nlcc_memory_class.f90
+natural_lcc,cover_fract,3D,pft_vgrid,diagnostic,yes,BASIC,PFT cover fractions,cover fract,mo_nlcc_memory_class.f90
+phenology,lai,2D,surface,diagnostic,yes,BASIC,,,mo_pheno_memory_class.f90
+phenology,lai_ta,2D,surface,diagnostic,yes,BASIC,,,mo_pheno_memory_class.f90
+phenology,fract_fpc,2D,surface,diagnostic,yes,BASIC,,,mo_pheno_memory_class.f90
+phenology,fract_fpc_max,2D,surface,diagnostic,yes,BASIC,,,mo_pheno_memory_class.f90
+phenology,fract_forest,2D,surface,diagnostic,yes,,,,mo_pheno_memory_class.f90
+phenology,veg_fract_correction,2D,surface,prognostic,yes,FULL,,,mo_pheno_memory_class.f90
+phenology,growth_phase_sg,2D,surface,diagnostic,yes,,,,mo_pheno_memory_class.f90
+phenology,growth_phase_eg,2D,surface,diagnostic,yes,,,,mo_pheno_memory_class.f90
+phenology,growth_phase_crp,2D,surface,diagnostic,yes,,,,mo_pheno_memory_class.f90
+phenology,growth_days_eg,2D,surface,diagnostic,yes,,,,mo_pheno_memory_class.f90
+phenology,growth_days_sg,2D,surface,prognostic,no,,,,mo_pheno_memory_class.f90
+phenology,yday_npp_pot_rate,2D,surface,prognostic,no,,prev day NPP_pot_rate_ca,,mo_pheno_memory_class.f90
+phenology,laimax_dyn,2D,surface,prognostic,no,,,,mo_pheno_memory_class.f90
+phenology,year_npp_sum,2D,surface,prognostic,no,,,,mo_pheno_memory_class.f90
+phenology,day_npp_sum,2D,surface,prognostic,yes,,,,mo_pheno_memory_class.f90
+phenology,heat_sum_eg,2D,surface,prognostic,no,,,,mo_pheno_memory_class.f90
+phenology,heat_sum_sg,2D,surface,prognostic,no,,,,mo_pheno_memory_class.f90
+phenology,heat_sum_crp,2D,surface,prognostic,no,,,,mo_pheno_memory_class.f90
+phenology,heat_sum_winter,2D,surface,prognostic,no,,,,mo_pheno_memory_class.f90
+phenology,chill_days_eg,2D,surface,prognostic,no,,,,mo_pheno_memory_class.f90
+phenology,chill_days_sg,2D,surface,prognostic,no,,,,mo_pheno_memory_class.f90
+phenology,maxLAI_allom,2D,surface,prognostic,yes,,m^2(leaf)/m^2(ground),maximum LAI according to allometric relationships,mo_pheno_memory_class.f90
+phenology,individuals,2D,surface,prognostic,yes,,trees ha-1,Number of individuals in last calculation,mo_pheno_memory_class.f90
+phenology,biomass_per_ind,2D,surface,prognostic,yes,,kg/tree,Biomass per individual according to allometric relationships,mo_pheno_memory_class.f90
+phenology,cconservation_allom,2D,surface,diagnostic,yes,,,,mo_pheno_memory_class.f90
+phenology,lai_ta_gmean,2D,surface,diagnostic,yes,,1,Global land mean leaf_area_index,mo_pheno_memory_class.f90
+phenology,fract_fpc_gmean,2D,surface,diagnostic,yes,,1,Global land mean foilage projected cover,mo_pheno_memory_class.f90
+pre_and_post_lcc,tree_fract,2D,surface,diagnostic,yes,output_level,1,Tree fraction relative to the grid cell area,mo_pplcc_memory_class.f90
+pre_and_post_lcc,shrub_fract,2D,surface,diagnostic,yes,output_level,1,Shrub fraction relative to the grid cell area,mo_pplcc_memory_class.f90
+pre_and_post_lcc,grass_fract,2D,surface,diagnostic,yes,output_level,1,Grass fraction relative to the grid cell area,mo_pplcc_memory_class.f90
+pre_and_post_lcc,crop_fract,2D,surface,diagnostic,yes,output_level,1,Crop fraction relative to the grid cell area,mo_pplcc_memory_class.f90
+pre_and_post_lcc,pasture_fract,2D,surface,diagnostic,yes,output_level,1,Pasture fraction relative to the grid cell area,mo_pplcc_memory_class.f90
+pre_and_post_lcc,C3pft_fract,2D,surface,diagnostic,yes,output_level,1,Fraction of C3-PFTs relative to the grid cell area,mo_pplcc_memory_class.f90
+pre_and_post_lcc,C4pft_fract,2D,surface,diagnostic,yes,output_level,1,Fraction of C4-PFTs relative to the grid cell area,mo_pplcc_memory_class.f90
+pre_and_post_lcc,baresoil_fract,2D,surface,diagnostic,yes,output_level,1,Bare soil fraction relative to the grid cell area,mo_pplcc_memory_class.f90
+pre_and_post_lcc,tree_area_gsum,2D,surface,diagnostic,yes,,Mio km2,Global tree area,mo_pplcc_memory_class.f90
+pre_and_post_lcc,shrub_area_gsum,2D,surface,diagnostic,yes,,Mio km2,Global shrub area,mo_pplcc_memory_class.f90
+pre_and_post_lcc,grass_area_gsum,2D,surface,diagnostic,yes,,Mio km2,Global grass area,mo_pplcc_memory_class.f90
+pre_and_post_lcc,crop_area_gsum,2D,surface,diagnostic,yes,,Mio km2,Global crop area,mo_pplcc_memory_class.f90
+pre_and_post_lcc,pasture_area_gsum,2D,surface,diagnostic,yes,,Mio km2,Global pasture area,mo_pplcc_memory_class.f90
+pre_and_post_lcc,baresoil_area_gsum,2D,surface,diagnostic,yes,,Mio km2,Global baresoil area,mo_pplcc_memory_class.f90
+pre_and_post_lcc,C3pft_area_gsum,2D,surface,diagnostic,yes,,Mio km2,Global area of C3 PFTs,mo_pplcc_memory_class.f90
+pre_and_post_lcc,C4pft_area_gsum,2D,surface,diagnostic,yes,,Mio km2,Global area of C4 PFTs,mo_pplcc_memory_class.f90
+q_agriculture,n_fertiliser_c3,2D,surface,prognostic,yes,NONE,mol m-2 yr-1,N fertiliser application rate for C3 crops,mo_q_agr_memory_class.f90
+q_agriculture,n_fertiliser_c4,2D,surface,prognostic,yes,NONE,mol m-2 yr-1,N fertiliser application rate for C4 crops,mo_q_agr_memory_class.f90
+q_agriculture,crop_growth_phase,2D,surface,prognostic,yes,NONE,[0 - 3],growth phase of crop from planting to harvest,mo_q_agr_memory_class.f90
+q_agriculture,gdd_mavg,2D,surface,prognostic,yes,NONE,degC days,long-term average growing degree days,mo_q_agr_memory_class.f90
+q_agriculture,nd_crop_season,2D,surface,prognostic,yes,NONE,# days,number of days in this crop growing season,mo_q_agr_memory_class.f90
+q_agriculture,nd_crop_season_mavg,2D,surface,prognostic,yes,NONE,# days,long-term average length of crop growing season,mo_q_agr_memory_class.f90
+q_agriculture,crop_season_per_year,2D,surface,prognostic,yes,NONE,# crop seasons yr-1,number of crop seasons in this year,mo_q_agr_memory_class.f90
+q_agriculture,crop_season_per_year_mavg,2D,surface,prognostic,yes,NONE,# crop seasons yr-1,long-term average of number of crop seasons per year,mo_q_agr_memory_class.f90
+q_agriculture,crop_type_index,2D,surface,prognostic,yes,NONE,[1-8],index of croptype,mo_q_agr_memory_class.f90
+q_assimilation,gross_assimilation,2D,surface,diagnostic,yes,BASIC,micro-mol CO2 m-2 s-1,canopy-integrated gross assimilation rate,mo_q_assimi_memory_class.f90
+q_assimilation,gross_assimilation_cl,3D,vgrid_canopy_q_assimi,diagnostic,yes,FULL,micro-mol CO2 m-2 s-1,gross assimilation rate per canopy layer,mo_q_assimi_memory_class.f90
+q_assimilation,ftranspiration_sl,3D,vgrid_soil_w,diagnostic,yes,FULL,?,fraction of transpiration,mo_q_assimi_memory_class.f90
+q_assimilation,aerodyn_cond,2D,surface,diagnostic,yes,FULL,m s-1,ga -- aerodynamic conductance,mo_q_assimi_memory_class.f90
+q_assimilation,canopy_cond_cl,3D,vgrid_canopy_q_assimi,diagnostic,no,FULL,m s-1,conductance for water per canopy layer,mo_q_assimi_memory_class.f90
+q_assimilation,co2_conc_leaf_cl,3D,vgrid_canopy_q_assimi,diagnostic,no,FULL,ppm,internal leaf CO2 concentration per canopy layer,mo_q_assimi_memory_class.f90
+q_assimilation,gross_assimilation_C13,2D,surface,diagnostic,yes,FULL,micro-mol 13CO2 m-2 s-1,canopy-integrated gross assimilation rate,mo_q_assimi_memory_class.f90
+q_assimilation,gross_assimilation_C14,2D,surface,diagnostic,yes,FULL,micro-mol 14CO2 m-2 s-1,canopy-integrated gross assimilation rate,mo_q_assimi_memory_class.f90
+q_assimilation,net_assimilation,2D,surface,diagnostic,no,MEDIUM,micro-mol CO2 m-2 s-1,canopy-integrated net assimilation rate,mo_q_assimi_memory_class.f90
+q_assimilation,net_assimilation_boc,2D,surface,diagnostic,no,FULL,micro-mol CO2 m-2 s-1,net assimilation rate at the bottom of the canopy,mo_q_assimi_memory_class.f90
+q_assimilation,maint_respiration_leaf,2D,surface,diagnostic,no,FULL,micro-mol CO2 m-2 s-1,canopy-integrated foliar respiration rate,mo_q_assimi_memory_class.f90
+q_assimilation,net_assimilation_cl,3D,vgrid_canopy_q_assimi,diagnostic,no,FULL,micro-mol CO2 m-2 s-1,net assimilation rate per canopy layer,mo_q_assimi_memory_class.f90
+q_assimilation,maint_respiration_leaf_cl,3D,vgrid_canopy_q_assimi,diagnostic,no,FULL,micro-mol CO2 m-2 s-1,foliar respiration rate per canopy layer,mo_q_assimi_memory_class.f90
+q_assimilation,beta_air,2D,surface,diagnostic,no,FULL,unitless,scaling factor to account for air humidity effects on conductance,mo_q_assimi_memory_class.f90
+q_assimilation,beta_soa,2D,surface,diagnostic,no,FULL,unitless,scaling factor for evergreen conifers in spring calc from the state of acclimation,mo_q_assimi_memory_class.f90
+q_assimilation,beta_soil_ps,2D,surface,diagnostic,no,FULL,unitless,scaling factor to account for soil moisture constraints on photosynthesis,mo_q_assimi_memory_class.f90
+q_assimilation,beta_soil_gs,2D,surface,diagnostic,no,FULL,unitless,scaling factor to account for soil moisture constraints on conductance,mo_q_assimi_memory_class.f90
+q_assimilation,canopy_cond,2D,surface,diagnostic,no,FULL,m s-1,canopy-integrated conductance for water,mo_q_assimi_memory_class.f90
+q_assimilation,co2_conc_leaf,2D,surface,diagnostic,no,FULL,ppm,canopy-integrated internal leaf CO2 concentration,mo_q_assimi_memory_class.f90
+q_assimilation,t_jmax_opt,2D,surface,diagnostic,no,FULL,deg C,optimal temperature for electron transport of photosynthesis,mo_q_assimi_memory_class.f90
+q_assimilation,vpd,2D,surface,diagnostic,no,FULL,Pa,2m air vapour pressure deficit,mo_q_assimi_memory_class.f90
+q_assimilation,jmax_cl,3D,vgrid_canopy_q_assimi,diagnostic,no,FULL,micro-mol CO2 m-2 s-1,maximum rate of electron transport,mo_q_assimi_memory_class.f90
+q_assimilation,vcmax_cl,3D,vgrid_canopy_q_assimi,diagnostic,no,FULL,micro-mol CO2 m-2 s-1,maximum rate of carboxylation,mo_q_assimi_memory_class.f90
+q_assimilation,chlfl_yield_cl,3D,vgrid_canopy_q_assimi,diagnostic,no,FULL,unitless,steady-state chlorophyll fluorescence yield,mo_q_assimi_memory_class.f90
+q_assimilation,soa_tsoa_mavg,2D,surface,prognostic,no,FULL,,"state of acclimation, used to calculate beta_soa",mo_q_assimi_memory_class.f90
+q_assimilation,beta_air_daytime,2D,surface,conditional,no,FULL,unitless,scaling factor beta_air average of the previous day,mo_q_assimi_memory_class.f90
+q_assimilation,beta_air_daytime_dacc,2D,surface,conditional,no,FULL,unitless,scaling factor beta_air average of the previous day,mo_q_assimi_memory_class.f90
+q_assimilation,beta_air_tfrac_mavg,2D,surface,conditional,no,FULL,unitless,scaling factor beta_air time-averaged,mo_q_assimi_memory_class.f90
+q_assimilation,beta_air_tcnl_mavg,2D,surface,conditional,no,FULL,unitless,scaling factor beta_air time-averaged,mo_q_assimi_memory_class.f90
+q_assimilation,beta_soa_tphen_mavg,2D,surface,conditional,no,FULL,unitless,"scaling factor for evergreen conifers in spring, tphen time-averaged",mo_q_assimi_memory_class.f90
+q_assimilation,beta_soil_ps_daytime,2D,surface,conditional,no,FULL,unitless,scaling factor beta_soil_ps average of the previous day,mo_q_assimi_memory_class.f90
+q_assimilation,beta_soil_ps_daytime_dacc,2D,surface,conditional,no,FULL,unitless,scaling factor beta_soil_ps average of the previous day,mo_q_assimi_memory_class.f90
+q_assimilation,beta_soil_ps_tfrac_mavg,2D,surface,conditional,no,FULL,unitless,scaling factor beta_soil_ps time-averaged,mo_q_assimi_memory_class.f90
+q_assimilation,beta_soil_ps_tcnl_mavg,2D,surface,conditional,no,FULL,unitless,scaling factor beta_soil_ps time-averaged,mo_q_assimi_memory_class.f90
+q_assimilation,beta_soil_gs_daytime,2D,surface,conditional,no,FULL,unitless,scaling factor beta_soil_gs average of the previous day,mo_q_assimi_memory_class.f90
+q_assimilation,beta_soil_gs_daytime_dacc,2D,surface,conditional,no,FULL,unitless,scaling factor beta_soil_gs average of the previous day,mo_q_assimi_memory_class.f90
+q_assimilation,beta_soil_gs_tphen_mavg,2D,surface,prognostic,no,FULL,unitless,scaling factor beta_soil_gs time-averaged,mo_q_assimi_memory_class.f90
+q_assimilation,beta_soil_gs_tfrac_mavg,2D,surface,conditional,no,FULL,unitless,scaling factor beta_soil_gs time-averaged,mo_q_assimi_memory_class.f90
+q_assimilation,beta_soil_gs_tcnl_mavg,2D,surface,conditional,no,FULL,unitless,scaling factor beta_soil_gs time-averaged,mo_q_assimi_memory_class.f90
+q_assimilation,wtr_soil_root_pot,2D,surface,prognostic,yes,BASIC,MPa,Soil water potential in the root zone,mo_q_assimi_memory_class.f90
+q_phenology,growing_season,2D,surface,prognostic,yes,FULL,"[0 FALSE, 1 TRUE]",logical to identify whether the plant is in the growing season,mo_q_pheno_memory_class.f90
+q_phenology,gdd,2D,surface,prognostic,no,FULL,K days,growing degree days above 5 degC,mo_q_pheno_memory_class.f90
+q_phenology,nd_dormance,2D,surface,prognostic,no,NONE,# days,number of days since last growing season,mo_q_pheno_memory_class.f90
+q_phenology,lai_max,2D,surface,prognostic,no,NONE,m2 m-2,maximum lai (site specific),mo_q_pheno_memory_class.f90
+q_phenology,root_phenology_type,2D,surface,prognostic,no,NONE,category,category to identify end of season trigger in grasses,mo_q_pheno_memory_class.f90
+q_soil_biogeochemistry,nhx_deposition_monthly,3D,vgrid_month,prognostic,yes,NONE,kg/m2/s,surface downward reduced nitrogen deposition velocity,mo_sb_memory_class.f90
+q_soil_biogeochemistry,noy_deposition_monthly,3D,vgrid_month,prognostic,yes,NONE,kg/m2/s,surface downward oxidised nitrogen deposition velocity,mo_sb_memory_class.f90
+q_soil_biogeochemistry,p_deposition_monthly,3D,vgrid_month,prognostic,yes,NONE,kg/m2/s,surface downward reduced phosphorus deposition velocity,mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_c,3D,vgrid_soil_w,diagnostic,yes,BASIC,mol m-3,"total C, sum of all sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_n,3D,vgrid_soil_w,diagnostic,yes,BASIC,mol m-3,"total N, sum of all sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_p,3D,vgrid_soil_w,diagnostic,yes,FULL,mol m-3,"total P, sum of all sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_c13,3D,vgrid_soil_w,diagnostic,yes,MEDIUM,mol m-3,"total C13, sum of all sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_c14,3D,vgrid_soil_w,diagnostic,yes,MEDIUM,mol m-3,"total C14, sum of all sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_n15,3D,vgrid_soil_w,diagnostic,yes,FULL,mol m-3,"total N15, sum of all sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_bg_soil_c,3D,vgrid_soil_w,diagnostic,yes,BASIC,mol m-3,"total C, sum of SOM and below ground litter in sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_bg_soil_n,3D,vgrid_soil_w,diagnostic,yes,BASIC,mol m-3,"total N, sum of SOM and below ground litter in sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_bg_soil_p,3D,vgrid_soil_w,diagnostic,yes,FULL,mol m-3,"total P, sum of SOM and below ground litter in sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_bg_soil_c13,3D,vgrid_soil_w,diagnostic,yes,FULL,mol m-3,"total C13, sum of SOM and below ground litter in sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_bg_soil_c14,3D,vgrid_soil_w,diagnostic,yes,FULL,mol m-3,"total C14, sum of SOM and below ground litter in sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_bg_soil_n15,3D,vgrid_soil_w,diagnostic,yes,FULL,mol m-3,"total N15, sum of SOM and below ground litter in sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_ag_litter_c,2D,surface,diagnostic,yes,BASIC,mol m-2,"total C, sum of the above ground litter in sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_ag_litter_n,2D,surface,diagnostic,yes,BASIC,mol m-2,"total N, sum of the above ground litter in sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_ag_litter_p,2D,surface,diagnostic,yes,FULL,mol m-2,"total P, sum of the above ground litter in sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_ag_litter_c13,2D,surface,diagnostic,yes,MEDIUM,mol m-2,"total C13, sum of the above ground litter in sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_ag_litter_c14,2D,surface,diagnostic,yes,MEDIUM,mol m-2,"total C14, sum of the above ground litter in sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_total_ag_litter_n15,2D,surface,diagnostic,yes,FULL,mol m-2,"total N15, sum of the above ground litter in sb_pool components",mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_ag_woody_litter_c,2D,surface,diagnostic,yes,BASIC,mol m-3,sb_pool woody litter,mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_ag_woody_litter_n,2D,surface,diagnostic,yes,BASIC,mol m-3,sb_pool woody litter,mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_ag_woody_litter_p,2D,surface,diagnostic,yes,FULL,mol m-3,sb_pool woody litter,mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_ag_woody_litter_c13,2D,surface,diagnostic,yes,MEDIUM,mol m-3,sb_pool woody litter,mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_ag_woody_litter_c14,2D,surface,diagnostic,yes,MEDIUM,mol m-3,sb_pool woody litter,mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_pool_ag_woody_litter_n15,2D,surface,diagnostic,yes,FULL,mol m-3,sb_pool woody litter,mo_sb_memory_class.f90
+q_soil_biogeochemistry,nh4_solute,3D,vgrid_soil_w,prognostic,no,FULL,mol m-3,ammonium in soil solution,mo_sb_memory_class.f90
+q_soil_biogeochemistry,nh4_assoc,3D,vgrid_soil_w,prognostic,no,FULL,mol m-3,minerally associated ammonium,mo_sb_memory_class.f90
+q_soil_biogeochemistry,no3_solute,3D,vgrid_soil_w,prognostic,no,FULL,mol m-3,nitrate in soil solution,mo_sb_memory_class.f90
+q_soil_biogeochemistry,noy,3D,vgrid_soil_w,prognostic,yes,FULL,mol m-3,NO_y,mo_sb_memory_class.f90
+q_soil_biogeochemistry,n2o,3D,vgrid_soil_w,prognostic,yes,FULL,mol m-3,N2O,mo_sb_memory_class.f90
+q_soil_biogeochemistry,n2,3D,vgrid_soil_w,prognostic,yes,FULL,mol m-3,N2,mo_sb_memory_class.f90
+q_soil_biogeochemistry,nh4_n15_solute,3D,vgrid_soil_w,prognostic,no,FULL,mol m-3,N15-ammonium in soil solution,mo_sb_memory_class.f90
+q_soil_biogeochemistry,nh4_n15_assoc,3D,vgrid_soil_w,prognostic,no,FULL,mol m-3,minerally associated N15-ammonium,mo_sb_memory_class.f90
+q_soil_biogeochemistry,no3_n15_solute,3D,vgrid_soil_w,prognostic,no,FULL,mol m-3,N15-nitrate in soil solution,mo_sb_memory_class.f90
+q_soil_biogeochemistry,noy_n15,3D,vgrid_soil_w,prognostic,no,NONE,mol m-3,N15-NO_y,mo_sb_memory_class.f90
+q_soil_biogeochemistry,n2o_n15,3D,vgrid_soil_w,prognostic,no,NONE,mol m-3,N15-N2O,mo_sb_memory_class.f90
+q_soil_biogeochemistry,n2_n15,3D,vgrid_soil_w,prognostic,no,NONE,mol m-3,N15-N2,mo_sb_memory_class.f90
+q_soil_biogeochemistry,po4_assoc_fast,3D,vgrid_soil_w,prognostic,no,FULL,mol m-3,fast minerally associated phosphate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,po4_assoc_slow,3D,vgrid_soil_w,prognostic,no,FULL,mol m-3,slow minerally associated phosphate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,po4_occluded,3D,vgrid_soil_w,prognostic,no,FULL,mol m-3,occluded phosphate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,po4_primary,3D,vgrid_soil_w,prognostic,no,FULL,mol m-3,primary phosphate mineral,mo_sb_memory_class.f90
+q_soil_biogeochemistry,po4_solute,3D,vgrid_soil_w,prognostic,no,FULL,mol m-3,phosphate in soil solution,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_nh4_solute,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of ammonium in soil solution,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_nh4_assoc,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of minerally associated ammonium,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_no3_solute,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of nitrate in soil solution,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_noy,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of NO_y,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_n2o,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of N2O,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_n2,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of N2,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_nh4_n15_solute,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of N15-ammonium in soil solution,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_nh4_n15_assoc,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of minerally associated N15-ammonium,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_no3_n15_solute,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of N15-nitrate in soil solution,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_noy_n15,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of N15-NO_y,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_n2o_n15,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of N15-N2O,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_n2_n15,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of N15-N2,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_po4_assoc_fast,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of fast minerally associated phosphate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_po4_assoc_slow,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of slow minerally associated phosphate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_po4_occluded,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of occluded phosphate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_po4_primary,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of primary phosphate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,transport_po4_solute,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,transport of minerally associated phosphate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,lateral_loss_dom_carbon_sl,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,lateral loss of dom carbon,mo_sb_memory_class.f90
+q_soil_biogeochemistry,lateral_loss_dom_nitrogen_sl,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,lateral loss of dom nitrogen,mo_sb_memory_class.f90
+q_soil_biogeochemistry,lateral_loss_dom_phosphorus_sl,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,lateral loss of dom phosphorus,mo_sb_memory_class.f90
+q_soil_biogeochemistry,lateral_loss_dom_carbon13_sl,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,lateral loss of dom C13,mo_sb_memory_class.f90
+q_soil_biogeochemistry,lateral_loss_dom_carbon14_sl,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,lateral loss of dom C14,mo_sb_memory_class.f90
+q_soil_biogeochemistry,lateral_loss_dom_nitrogen15_sl,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,lateral loss of dom N15,mo_sb_memory_class.f90
+q_soil_biogeochemistry,lateral_loss_nh4_solute_sl,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,lateral loss of NH4,mo_sb_memory_class.f90
+q_soil_biogeochemistry,lateral_loss_no3_solute_sl,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,lateral loss of NO3,mo_sb_memory_class.f90
+q_soil_biogeochemistry,lateral_loss_po4_solute_sl,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,lateral loss of PO4,mo_sb_memory_class.f90
+q_soil_biogeochemistry,lateral_loss_nh4_n15_solute_sl,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,lateral loss of 15NH4,mo_sb_memory_class.f90
+q_soil_biogeochemistry,lateral_loss_no3_n15_solute_sl,3D,vgrid_soil_w,diagnostic,no,FULL,mol m-3 timestep-1,lateral loss of 15NO3,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rtm_decomposition,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rtm_depolymerisation,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rtm_mic_uptake,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rtm_plant_uptake,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rtm_sorption,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rtm_desorption,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rtm_hsc,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rtm_nitrification,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rtm_denitrification,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rtm_gasdiffusion,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rtm_asymb_bnf,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rmm_decomposition,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rmm_depolymerisation,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rmm_mic_uptake,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rmm_plant_uptake,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rmm_sorption,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rmm_desorption,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rmm_hsc,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rmm_nitrification,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rmm_gasdiffusion,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rmm_asymb_bnf,3D,vgrid_soil_w,diagnostic,no,NONE,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,het_respiration,3D,vgrid_soil_w,diagnostic,yes,BASIC,micro-mol m-3 s-1,heterotrophic respiration,mo_sb_memory_class.f90
+q_soil_biogeochemistry,het_respiration_c13,3D,vgrid_soil_w,diagnostic,yes,FULL,micro-mol m-3 s-1,c13 heterotrophic respiration,mo_sb_memory_class.f90
+q_soil_biogeochemistry,het_respiration_c14,3D,vgrid_soil_w,diagnostic,yes,FULL,micro-mol m-3 s-1,c14 heterotrophic respiration,mo_sb_memory_class.f90
+q_soil_biogeochemistry,myc_respiration,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,mycorrhizae respiration,mo_sb_memory_class.f90
+q_soil_biogeochemistry,myc_respiration_c13,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,c13 mycorrhizae respiration,mo_sb_memory_class.f90
+q_soil_biogeochemistry,myc_respiration_c14,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,c14 mycorrhizae respiration,mo_sb_memory_class.f90
+q_soil_biogeochemistry,net_mineralisation_nh4,3D,vgrid_soil_w,diagnostic,yes,BASIC,micro-mol m-3 s-1,net mineralisation of N,mo_sb_memory_class.f90
+q_soil_biogeochemistry,net_mineralisation_nh4_n15,3D,vgrid_soil_w,diagnostic,yes,FULL,micro-mol m-3 s-1,net mineralisation of N15,mo_sb_memory_class.f90
+q_soil_biogeochemistry,net_mineralisation_no3,3D,vgrid_soil_w,diagnostic,yes,BASIC,micro-mol m-3 s-1,net mineralisation of N,mo_sb_memory_class.f90
+q_soil_biogeochemistry,net_mineralisation_no3_n15,3D,vgrid_soil_w,diagnostic,yes,FULL,micro-mol m-3 s-1,net mineralisation of N15,mo_sb_memory_class.f90
+q_soil_biogeochemistry,net_mineralisation_po4,3D,vgrid_soil_w,diagnostic,yes,FULL,micro-mol m-3 s-1,net mineralisation of P,mo_sb_memory_class.f90
+q_soil_biogeochemistry,plant_uptake_nh4_sl,3D,vgrid_soil_w,diagnostic,yes,FULL,micro-mol m-3 s-1,plant uptake of N,mo_sb_memory_class.f90
+q_soil_biogeochemistry,plant_uptake_nh4_n15_sl,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,plant uptake of N15,mo_sb_memory_class.f90
+q_soil_biogeochemistry,plant_uptake_no3_sl,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,plant uptake of N,mo_sb_memory_class.f90
+q_soil_biogeochemistry,plant_uptake_no3_n15_sl,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,plant uptake of N15,mo_sb_memory_class.f90
+q_soil_biogeochemistry,plant_uptake_po4_sl,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,plant uptake of P,mo_sb_memory_class.f90
+q_soil_biogeochemistry,microbial_uptake_nh4_sl,3D,vgrid_soil_w,diagnostic,yes,output_level_local,micro-mol m-3 s-1,microbial uptake of N,mo_sb_memory_class.f90
+q_soil_biogeochemistry,microbial_uptake_nh4_n15_sl,3D,vgrid_soil_w,diagnostic,no,output_level_local,micro-mol m-3 s-1,microbial uptake of N15,mo_sb_memory_class.f90
+q_soil_biogeochemistry,microbial_uptake_no3_sl,3D,vgrid_soil_w,diagnostic,yes,output_level_local,micro-mol m-3 s-1,microbial uptake of N,mo_sb_memory_class.f90
+q_soil_biogeochemistry,microbial_uptake_no3_n15_sl,3D,vgrid_soil_w,diagnostic,no,output_level_local,micro-mol m-3 s-1,microbial uptake of N15,mo_sb_memory_class.f90
+q_soil_biogeochemistry,microbial_uptake_po4_sl,3D,vgrid_soil_w,diagnostic,yes,output_level_local,micro-mol m-3 s-1,microbial uptake of P,mo_sb_memory_class.f90
+q_soil_biogeochemistry,mycorrhiza_uptake_nh4_sl,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,mycorrhiza uptake of N,mo_sb_memory_class.f90
+q_soil_biogeochemistry,mycorrhiza_uptake_nh4_n15_sl,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,mycorrhiza uptake of N15,mo_sb_memory_class.f90
+q_soil_biogeochemistry,mycorrhiza_uptake_no3_sl,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,mycorrhiza uptake of N,mo_sb_memory_class.f90
+q_soil_biogeochemistry,mycorrhiza_uptake_no3_n15_sl,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,mycorrhiza uptake of N15,mo_sb_memory_class.f90
+q_soil_biogeochemistry,mycorrhiza_uptake_norg_sl,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,mycorrhiza uptake of N,mo_sb_memory_class.f90
+q_soil_biogeochemistry,mycorrhiza_uptake_norg_n15_sl,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,mycorrhiza uptake of N15,mo_sb_memory_class.f90
+q_soil_biogeochemistry,mycorrhiza_uptake_po4_sl,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,mycorrhiza uptake of P,mo_sb_memory_class.f90
+q_soil_biogeochemistry,myc_export_n_tlabile_mavg_sl,3D,vgrid_soil_w,prognostic,no,FULL,mol m-3,time averaged mycorrhizae export of N,mo_sb_memory_class.f90
+q_soil_biogeochemistry,myc_export_p_tlabile_mavg_sl,3D,vgrid_soil_w,prognostic,no,FULL,mol m-3,time averaged mycorrhizae export of P,mo_sb_memory_class.f90
+q_soil_biogeochemistry,myc_export_c_tmyc_mavg_sl,3D,vgrid_soil_w,prognostic,no,FULL,mol m-3,time averaged mycorrhizae export of C,mo_sb_memory_class.f90
+q_soil_biogeochemistry,myc_export_n_tmyc_mavg_sl,3D,vgrid_soil_w,prognostic,no,FULL,mol m-3,time averaged mycorrhizae export of N,mo_sb_memory_class.f90
+q_soil_biogeochemistry,volatilisation_nh4,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,volatilisation of NH4,mo_sb_memory_class.f90
+q_soil_biogeochemistry,volatilisation_nh4_n15,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,volatilisation of 15NH4,mo_sb_memory_class.f90
+q_soil_biogeochemistry,nitrification_no3,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,nitrification NO3,mo_sb_memory_class.f90
+q_soil_biogeochemistry,nitrification_no3_n15,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,nitrification 15NO3,mo_sb_memory_class.f90
+q_soil_biogeochemistry,nitrification_noy,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,nitrification to NOy,mo_sb_memory_class.f90
+q_soil_biogeochemistry,nitrification_noy_n15,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,nitrification to 15NOy,mo_sb_memory_class.f90
+q_soil_biogeochemistry,nitrification_n2o,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,nitrification to N2O,mo_sb_memory_class.f90
+q_soil_biogeochemistry,nitrification_n2o_n15,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,nitrification to 15N2O,mo_sb_memory_class.f90
+q_soil_biogeochemistry,denitrification_noy,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,nitrification NOy,mo_sb_memory_class.f90
+q_soil_biogeochemistry,denitrification_n2o_n15,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,nitrification to 15N2O,mo_sb_memory_class.f90
+q_soil_biogeochemistry,denitrification_n2o,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,nitrification to N2O,mo_sb_memory_class.f90
+q_soil_biogeochemistry,denitrification_noy_n15,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,nitrification 15NOy,mo_sb_memory_class.f90
+q_soil_biogeochemistry,denitrification_n2,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,denitrification to N2,mo_sb_memory_class.f90
+q_soil_biogeochemistry,denitrification_n2_n15,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,denitrification to 15N2,mo_sb_memory_class.f90
+q_soil_biogeochemistry,asymb_n_fixation,3D,vgrid_soil_w,diagnostic,yes,MEDIUM,micro-mol m-3 s-1,asymboitic N fixation,mo_sb_memory_class.f90
+q_soil_biogeochemistry,asymb_n_fixation_n15,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,asymboitic 15N fixation,mo_sb_memory_class.f90
+q_soil_biogeochemistry,weathering_po4,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,phosphorus weathering rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,occlusion_po4,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,"phosphorus occlusion rate, assoc_slow --> occluded",mo_sb_memory_class.f90
+q_soil_biogeochemistry,slow_exchange_po4,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol P m-3 s-1,"phosphorus slow exchange rate, assoc_fast <--> assoc_slow",mo_sb_memory_class.f90
+q_soil_biogeochemistry,fast_exchange_po4,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol P m-3 s-1,"phosphorus fast exchange rate, solute <--> assoc_fast",mo_sb_memory_class.f90
+q_soil_biogeochemistry,fast_exchange_nh4,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol N m-3 s-1,"nh4 fast exchange rate, solute <--> nh4_assoc",mo_sb_memory_class.f90
+q_soil_biogeochemistry,fast_adsorpt_po4,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol P m-3 s-1,"phosphorus fast exchange rate, solute <--> assoc_fast",mo_sb_memory_class.f90
+q_soil_biogeochemistry,fast_adsorpt_nh4,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol N m-3 s-1,"nh4 fast adsorption rate, solute --> nh4_assoc",mo_sb_memory_class.f90
+q_soil_biogeochemistry,biochem_mineralisation_po4,3D,vgrid_soil_w,diagnostic,yes,output_level_local,micro-mol m-3 s-1,phosphorus biochemical mineralization rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,gross_mineralisation_po4,3D,vgrid_soil_w,diagnostic,no,FULL,micro-mol m-3 s-1,phosphorus gross (biological) mineralization rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,leaching_dom_carbon,2D,surface,diagnostic,yes,output_level_local,micro-mol m-2 s-1,land to groundwater flux of DOM-C,mo_sb_memory_class.f90
+q_soil_biogeochemistry,leaching_dom_nitrogen,2D,surface,diagnostic,yes,FULL,micro-mol m-2 s-1,land to groundwater flux of DOM-N,mo_sb_memory_class.f90
+q_soil_biogeochemistry,leaching_dom_phosphorus,2D,surface,diagnostic,yes,FULL,micro-mol m-2 s-1,land to groundwater flux of DOM-P,mo_sb_memory_class.f90
+q_soil_biogeochemistry,leaching_dom_carbon13,2D,surface,diagnostic,no,FULL,micro-mol m-2 s-1,land to groundwater flux of DOM-C13,mo_sb_memory_class.f90
+q_soil_biogeochemistry,leaching_dom_carbon14,2D,surface,diagnostic,no,FULL,micro-mol m-2 s-1,land to groundwater flux of DOM-C14,mo_sb_memory_class.f90
+q_soil_biogeochemistry,leaching_dom_nitrogen15,2D,surface,diagnostic,no,FULL,micro-mol m-2 s-1,land to groundwater flux of DOM-N15,mo_sb_memory_class.f90
+q_soil_biogeochemistry,leaching_nh4_solute,2D,surface,diagnostic,no,FULL,micro-mol m-2 s-1,land to groundwater flux of NH4,mo_sb_memory_class.f90
+q_soil_biogeochemistry,leaching_no3_solute,2D,surface,diagnostic,no,FULL,micro-mol m-2 s-1,land to groundwater flux of NO3,mo_sb_memory_class.f90
+q_soil_biogeochemistry,leaching_po4_solute,2D,surface,diagnostic,no,FULL,micro-mol m-2 s-1,land to groundwater flux of PO4,mo_sb_memory_class.f90
+q_soil_biogeochemistry,leaching_nh4_n15_solute,2D,surface,diagnostic,no,FULL,micro-mol m-2 s-1,land to groundwater flux of 15NH4,mo_sb_memory_class.f90
+q_soil_biogeochemistry,leaching_no3_n15_solute,2D,surface,diagnostic,no,FULL,micro-mol m-2 s-1,land to groundwater flux of 15NO3,mo_sb_memory_class.f90
+q_soil_biogeochemistry,emission_noy,2D,surface,diagnostic,yes,BASIC,micro-mol m-2 s-1,land to atmosphere flux of NOy,mo_sb_memory_class.f90
+q_soil_biogeochemistry,emission_n2o,2D,surface,diagnostic,yes,BASIC,micro-mol m-2 s-1,land to atmosphere flux of N2O,mo_sb_memory_class.f90
+q_soil_biogeochemistry,emission_n2,2D,surface,diagnostic,yes,BASIC,micro-mol m-2 s-1,land to atmosphere flux of N2,mo_sb_memory_class.f90
+q_soil_biogeochemistry,emission_noy_n15,2D,surface,diagnostic,yes,FULL,micro-mol m-2 s-1,land to atmosphere flux of 15NOy,mo_sb_memory_class.f90
+q_soil_biogeochemistry,emission_n2o_n15,2D,surface,diagnostic,yes,FULL,micro-mol m-2 s-1,land to atmosphere flux of 15N2O,mo_sb_memory_class.f90
+q_soil_biogeochemistry,emission_n2_n15,2D,surface,diagnostic,yes,FULL,micro-mol m-2 s-1,land to atmosphere flux of 15N2,mo_sb_memory_class.f90
+q_soil_biogeochemistry,qmax_org,3D,vgrid_soil_w,prognostic,yes,output_level_local,kg C kg-1 mineral soil,sorption capacity of dom of mineral soil,mo_sb_memory_class.f90
+q_soil_biogeochemistry,qmax_po4,3D,vgrid_soil_w,prognostic,no,FULL,mol P m-3 soil,sorption capacity of po4 of mineral soil,mo_sb_memory_class.f90
+q_soil_biogeochemistry,km_adsorpt_po4_sl,3D,vgrid_soil_w,prognostic,no,FULL,mol P m-3 soil,half saturation of po4 sorption isotherm,mo_sb_memory_class.f90
+q_soil_biogeochemistry,qmax_nh4,3D,vgrid_soil_w,prognostic,no,FULL,mol N m-3 soil,sorption capacity of nh4 of mineral soil,mo_sb_memory_class.f90
+q_soil_biogeochemistry,km_adsorpt_nh4_sl,3D,vgrid_soil_w,prognostic,no,FULL,mol N m-3 soil,half saturation of nh4 sorption isotherm,mo_sb_memory_class.f90
+q_soil_biogeochemistry,qmax_fast_po4,3D,vgrid_soil_w,prognostic,no,FULL,mol P m-3 soil,sorption capacity of po4 of the clay(Fe/Al) and SOM pool,mo_sb_memory_class.f90
+q_soil_biogeochemistry,qmax_slow_po4,3D,vgrid_soil_w,prognostic,no,FULL,mol P m-3 soil,sorption capacity of po4 of the silt/sand pool,mo_sb_memory_class.f90
+q_soil_biogeochemistry,km_fast_po4,3D,vgrid_soil_w,prognostic,no,FULL,mol P m-3 soil,half-saturation concentration of po4 for the clay(Fe/Al) and SOM pool,mo_sb_memory_class.f90
+q_soil_biogeochemistry,km_slow_po4,3D,vgrid_soil_w,prognostic,no,FULL,mol P m-3 soil,half-saturation concentration of po4 for the silt/sand pool,mo_sb_memory_class.f90
+q_soil_biogeochemistry,k_bioturb,3D,vgrid_soil_w,prognostic,no,FULL,m2 s-1,diffusion rate resulting from bioturbation,mo_sb_memory_class.f90
+q_soil_biogeochemistry,bulk_dens_corr_sl,3D,vgrid_soil_w,prognostic,yes,output_level_local,kg m-3,organic fraction corrected bulk-density of the soil,mo_sb_memory_class.f90
+q_soil_biogeochemistry,bulk_soil_carbon_sl,3D,vgrid_soil_w,prognostic,yes,output_level_local,mol m-3,bulk soil density of non-litter carbon,mo_sb_memory_class.f90
+q_soil_biogeochemistry,soil_litter_carbon_sl,3D,vgrid_soil_w,prognostic,no,NONE,mol m-3,soil density of litter carbon,mo_sb_memory_class.f90
+q_soil_biogeochemistry,particle_fluxrate,3D,vgrid_soil_w,diagnostic,no,output_level_local,m s-1,burial rate due to organic matter fall and decay,mo_sb_memory_class.f90
+q_soil_biogeochemistry,anaerobic_volume_fraction_sl,3D,vgrid_soil_w,prognostic,no,FULL,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,microbial_cue_eff,3D,vgrid_soil_w,prognostic,no,FULL,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,microbial_cue_eff_tmic_mavg,3D,vgrid_soil_w,prognostic,yes,output_level_local,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,microbial_nue_eff,3D,vgrid_soil_w,prognostic,no,FULL,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,microbial_nue_eff_tmic_mavg,3D,vgrid_soil_w,prognostic,yes,output_level_local,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,microbial_pue_eff,3D,vgrid_soil_w,prognostic,no,FULL,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,microbial_pue_eff_tmic_mavg,3D,vgrid_soil_w,prognostic,yes,output_level_local,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,fact_n_status_mic_c_growth,3D,vgrid_soil_w,prognostic,yes,output_level_local,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,fact_p_status_mic_c_growth,3D,vgrid_soil_w,prognostic,yes,output_level_local,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,enzyme_frac_AP,3D,vgrid_soil_w,prognostic,yes,output_level_local,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,dom_cn,3D,vgrid_soil_w,prognostic,no,FULL,mol mol-1,C:N ratio of DOM pool,mo_sb_memory_class.f90
+q_soil_biogeochemistry,dom_cp,3D,vgrid_soil_w,prognostic,no,FULL,mol mol-1,C:P ratio of DOM pool,mo_sb_memory_class.f90
+q_soil_biogeochemistry,dom_cn_mavg,3D,vgrid_soil_w,prognostic,yes,output_level_local,mol mol-1,time-averaged C:N ratio of DOM pool,mo_sb_memory_class.f90
+q_soil_biogeochemistry,dom_cp_mavg,3D,vgrid_soil_w,prognostic,yes,output_level_local,mol mol-1,time-averaged C:P ratio of DOM pool,mo_sb_memory_class.f90
+q_soil_biogeochemistry,residue_som_c_form_mavg_sl,3D,vgrid_soil_w,prognostic,no,FULL,micro-mol m-3 s-1,time-averaged residual som C formation rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,residue_som_c14_form_mavg_sl,3D,vgrid_soil_w,prognostic,no,FULL,micro-mol m-3 s-1,time-averaged residual som C14 formation rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,residue_assoc_som_c_form_mavg_sl,3D,vgrid_soil_w,prognostic,no,FULL,micro-mol m-3 s-1,time-averaged assoc residual som C formation rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,residue_assoc_som_c14_form_mavg_sl,3D,vgrid_soil_w,prognostic,no,FULL,micro-mol m-3 s-1,time-averaged assoc resid som C14 formation rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,assoc_dom_c_form_mavg_sl,3D,vgrid_soil_w,prognostic,no,FULL,micro-mol m-3 s-1,time-averaged associated dom C formation rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,assoc_dom_c14_form_mavg_sl,3D,vgrid_soil_w,prognostic,no,FULL,micro-mol m-3 s-1,time-averaged associated dom C14 formation rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,residue_som_c_loss_mavg_sl,3D,vgrid_soil_w,prognostic,no,FULL,micro-mol m-3 s-1,time-averaged residual som C loss rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,residue_assoc_som_c_loss_mavg_sl,3D,vgrid_soil_w,prognostic,no,FULL,micro-mol m-3 s-1,time-averaged associated residual som C loss rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,assoc_dom_c_loss_mavg_sl,3D,vgrid_soil_w,prognostic,no,FULL,micro-mol m-3 s-1,time-averaged associated dom C loss rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,ph_sl,3D,vgrid_soil_w,prognostic,no,FULL,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,vmax_weath_mineral_sl,3D,vgrid_soil_w,prognostic,no,FULL,mol P m-3 s-1,weathering coefficient of mineral soil,mo_sb_memory_class.f90
+q_soil_biogeochemistry,Qmax_AlFe_cor,3D,vgrid_soil_w,prognostic,no,FULL,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,enzyme_frac_poly,3D,vgrid_soil_w,prognostic,yes,output_level_local,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,enzyme_frac_residue,3D,vgrid_soil_w,prognostic,yes,output_level_local,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,enzyme_frac_poly_c,3D,vgrid_soil_w,prognostic,no,FULL,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,enzyme_frac_poly_n,3D,vgrid_soil_w,prognostic,no,FULL,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,enzyme_frac_poly_p,3D,vgrid_soil_w,prognostic,no,FULL,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,enzyme_frac_poly_c_mavg,3D,vgrid_soil_w,prognostic,no,FULL,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,enzyme_frac_poly_n_mavg,3D,vgrid_soil_w,prognostic,no,FULL,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,enzyme_frac_poly_p_mavg,3D,vgrid_soil_w,prognostic,no,FULL,,,mo_sb_memory_class.f90
+q_soil_biogeochemistry,volume_min_sl,3D,vgrid_soil_w,prognostic,no,FULL,,soil mineral volumetric proportion,mo_sb_memory_class.f90
+q_soil_biogeochemistry,qmax_org_min_sl,3D,vgrid_soil_w,prognostic,no,FULL,mol C kg-1 mineral soil,maximum OM sorption capacity of mineral soil,mo_sb_memory_class.f90
+q_soil_biogeochemistry,qmax_po4_min_sl,3D,vgrid_soil_w,prognostic,no,FULL,mol P kg-1 mineral soil,maximum po4 sorption capacity of mineral soil,mo_sb_memory_class.f90
+q_soil_biogeochemistry,qmax_nh4_min_sl,3D,vgrid_soil_w,prognostic,no,FULL,mol N kg-1 mineral soil,maximum po4 sorption capacity of mineral soil,mo_sb_memory_class.f90
+q_soil_biogeochemistry,qmax_po4_om_sl,3D,vgrid_soil_w,prognostic,no,FULL,mol P kg-1 SOM,maximum po4 sorption capacity of SOM,mo_sb_memory_class.f90
+q_soil_biogeochemistry,fertiliser_nh4,2D,surface,diagnostic,yes,BASIC,micro mol m-2 s-1,NH4 fertiliser application rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,fertiliser_nh4_n15,2D,surface,diagnostic,yes,NONE,micro mol m-2 s-1,15NH4 fertiliser application rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,fertiliser_no3,2D,surface,diagnostic,yes,BASIC,micro mol m-2 s-1,NO3 fertiliser application rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,fertiliser_no3_n15,2D,surface,diagnostic,yes,NONE,micro mol m-2 s-1,15NO3 fertiliser application rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,fertiliser_po4,2D,surface,diagnostic,yes,FULL,micro mol m-2 s-1,PO4 fertiliser application rate,mo_sb_memory_class.f90
+q_soil_biogeochemistry,total_flux_carbon,2D,surface,diagnostic,no,FULL,mol C m-2 s-1,carbon mass balance checks in soil_biogeochemistry model,mo_sb_memory_class.f90
+q_soil_biogeochemistry,total_flux_nitrogen,2D,surface,diagnostic,no,FULL,mol N m-2 s-1,nitrogen mass balance checks in soil_biogeochemistry model,mo_sb_memory_class.f90
+q_soil_biogeochemistry,total_flux_phosphorus,2D,surface,diagnostic,no,FULL,mol P m-2 s-1,phosphorus mass balance checks in soil_biogeochemistry model,mo_sb_memory_class.f90
+q_soil_biogeochemistry,total_flux_carbon13,2D,surface,diagnostic,no,FULL,mol C13 m-2 s-1,carbon13 mass balance checks in soil_biogeochemistry model,mo_sb_memory_class.f90
+q_soil_biogeochemistry,total_flux_carbon14,2D,surface,diagnostic,no,FULL,mol C14 m-2 s-1,carbon14 mass balance checks in soil_biogeochemistry model,mo_sb_memory_class.f90
+q_soil_biogeochemistry,total_flux_nitrogen15,2D,surface,diagnostic,no,FULL,mol N15 m-2 s-1,nitrogen15 mass balance checks in soil_biogeochemistry model,mo_sb_memory_class.f90
+q_soil_biogeochemistry,total_soil_n,3D,vgrid_soil_w,diagnostic,yes,BASIC,mol m-3,sb_pool_total_bg_soil_n + nh4_solute + nh4_assoc + no3_solute,mo_sb_memory_class.f90
+q_soil_biogeochemistry,total_soil_inorg_n,3D,vgrid_soil_w,diagnostic,yes,BASIC,mol m-3,nh4_solute + nh4_assoc + no3_solute,mo_sb_memory_class.f90
+q_soil_biogeochemistry,ecosystem_total_n_loss,2D,surface,diagnostic,yes,BASIC,micro-mol m-2 s-1,emissions + leaching + lateral loss,mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_bgcm_pool_microbial_c,3D,vgrid_soil_w,diagnostic,yes,output_level_local,mol m-3,microbial C,mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_bgcm_pool_microbial_n,3D,vgrid_soil_w,diagnostic,yes,output_level_local,mol m-3,microbial N,mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_bgcm_pool_microbial_p,3D,vgrid_soil_w,diagnostic,yes,output_level_local,mol m-3,microbial P,mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_bgcm_pool_mineral_assoc_c,3D,vgrid_soil_w,diagnostic,yes,output_level_local,mol m-3,mineral associated C in soils,mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_bgcm_pool_mineral_assoc_n,3D,vgrid_soil_w,diagnostic,yes,output_level_local,mol m-3,mineral associated N in soils,mo_sb_memory_class.f90
+q_soil_biogeochemistry,sb_bgcm_pool_mineral_assoc_p,3D,vgrid_soil_w,diagnostic,yes,output_level_local,mol m-3,mineral associated P in soils,mo_sb_memory_class.f90
+q_soil_biogeochemistry,total_som_c_gsum,2D,surface,diagnostic,yes,,Pg,Global sum of all soil C pools,mo_sb_memory_class.f90
+q_soil_biogeochemistry,total_inorg_n_gsum,2D,surface,diagnostic,yes,,Tg,Global sum of plant acc. soil inorganic N pools,mo_sb_memory_class.f90
+q_soil_biogeochemistry,rh_gsum,2D,surface,diagnostic,yes,,Pg yr-1,Global sum of soil respiration,mo_sb_memory_class.f90
+q_soil_biogeochemistry,nbp_gsum,2D,surface,diagnostic,yes,,Pg yr-1,Global sum of net biosphere production,mo_sb_memory_class.f90
+q_soil_biogeochemistry,fnloss_gsum,2D,surface,diagnostic,yes,,Pg yr-1,Global sum of nitrogen loss,mo_sb_memory_class.f90
+q_soil_biogeochemistry,fn2o_gsum,2D,surface,diagnostic,yes,,Tg yr-1,Global sum of n2o emission,mo_sb_memory_class.f90
+q_soil_phys,soil_depth,2D,surface,prognostic,yes,BASIC,m,"Soil depth derived from textures (bedrock), for hydrology",mo_spq_memory_class.f90
+q_soil_phys,temp_srf_eff_4,2D,surface,prognostic,yes,BASIC,K**4.0,effective surface temperature ** 4.0,mo_spq_memory_class.f90
+q_soil_phys,zril_old,2D,surface,prognostic,no,FULL,,previous timesteps Reynolds number,mo_spq_memory_class.f90
+q_soil_phys,elevation,2D,surface,diagnostic,no,FULL,m,Mean orography,mo_spq_memory_class.f90
+q_soil_phys,s_star,2D,surface,prognostic,yes,BASIC,m2 s-2 ?,surface dry static energy,mo_spq_memory_class.f90
+q_soil_phys,evapotranspiration,2D,surface,prognostic,yes,BASIC,kg m-2 s-1 ?,evapotranspiration,mo_spq_memory_class.f90
+q_soil_phys,interception,2D,surface,prognostic,yes,BASIC,kg m-2 s-1,surface interception evaporation,mo_spq_memory_class.f90
+q_soil_phys,evapopot,2D,surface,prognostic,yes,FULL,kg m-2 s-1,potential evaporation,mo_spq_memory_class.f90
+q_soil_phys,evaporation,2D,surface,prognostic,yes,BASIC,kg m-2 s-1,surface evaporation,mo_spq_memory_class.f90
+q_soil_phys,evaporation_snow,2D,surface,prognostic,yes,BASIC,kg m-2 s-1,snow surface evaporation,mo_spq_memory_class.f90
+q_soil_phys,srf_runoff,2D,surface,prognostic,yes,BASIC,kg m-2 s-1,surface runoff,mo_spq_memory_class.f90
+q_soil_phys,drainage,2D,surface,prognostic,yes,BASIC,kg m-2 s-1,drainage,mo_spq_memory_class.f90
+q_soil_phys,gw_runoff,2D,surface,prognostic,yes,BASIC,kg m-2 s-1,sum of lateral runoff across all soil layers,mo_spq_memory_class.f90
+q_soil_phys,drainage_fraction,2D,surface,prognostic,no,FULL,1 s-1,water mass fraction lost from the soil column by drainage,mo_spq_memory_class.f90
+q_soil_phys,gw_runoff_sl,3D,vgrid_soil_w,prognostic,yes,BASIC,kg m-2 s-1,lateral groundwater runoff per layer,mo_spq_memory_class.f90
+q_soil_phys,drainage_sl,3D,vgrid_soil_w,prognostic,yes,FULL,kg m-2 s-1,drainage of soil layers,mo_spq_memory_class.f90
+q_soil_phys,saxtonA,3D,vgrid_soil_w,prognostic,no,FULL,,,mo_spq_memory_class.f90
+q_soil_phys,saxtonB,3D,vgrid_soil_w,prognostic,no,FULL,,,mo_spq_memory_class.f90
+q_soil_phys,saxtonC,3D,vgrid_soil_w,prognostic,no,FULL,,,mo_spq_memory_class.f90
+q_soil_phys,kdiff_sat_sl,3D,vgrid_soil_w,prognostic,no,FULL,m s-1,saturated hydraulic conductivity,mo_spq_memory_class.f90
+q_soil_phys,sensible_heat_flx,2D,surface,prognostic,yes,BASIC,W m-2,sensible heat flux,mo_spq_memory_class.f90
+q_soil_phys,latent_heat_flx,2D,surface,prognostic,yes,BASIC,W m-2,latent heat flux,mo_spq_memory_class.f90
+q_soil_phys,ground_heat_flx,2D,surface,prognostic,yes,BASIC,W m-2,ground heat flux,mo_spq_memory_class.f90
+q_soil_phys,ground_heat_flx_old,2D,surface,prognostic,no,FULL,W m-2,ground heat flux of previous timestep,mo_spq_memory_class.f90
+q_soil_phys,w_soil_freeze_flux,3D,vgrid_soil_w,prognostic,no,FULL,m,Water flux from liquid to ice from freezing,mo_spq_memory_class.f90
+q_soil_phys,w_soil_melt_flux,3D,vgrid_soil_w,prognostic,no,FULL,m,Water transfer from ice to liquid from melting,mo_spq_memory_class.f90
+q_soil_phys,heat_capa_sl,3D,vgrid_soil_w,prognostic,yes,BASIC,J kg-1,soil heat capacity,mo_spq_memory_class.f90
+q_soil_phys,therm_cond_sl,3D,vgrid_soil_w,prognostic,no,FULL,W m-2 K-1,soil thermal conductivity,mo_spq_memory_class.f90
+q_soil_phys,snow_height,2D,surface,prognostic,yes,FULL,m,snow depth,mo_spq_memory_class.f90
+q_soil_phys,snow_soil_heat_flux,2D,surface,prognostic,no,FULL,W m-2,snow soil heat flux,mo_spq_memory_class.f90
+q_soil_phys,snow_srf_heat_flux,2D,surface,prognostic,no,FULL,W m-2,snow srf heat flux,mo_spq_memory_class.f90
+q_soil_phys,snow_melt_to_soil,2D,surface,prognostic,no,FULL,kg m-2 s-1,snow melt water to soil,mo_spq_memory_class.f90
+q_soil_phys,snow_present_snl,3D,vgrid_snow_spq,prognostic,no,FULL,,,mo_spq_memory_class.f90
+q_soil_phys,t_snow_snl,3D,vgrid_snow_spq,prognostic,no,FULL,m,temperature snow layer,mo_spq_memory_class.f90
+q_soil_phys,w_snow_snl,3D,vgrid_snow_spq,prognostic,no,FULL,m,water content snow layer,mo_spq_memory_class.f90
+q_soil_phys,snow_lay_thickness_snl,3D,vgrid_snow_spq,prognostic,no,FULL,m,snow layer thickness,mo_spq_memory_class.f90
+q_soil_phys,w_snow_max_snl,3D,vgrid_snow_spq,prognostic,no,FULL,m,maximum water content snow layer,mo_spq_memory_class.f90
+q_soil_phys,w_liquid_snl,3D,vgrid_snow_spq,prognostic,no,FULL,m,w_liquid_snl,mo_spq_memory_class.f90
+q_sylviculture,fract_forest_harvest_y_read,2D,surface,prognostic,yes,NONE,,,mo_q_syl_memory_class.f90
+q_sylviculture,fract_wood_to_slash,2D,surface,prognostic,yes,NONE,,,mo_q_syl_memory_class.f90
+q_sylviculture,fract_forest_harvest,2D,surface,prognostic,yes,BASIC,,,mo_q_syl_memory_class.f90
+q_vegetation,veg_pool_total_c,2D,surface,diagnostic,yes,BASIC,mol m-2,"total C, sum of all veg_pool components",mo_veg_memory_class.f90
+q_vegetation,veg_pool_total_n,2D,surface,diagnostic,yes,BASIC,mol m-2,"total N, sum of all veg_pool components",mo_veg_memory_class.f90
+q_vegetation,veg_pool_total_p,2D,surface,diagnostic,yes,MEDIUM,mol m-2,"total P, sum of all veg_pool components",mo_veg_memory_class.f90
+q_vegetation,veg_pool_total_c13,2D,surface,diagnostic,yes,MEDIUM,mol m-2,"total C13, sum of all veg_pool components",mo_veg_memory_class.f90
+q_vegetation,veg_pool_total_c14,2D,surface,diagnostic,yes,MEDIUM,mol m-2,"total C14, sum of all veg_pool components",mo_veg_memory_class.f90
+q_vegetation,veg_pool_total_n15,2D,surface,diagnostic,yes,FULL,mol m-2,"total N15, sum of all veg_pool components",mo_veg_memory_class.f90
+q_vegetation,veg_growth_total_c,2D,surface,diagnostic,yes,FULL,mol m-2 timestep-1,"total C, sum of all veg_growth components",mo_veg_memory_class.f90
+q_vegetation,veg_growth_total_n,2D,surface,diagnostic,yes,FULL,mol m-2 timestep-1,"total N, sum of all veg_growth components",mo_veg_memory_class.f90
+q_vegetation,veg_growth_total_p,2D,surface,diagnostic,yes,FULL,mol m-2 timestep-1,"total P, sum of all veg_growth components",mo_veg_memory_class.f90
+q_vegetation,veg_growth_total_c13,2D,surface,diagnostic,yes,FULL,mol m-2 timestep-1,"total C13, sum of all veg_growth components",mo_veg_memory_class.f90
+q_vegetation,veg_growth_total_c14,2D,surface,diagnostic,yes,FULL,mol m-2 timestep-1,"total C14, sum of all veg_growth components",mo_veg_memory_class.f90
+q_vegetation,veg_growth_total_n15,2D,surface,diagnostic,yes,FULL,mol m-2 timestep-1,"total N15, sum of all veg_growth components",mo_veg_memory_class.f90
+q_vegetation,veg_litterfall_total_c,2D,surface,diagnostic,yes,BASIC,mol m-2 timestep-1,"total C, sum of all veg_litterfall components",mo_veg_memory_class.f90
+q_vegetation,veg_litterfall_total_n,2D,surface,diagnostic,yes,BASIC,mol m-2 timestep-1,"total N, sum of all veg_litterfall components",mo_veg_memory_class.f90
+q_vegetation,veg_litterfall_total_p,2D,surface,diagnostic,yes,FULL,mol m-2 timestep-1,"total P, sum of all veg_litterfall components",mo_veg_memory_class.f90
+q_vegetation,veg_litterfall_total_c13,2D,surface,diagnostic,yes,FULL,mol m-2 timestep-1,"total C13, sum of all veg_litterfall components",mo_veg_memory_class.f90
+q_vegetation,veg_litterfall_total_c14,2D,surface,diagnostic,yes,FULL,mol m-2 timestep-1,"total C14, sum of all veg_litterfall components",mo_veg_memory_class.f90
+q_vegetation,veg_litterfall_total_n15,2D,surface,diagnostic,yes,FULL,mol m-2 timestep-1,"total N15, sum of all veg_litterfall components",mo_veg_memory_class.f90
+q_vegetation,veg_pool_leaf_c,2D,surface,diagnostic,yes,BASIC,mol m-2,vegetation pool leaf carbon,mo_veg_memory_class.f90
+q_vegetation,veg_pool_leaf_n,2D,surface,diagnostic,yes,BASIC,mol m-2,vegetation pool leaf nitrogen,mo_veg_memory_class.f90
+q_vegetation,veg_pool_leaf_p,2D,surface,diagnostic,yes,FULL,mol m-2,vegetation pool leaf phosphorus,mo_veg_memory_class.f90
+q_vegetation,veg_pool_wood_c,2D,surface,diagnostic,yes,BASIC,mol m-2,vegetation pool sapwood + heartwood carbon,mo_veg_memory_class.f90
+q_vegetation,veg_pool_wood_n,2D,surface,diagnostic,yes,BASIC,mol m-2,vegetation pool sapwood + heartwood nitrogen,mo_veg_memory_class.f90
+q_vegetation,veg_pool_wood_p,2D,surface,diagnostic,yes,FULL,mol m-2,vegetation pool sapwood + heartwood phosphorus,mo_veg_memory_class.f90
+q_vegetation,veg_pool_fine_root_c,2D,surface,diagnostic,yes,BASIC,mol m-2,vegetation pool fine root carbon,mo_veg_memory_class.f90
+q_vegetation,veg_pool_fine_root_n,2D,surface,diagnostic,yes,BASIC,mol m-2,vegetation pool fine root nitrogen,mo_veg_memory_class.f90
+q_vegetation,veg_pool_fine_root_p,2D,surface,diagnostic,yes,FULL,mol m-2,vegetation pool fine root phosphorus,mo_veg_memory_class.f90
+q_vegetation,veg_products_total_c,2D,surface,diagnostic,yes,BASIC,mol m-2,total c in product pools,mo_veg_memory_class.f90
+q_vegetation,veg_products_total_n,2D,surface,diagnostic,yes,BASIC,mol m-2,total N in product pools,mo_veg_memory_class.f90
+q_vegetation,veg_products_total_p,2D,surface,diagnostic,yes,FULL,mol m-2,total P in product pools,mo_veg_memory_class.f90
+q_vegetation,veg_products_total_c13,2D,surface,diagnostic,yes,MEDIUM,mol m-2,total C13 in product pools,mo_veg_memory_class.f90
+q_vegetation,veg_products_total_c14,2D,surface,diagnostic,yes,MEDIUM,mol m-2,total C14 in product pools,mo_veg_memory_class.f90
+q_vegetation,veg_products_total_n15,2D,surface,diagnostic,yes,FULL,mol m-2,total N15 in product pools,mo_veg_memory_class.f90
+q_vegetation,veg_products_decay_c,2D,surface,diagnostic,yes,BASIC,micro-mol m-2 s-1,C lost to atmosphere due to product decay,mo_veg_memory_class.f90
+q_vegetation,veg_products_decay_n,2D,surface,diagnostic,yes,BASIC,micro-mol m-2 s-1,N lost from land due to product decay,mo_veg_memory_class.f90
+q_vegetation,veg_products_decay_p,2D,surface,diagnostic,yes,FULL,micro-mol m-2 s-1,P lost from land due to product decay,mo_veg_memory_class.f90
+q_vegetation,veg_products_decay_c13,2D,surface,diagnostic,yes,MEDIUM,micro-mol m-2 s-1,C13 lost to atmosphere due to product decay,mo_veg_memory_class.f90
+q_vegetation,veg_products_decay_c14,2D,surface,diagnostic,yes,MEDIUM,micro-mol m-2 s-1,C14 lost to atmosphere due to product decay,mo_veg_memory_class.f90
+q_vegetation,veg_products_decay_n15,2D,surface,diagnostic,yes,FULL,micro-mol m-2 s-1,N15 lost from land due to product decay,mo_veg_memory_class.f90
+q_vegetation,height,2D,surface,prognostic,no,FULL,m,plant height,mo_veg_memory_class.f90
+q_vegetation,diameter,2D,surface,prognostic,no,FULL,m,plant diameter,mo_veg_memory_class.f90
+q_vegetation,dens_ind,2D,surface,prognostic,no,FULL,# m-2,density of individuals,mo_veg_memory_class.f90
+q_vegetation,lai,2D,surface,diagnostic,yes,BASIC,m2 m-2,actual leaf area index,mo_veg_memory_class.f90
+q_vegetation,sai,2D,surface,diagnostic,yes,MEDIUM,m2 m-2,actual stem area index,mo_veg_memory_class.f90
+q_vegetation,target_cn_leaf,2D,surface,prognostic,no,NONE,,target foliar C:N ratio,mo_veg_memory_class.f90
+q_vegetation,target_np_leaf,2D,surface,prognostic,no,NONE,,target foliar N:P ratio ,mo_veg_memory_class.f90
+q_vegetation,mean_leaf_age,2D,surface,prognostic,no,FULL,,average foliage age in days ,mo_veg_memory_class.f90
+q_vegetation,fract_fpc,2D,surface,diagnostic,yes,BASIC,,foliage projected cover fraction,mo_veg_memory_class.f90
+q_vegetation,rough_veg_star ,2D,surface,diagnostic,yes,FULL,,transformation of vegetation surface roughness length of the tile,mo_veg_memory_class.f90
+q_vegetation,f_n_demand,2D,surface,diagnostic,no,NONE,,relative plant demand for N,mo_veg_memory_class.f90
+q_vegetation,f_p_demand,2D,surface,diagnostic,no,NONE,,relative plant demand for P,mo_veg_memory_class.f90
+q_vegetation,beta_sinklim_ps,2D,surface,diagnostic,yes,FULL,,scaling factor to account for a direct sink limitation contraint on photosynthesis,mo_veg_memory_class.f90
+q_vegetation,dphi,2D,surface,diagnostic,no,NONE,MPa,plant-soil water potential gradient,mo_veg_memory_class.f90
+q_vegetation,growth_req_n,2D,surface,diagnostic,no,NONE,,moles N required for a unit of C growth under current allocation fractions ,mo_veg_memory_class.f90
+q_vegetation,growth_req_p,2D,surface,diagnostic,no,NONE,,moles P required for a unit of N growth under current allocation fractions ,mo_veg_memory_class.f90
+q_vegetation,leaf_cn_direction,2D,surface,diagnostic,no,NONE,,indicates direction of change in leaf CN ratio to maximise NPP,mo_veg_memory_class.f90
+q_vegetation,target_lai,2D,surface,prognostic,yes,NONE,m2 m-2,LAI implied from sap wood area,mo_veg_memory_class.f90
+q_vegetation,kstar_labile,2D,surface,diagnostic,no,NONE,,"labile pool turnover rate, only temperature and moisture constraints, no stoichiometry",mo_veg_memory_class.f90
+q_vegetation,root_limitation_state,2D,surface,prognostic,no,NONE,,root_limitation_state,mo_veg_memory_class.f90
+q_vegetation,falloc_fruit_crop,2D,surface,prognostic,yes,NONE,0-1,fraction of allocation in crops for grain production,mo_veg_memory_class.f90
+q_vegetation,root_fraction_sl,3D,vgrid_soil_w,prognostic,no,FULL,,fractions of root per layer,mo_veg_memory_class.f90
+q_vegetation,delta_root_fraction_sl,3D,vgrid_soil_w,diagnostic,no,NONE,,change in fractions of root per layer,mo_veg_memory_class.f90
+q_vegetation,lai_cl,3D,vgrid_canopy_q_assimi,diagnostic,yes,NONE,m2 m-2,leaf area index per canopy layer,mo_veg_memory_class.f90
+q_vegetation,cumm_lai_cl,3D,vgrid_canopy_q_assimi,diagnostic,no,NONE,m2 m-2,cummulative leaf area above the mid-point of the canopy layer,mo_veg_memory_class.f90
+q_vegetation,target_cn_fine_root,2D,surface,prognostic,no,NONE,mol/mol,target C:N ratio for fine roots,mo_veg_memory_class.f90
+q_vegetation,target_cn_coarse_root,2D,surface,diagnostic,no,NONE,mol/mol,target C:N ratio for coarse roots,mo_veg_memory_class.f90
+q_vegetation,target_cn_sap_wood,2D,surface,diagnostic,no,NONE,mol/mol,target C:N ratio for sap wood ,mo_veg_memory_class.f90
+q_vegetation,target_cn_fruit,2D,surface,diagnostic,no,NONE,mol/mol,target C:N ratio for fruit pool,mo_veg_memory_class.f90
+q_vegetation,target_np_fine_root,2D,surface,prognostic,no,NONE,mol/mol,target N:P ratio for fine roots,mo_veg_memory_class.f90
+q_vegetation,target_np_coarse_root,2D,surface,diagnostic,no,NONE,mol/mol,target N:P ratio for coarse roots,mo_veg_memory_class.f90
+q_vegetation,target_np_sap_wood,2D,surface,diagnostic,no,NONE,mol/mol,target N:P ratio for sap wood pool,mo_veg_memory_class.f90
+q_vegetation,target_np_fruit,2D,surface,diagnostic,no,NONE,mol/mol,target N:P ratio for fruit pool,mo_veg_memory_class.f90
+q_vegetation,leaf_nitrogen_cl,3D,vgrid_canopy_q_assimi,diagnostic,no,NONE,mmol m-2 LAI,N in canopy layer,mo_veg_memory_class.f90
+q_vegetation,fn_chl_cl,3D,vgrid_canopy_q_assimi,conditional,no,NONE,,,mo_veg_memory_class.f90
+q_vegetation,fn_et_cl,3D,vgrid_canopy_q_assimi,diagnostic,no,NONE,,,mo_veg_memory_class.f90
+q_vegetation,fn_rub_cl,3D,vgrid_canopy_q_assimi,diagnostic,no,NONE,,,mo_veg_memory_class.f90
+q_vegetation,fn_pepc_cl,3D,vgrid_canopy_q_assimi,diagnostic,no,NONE,,,mo_veg_memory_class.f90
+q_vegetation,fn_oth_cl,3D,vgrid_canopy_q_assimi,diagnostic,no,FULL,,,mo_veg_memory_class.f90
+q_vegetation,fleaf_sunlit_cl,3D,vgrid_canopy_q_assimi,diagnostic,no,NONE,,,mo_veg_memory_class.f90
+q_vegetation,maint_respiration_pot,2D,surface,diagnostic,no,NONE,micro-mol CO2 m-2 s-1,potential maintenance respiration,mo_veg_memory_class.f90
+q_vegetation,maint_respiration,2D,surface,diagnostic,yes,BASIC,micro-mol CO2 m-2 s-1,maintenance respiration,mo_veg_memory_class.f90
+q_vegetation,maint_respiration_c13,2D,surface,diagnostic,yes,FULL,micro-mol 13CO2 m-2 s-1,maintenance respiration,mo_veg_memory_class.f90
+q_vegetation,maint_respiration_c14,2D,surface,diagnostic,yes,FULL,micro-mol 14CO2 m-2 s-1,maintenance respiration,mo_veg_memory_class.f90
+q_vegetation,growth_respiration,2D,surface,diagnostic,yes,BASIC,micro-mol CO2 m-2 s-1,growth respiration,mo_veg_memory_class.f90
+q_vegetation,growth_respiration_c13,2D,surface,diagnostic,yes,FULL,micro-mol 13CO2 m-2 s-1,growth respiration,mo_veg_memory_class.f90
+q_vegetation,growth_respiration_c14,2D,surface,diagnostic,yes,FULL,micro-mol 14CO2 m-2 s-1,growth respiration,mo_veg_memory_class.f90
+q_vegetation,n_transform_respiration,2D,surface,diagnostic,yes,FULL,micro-mol CO2 m-2 s-1,respiration associated with N transformation,mo_veg_memory_class.f90
+q_vegetation,n_fixation_respiration,2D,surface,diagnostic,yes,FULL,micro-mol CO2 m-2 s-1,respiration associated with N fixation,mo_veg_memory_class.f90
+q_vegetation,n_processing_respiration,2D,surface,diagnostic,yes,BASIC,micro-mol CO2 m-2 s-1,respiration associated with N processing,mo_veg_memory_class.f90
+q_vegetation,n_processing_respiration_c13,2D,surface,diagnostic,yes,FULL,micro-mol 13CO2 m-2 s-1,respiration associated with N processing,mo_veg_memory_class.f90
+q_vegetation,n_processing_respiration_c14,2D,surface,diagnostic,yes,FULL,micro-mol 14CO2 m-2 s-1,respiration associated with N processing,mo_veg_memory_class.f90
+q_vegetation,npp,2D,surface,diagnostic,yes,BASIC,micro-mol CO2 m-2 s-1,net primary production,mo_veg_memory_class.f90
+q_vegetation,npp_c13,2D,surface,diagnostic,yes,MEDIUM,micro-mol 13CO2 m-2 s-1,net primary production,mo_veg_memory_class.f90
+q_vegetation,npp_c14,2D,surface,diagnostic,yes,MEDIUM,micro-mol 14CO2 m-2 s-1,net primary production,mo_veg_memory_class.f90
+q_vegetation,uptake_nh4,2D,surface,diagnostic,yes,BASIC,micro-mol N m-2 s-1,NH4 uptake from soil,mo_veg_memory_class.f90
+q_vegetation,uptake_nh4_n15,2D,surface,diagnostic,yes,FULL,micro-mol N m-2 s-1,15NH4 uptake from soil,mo_veg_memory_class.f90
+q_vegetation,uptake_no3,2D,surface,diagnostic,yes,BASIC,micro-mol N m-2 s-1,NO3 uptake from soil,mo_veg_memory_class.f90
+q_vegetation,uptake_no3_n15,2D,surface,diagnostic,yes,FULL,micro-mol N m-2 s-1,15NO3 uptake from soil,mo_veg_memory_class.f90
+q_vegetation,uptake_po4,2D,surface,diagnostic,yes,FULL,micro-mol P m-2 s-1,PO4 uptake from soil,mo_veg_memory_class.f90
+q_vegetation,n_fixation,2D,surface,diagnostic,yes,MEDIUM,micro-mol N m-2 s-1,symbiontic N fixation,mo_veg_memory_class.f90
+q_vegetation,n_fixation_n15,2D,surface,diagnostic,yes,FULL,micro-mol 15N m-2 s-1,symbiontic N fixation,mo_veg_memory_class.f90
+q_vegetation,recycling_leaf_n,2D,surface,diagnostic,yes,FULL,mol m-2 timestep-1,net flux of N from leaf to labile (senescence and maintenance),mo_veg_memory_class.f90
+q_vegetation,recycling_leaf_n15,2D,surface,diagnostic,no,FULL,mol m-2 timestep-1,"net flux of 15N from leaf to labile, senescence & maint",mo_veg_memory_class.f90
+q_vegetation,recycling_leaf_p,2D,surface,diagnostic,no,FULL,mol m-2 timestep-1,"net flux of P from leaf to labile, senescence & maint",mo_veg_memory_class.f90
+q_vegetation,recycling_fine_root_n,2D,surface,diagnostic,no,FULL,mol m-2 timestep-1,"net flux of N from fine roots to labile, senescence & maint",mo_veg_memory_class.f90
+q_vegetation,recycling_fine_root_n15,2D,surface,diagnostic,no,FULL,mol m-2 timestep-1,"net flux of 15N from fine roots to labile, senescence & maint",mo_veg_memory_class.f90
+q_vegetation,recycling_fine_root_p,2D,surface,diagnostic,no,FULL,mol m-2 timestep-1,"net flux of P from fine roots to labile, senescence & maint",mo_veg_memory_class.f90
+q_vegetation,recycling_heart_wood_n,2D,surface,diagnostic,no,FULL,mol m-2 timestep-1,"net flux of N from sapwood to labile, senescence & maint",mo_veg_memory_class.f90
+q_vegetation,recycling_heart_wood_n15,2D,surface,diagnostic,no,FULL,mol m-2 timestep-1,"net flux of 15N from sapwood to labile, senescence & maint",mo_veg_memory_class.f90
+q_vegetation,recycling_heart_wood_p,2D,surface,diagnostic,no,FULL,mol m-2 timestep-1,"net flux of P from sapwood to labile, senescence & maint",mo_veg_memory_class.f90
+q_vegetation,net_growth,2D,surface,diagnostic,no,FULL,micro-mol CO2 m-2 s-1,npp minus turnover,mo_veg_memory_class.f90
+q_vegetation,herbivory_leaf_resp,2D,surface,diagnostic,yes,BASIC,micro-mol CO2 m-2 s-1,respiration associated with herbivory on leaves,mo_veg_memory_class.f90
+q_vegetation,herbivory_leaf_resp_c13,2D,surface,diagnostic,yes,FULL,micro-mol 13CO2 m-2 s-1,respiration associated with herbivory on leaves,mo_veg_memory_class.f90
+q_vegetation,herbivory_leaf_resp_c14,2D,surface,diagnostic,yes,FULL,micro-mol 14CO2 m-2 s-1,respiration associated with herbivory on leaves,mo_veg_memory_class.f90
+q_vegetation,herbivory_fruit_resp,2D,surface,diagnostic,yes,BASIC,micro-mol CO2 m-2 s-1,respiration associated with herbivory on fruits,mo_veg_memory_class.f90
+q_vegetation,herbivory_fruit_resp_c13,2D,surface,diagnostic,yes,FULL,micro-mol 13CO2 m-2 s-1,respiration associated with herbivory on fruits,mo_veg_memory_class.f90
+q_vegetation,herbivory_fruit_resp_c14,2D,surface,diagnostic,yes,FULL,micro-mol 14CO2 m-2 s-1,respiration associated with herbivory on fruits,mo_veg_memory_class.f90
+q_vegetation,fmaint_rate_root,2D,surface,diagnostic,no,NONE,~micro-mol C mol-1 N s-1,current N-specific maintentance respiration,mo_veg_memory_class.f90
+q_vegetation,unit_npp,2D,surface,diagnostic,no,NONE,,incremental change in NPP. Needed for optimal allocation,mo_veg_memory_class.f90
+q_vegetation,unit_transpiration,2D,surface,diagnostic,no,NONE,,incremental change in transpiration. Needed for optimal allocation,mo_veg_memory_class.f90
+q_vegetation,unit_uptake_n_pot,2D,surface,diagnostic,no,NONE,,"incremental change in potential N uptake per unit root carbon, N uptake calculation ",mo_veg_memory_class.f90
+q_vegetation,unit_uptake_p_pot,2D,surface,diagnostic,no,NONE,,"incremental change in potential P uptake per unit root carbon, currently unused ",mo_veg_memory_class.f90
+q_vegetation,unit_uptake_n_act,2D,surface,diagnostic,no,NONE,,"incremental change in actual N uptake per unit root carbon, optimal allocation",mo_veg_memory_class.f90
+q_vegetation,unit_uptake_p_act,2D,surface,diagnostic,no,NONE,,"incremental change in actual P uptake per unit root carbon, optimal allocation",mo_veg_memory_class.f90
+q_vegetation,delta_dens_ind,2D,surface,diagnostic,no,NONE,# m-2 timestep-1,change in density of individuals,mo_veg_memory_class.f90
+q_vegetation,cost_n_uptake_root,2D,surface,diagnostic,no,NONE,mol C mol-1 N,actual cost for N uptake by roots,mo_veg_memory_class.f90
+q_vegetation,mortality_rate,2D,surface,diagnostic,yes,FULL,mortality rate of trees / grass per timestep-1,mortality rate,mo_veg_memory_class.f90
+q_vegetation,k1_opt,2D,surface,diagnostic,no,NONE,,,mo_veg_memory_class.f90
+q_vegetation,k2_opt,2D,surface,diagnostic,no,NONE,,,mo_veg_memory_class.f90
+q_vegetation,leaf2sapwood_mass_ratio,2D,surface,diagnostic,no,NONE,,,mo_veg_memory_class.f90
+q_vegetation,leaf2root_mass_ratio,2D,surface,diagnostic,no,NONE,,,mo_veg_memory_class.f90
+q_vegetation,active_n_fixation,2D,surface,diagnostic,no,NONE,,,mo_veg_memory_class.f90
+q_vegetation,fleaf_sunlit_daytime_cl,3D,vgrid_canopy_q_assimi,prognostic,no,NONE,,,mo_veg_memory_class.f90
+q_vegetation,t_air_daytime,2D,surface,conditional,no,NONE,K,average of the previous day,mo_veg_memory_class.f90
+q_vegetation,press_srf_daytime,2D,surface,conditional,no,NONE,Pa,average of the previous day,mo_veg_memory_class.f90
+q_vegetation,co2_mixing_ratio_daytime,2D,surface,conditional,no,NONE,co2 in ppm,average of the previous day,mo_veg_memory_class.f90
+q_vegetation,ga_daytime,2D,surface,conditional,no,NONE,co2 in ppm,average of the previous day,mo_veg_memory_class.f90
+q_vegetation,beta_sinklim_ps_daytime,2D,surface,conditional,no,NONE,,,mo_veg_memory_class.f90
+q_vegetation,t_jmax_opt_daytime,2D,surface,prognostic,no,NONE,deg C,average of the previous day,mo_veg_memory_class.f90
+q_vegetation,fleaf_sunlit_daytime_dacc_cl,3D,vgrid_canopy_q_assimi,prognostic,no,NONE,,,mo_veg_memory_class.f90
+q_vegetation,t_air_daytime_dacc,2D,surface,conditional,no,NONE,K,average of the previous day,mo_veg_memory_class.f90
+q_vegetation,press_srf_daytime_dacc,2D,surface,conditional,no,NONE,Pa,average of the previous day,mo_veg_memory_class.f90
+q_vegetation,co2_mixing_ratio_daytime_dacc,2D,surface,conditional,no,NONE,co2 in ppm,average of the previous day,mo_veg_memory_class.f90
+q_vegetation,ga_daytime_dacc,2D,surface,conditional,no,NONE,m s-1,aerodynamic conductance average of the previous day,mo_veg_memory_class.f90
+q_vegetation,beta_sinklim_ps_daytime_dacc,2D,surface,conditional,no,NONE,,,mo_veg_memory_class.f90
+q_vegetation,t_jmax_opt_daytime_dacc,2D,surface,prognostic,no,NONE,deg C,value accumulated over current day ,mo_veg_memory_class.f90
+q_vegetation,gpp_tlabile_mavg,2D,surface,prognostic,no,NONE,micro-mol m-2 s-1,gpp ,mo_veg_memory_class.f90
+q_vegetation,maint_respiration_tlabile_mavg,2D,surface,prognostic,no,NONE,micro-mol m-2 s-1,maintenance respiration,mo_veg_memory_class.f90
+q_vegetation,growth_req_n_tlabile_mavg,2D,surface,prognostic,no,NONE,,moles N required for a unit of C growth under current allocation fractions,mo_veg_memory_class.f90
+q_vegetation,growth_req_p_tlabile_mavg,2D,surface,prognostic,no,NONE,,moles P required for a unit of N growth under current allocation fractions,mo_veg_memory_class.f90
+q_vegetation,t_air_tphen_mavg,2D,surface,prognostic,no,NONE,,air temp mavg for phenology calc,mo_veg_memory_class.f90
+q_vegetation,t_soil_srf_tphen_mavg,2D,surface,prognostic,no,NONE,,soil temp mavg for phenology calc,mo_veg_memory_class.f90
+q_vegetation,npp_tuptake_mavg,2D,surface,prognostic,no,NONE,micro-mol m-2 s-1,npp of the last week,mo_veg_memory_class.f90
+q_vegetation,demand_uptake_n_tuptake_mavg,2D,surface,prognostic,no,NONE,,scalar of Vmax for root N uptake ,mo_veg_memory_class.f90
+q_vegetation,demand_uptake_p_tuptake_mavg,2D,surface,prognostic,no,NONE,,scalar of Vmax for root P uptake,mo_veg_memory_class.f90
+q_vegetation,growth_req_n_tuptake_mavg,2D,surface,prognostic,no,NONE,,moles N required for a unit of C growth under current allocation fractions,mo_veg_memory_class.f90
+q_vegetation,growth_req_p_tuptake_mavg,2D,surface,prognostic,no,NONE,,moles P required for a unit of N growth under current allocation fractions,mo_veg_memory_class.f90
+q_vegetation,exudation_c_tmyc_mavg,2D,surface,prognostic,no,NONE,mol C,moving average of C allocation to mycorrhizae,mo_veg_memory_class.f90
+q_vegetation,fleaf_sunlit_tfrac_mavg_cl,3D,vgrid_canopy_q_assimi,prognostic,no,NONE,,fraction of sunlit leaves,mo_veg_memory_class.f90
+q_vegetation,t_air_tfrac_mavg,2D,surface,conditional,no,NONE,,air temp,mo_veg_memory_class.f90
+q_vegetation,press_srf_tfrac_mavg,2D,surface,conditional,no,NONE,,air pressure at surface,mo_veg_memory_class.f90
+q_vegetation,co2_mixing_ratio_tfrac_mavg,2D,surface,conditional,no,NONE,,co2 mixing ratio of the air,mo_veg_memory_class.f90
+q_vegetation,ga_tfrac_mavg,2D,surface,conditional,no,NONE,,aerodynamic conductance,mo_veg_memory_class.f90
+q_vegetation,beta_sinklim_ps_tfrac_mavg,2D,surface,conditional,no,NONE,,scaling factor to account for soil moisture constraints on photosynthesis ,mo_veg_memory_class.f90
+q_vegetation,fleaf_sunlit_tcnl_mavg_cl,3D,vgrid_canopy_q_assimi,conditional,no,NONE,,fraction of sunlit leaves,mo_veg_memory_class.f90
+q_vegetation,t_air_tcnl_mavg,2D,surface,conditional,no,NONE,,air temp,mo_veg_memory_class.f90
+q_vegetation,press_srf_tcnl_mavg,2D,surface,conditional,no,NONE,,air pressure at surface,mo_veg_memory_class.f90
+q_vegetation,co2_mixing_ratio_tcnl_mavg,2D,surface,conditional,no,NONE,,co2 mixing ratio of the air,mo_veg_memory_class.f90
+q_vegetation,ga_tcnl_mavg,2D,surface,conditional,no,NONE,,aerodynamic conductance,mo_veg_memory_class.f90
+q_vegetation,uptake_n_tcnl_mavg,2D,surface,prognostic,no,NONE,,root N uptake,mo_veg_memory_class.f90
+q_vegetation,growth_cn_tcnl_mavg,2D,surface,prognostic,no,NONE,,new growth CN ratio,mo_veg_memory_class.f90
+q_vegetation,growth_np_tcnl_mavg,2D,surface,prognostic,no,NONE,, ,mo_veg_memory_class.f90
+q_vegetation,npp_tcnl_mavg,2D,surface,conditional,no,NONE,,NPP,mo_veg_memory_class.f90
+q_vegetation,fmaint_rate_tcnl_mavg,2D,surface,conditional,no,NONE,~micro-mol C mol-1 N s-1,N-specific maintentance respiration for optmal leaf N,mo_veg_memory_class.f90
+q_vegetation,labile_nitrogen_tcnl_mavg,2D,surface,prognostic,no,NONE,, ,mo_veg_memory_class.f90
+q_vegetation,labile_carbon_tcnl_mavg,2D,surface,prognostic,no,NONE,, ,mo_veg_memory_class.f90
+q_vegetation,labile_phosphorus_tcnl_mavg,2D,surface,prognostic,no,NONE,, ,mo_veg_memory_class.f90
+q_vegetation,npp_talloc_mavg,2D,surface,conditional,no,NONE,micro-mol m-2 s-1,NPP,mo_veg_memory_class.f90
+q_vegetation,n_fixation_talloc_mavg,2D,surface,conditional,no,NONE,,N fixation averaged at the allocation timescale,mo_veg_memory_class.f90
+q_vegetation,transpiration_talloc_mavg,2D,surface,conditional,no,FULL,,average transpiration at allocation time-scale,mo_veg_memory_class.f90
+q_vegetation,unit_npp_talloc_mavg,2D,surface,conditional,no,FULL,micro-mol C mol-1,rate of change in NPP with  increment in leaf mass,mo_veg_memory_class.f90
+q_vegetation,unit_transpiration_talloc_mavg,2D,surface,conditional,no,FULL,,rate of tranpiration change per unit LAI change?,mo_veg_memory_class.f90
+q_vegetation,unit_uptake_n_talloc_mavg,2D,surface,conditional,no,FULL,micro-mol N mol-1,actual rate of N uptkae per unit root,mo_veg_memory_class.f90
+q_vegetation,unit_uptake_p_talloc_mavg,2D,surface,conditional,no,FULL,micro-mol P mol-1,actual rate of P uptake per unit root,mo_veg_memory_class.f90
+q_vegetation,dphi_talloc_mavg,2D,surface,conditional,no,FULL,MPa,leaf-soil water potential gradient,mo_veg_memory_class.f90
+q_vegetation,growth_cn_talloc_mavg,2D,surface,prognostic,no,FULL,,"plant growth cn ratio, equivalent to 1/growth_req_n",mo_veg_memory_class.f90
+q_vegetation,growth_cp_talloc_mavg,2D,surface,conditional,no,FULL,,"plant growth cp ratio, equivalent to 1 / (growthreq_n * growth_req_p)",mo_veg_memory_class.f90
+q_vegetation,growth_np_talloc_mavg,2D,surface,prognostic,no,FULL,,"plant growth hp ratio, equivalent to 1/(growth_req_p)",mo_veg_memory_class.f90
+q_vegetation,labile_carbon_talloc_mavg,2D,surface,prognostic,no,FULL,,"moving average of labile carbon pool, allometry calculations",mo_veg_memory_class.f90
+q_vegetation,labile_nitrogen_talloc_mavg,2D,surface,prognostic,no,FULL,,"moving average of labile nitrogen pool, allometry calculations",mo_veg_memory_class.f90
+q_vegetation,labile_phosphorus_talloc_mavg,2D,surface,prognostic,no,FULL,,"moving average of labile phosphorus pool, allometry calculations",mo_veg_memory_class.f90
+q_vegetation,growth_p_limit_based_on_n_mavg,2D,surface,prognostic,no,FULL,,moving average indicator of how much plant is P limited based on N,mo_veg_memory_class.f90
+q_vegetation,reserve_carbon_talloc_mavg,2D,surface,prognostic,no,FULL,,"moving average of reserve carbon, optimal allocation",mo_veg_memory_class.f90
+q_vegetation,reserve_nitrogen_talloc_mavg,2D,surface,prognostic,no,FULL,,"moving average of reserve nitrogen, optimal allocation",mo_veg_memory_class.f90
+q_vegetation,reserve_phosphorus_talloc_mavg,2D,surface,prognostic,no,FULL,,"moving average of reserve phosphorus, optimal allocation",mo_veg_memory_class.f90
+q_vegetation,wtr_rootzone_rel_talloc_mavg,2D,surface,prognostic,no,FULL,,moving average of relative soil moisture in rootzone,mo_veg_memory_class.f90
+q_vegetation,leaf2root_troot_mavg,2D,surface,prognostic,no,FULL,,leaf to root mass ratio,mo_veg_memory_class.f90
+q_vegetation,unit_npp_troot_mavg,2D,surface,prognostic,no,FULL,micro-mol C mol-1,rate of change in NPP with increment in leaf mass,mo_veg_memory_class.f90
+q_vegetation,unit_uptake_n_pot_troot_mavg,2D,surface,prognostic,no,FULL,micro-mol N mol-1,rate of N uptkae per unit root,mo_veg_memory_class.f90
+q_vegetation,unit_uptake_p_pot_troot_mavg,2D,surface,prognostic,no,FULL,micro-mol P mol-1,rate of P uptake per unit root,mo_veg_memory_class.f90
+q_vegetation,fmaint_rate_troot_mavg,2D,surface,prognostic,no,FULL,~micro-mol C mol-1 N s-1,moving average of N-specific maintentance respiration,mo_veg_memory_class.f90
+q_vegetation,an_boc_tvegdyn_mavg,2D,surface,prognostic,no,FULL,,"net photosynthesis at bottom of canopy, lowest canopy layer existing",mo_veg_memory_class.f90
+q_vegetation,net_growth_tvegdyn_mavg,2D,surface,prognostic,no,FULL,micro-mol C m-2 s-1,"net growth, npp minus turnover",mo_veg_memory_class.f90
+q_vegetation,lai_tvegdyn_mavg,2D,surface,prognostic,no,FULL,m2 m-2,lai at vegdynamics timescale,mo_veg_memory_class.f90
+q_vegetation,beta_sinklim_ps_tacclim_mavg,2D,surface,prognostic,no,FULL,,scaling factor to adjust beta sinklimitation to labile carbon response,mo_veg_memory_class.f90
+q_vegetation,t_air_tacclim_mavg,2D,surface,prognostic,no,FULL,,average air temperature for respiration acclimation,mo_veg_memory_class.f90
+q_vegetation,t_soil_root,2D,surface,diagnostic,no,FULL,K,Temperature of fine roots in the soil,mo_veg_memory_class.f90
+q_vegetation,t_soil_root_tacclim_mavg,2D,surface,prognostic,no,FULL,,average root temperature for respiration acclimation,mo_veg_memory_class.f90
+q_vegetation,t_air_week_mavg,2D,surface,prognostic,no,FULL,,avrg air temperature across 7 days,mo_veg_memory_class.f90
+q_vegetation,t_air_month_mavg,2D,surface,prognostic,no,FULL,,avrg air temperature across 30 days,mo_veg_memory_class.f90
+q_vegetation,t_jmax_opt_mavg,2D,surface,prognostic,no,FULL,,optimim temperature for electron transport of photosynthesis,mo_veg_memory_class.f90
+q_vegetation,rfr_ratio_boc,2D,surface,diagnostic,yes,FULL,,,mo_veg_memory_class.f90
+q_vegetation,rfr_ratio_boc_tvegdyn_mavg,2D,surface,prognostic,no,FULL,,,mo_veg_memory_class.f90
+q_vegetation,net_biosphere_production,2D,surface,diagnostic,yes,BASIC,[micro-mol CO2 m-2 s-1],Balance between carbon losses and gains,mo_veg_memory_class.f90
+q_vegetation,net_biosphere_production_c14,2D,surface,diagnostic,yes,MEDIUM,[micro-mol CO2 m-2 s-1],Balance between carbon14 losses and gains,mo_veg_memory_class.f90
+q_vegetation,net_biosphere_production_c13,2D,surface,diagnostic,yes,MEDIUM,[micro-mol CO2 m-2 s-1],Balance between carbon13 losses and gains,mo_veg_memory_class.f90
+q_vegetation,biological_n_fixation,2D,surface,diagnostic,yes,BASIC,[micro-mol N m-2 s-1],symbiotic + asymbiotic N fixation,mo_veg_memory_class.f90
+q_vegetation,total_veg_c_gsum,2D,surface,diagnostic,yes,,Pg,Global sum of all vegetation C pools,mo_veg_memory_class.f90
+q_vegetation,total_prod_c_gsum,2D,surface,diagnostic,yes,,Pg,Global sum of all product C pools,mo_veg_memory_class.f90
+q_vegetation,lai_gmean,2D,surface,diagnostic,yes,,m2 m-2,Global average of LAI,mo_veg_memory_class.f90
+q_vegetation,fract_fpc_gmean,2D,surface,diagnostic,yes,,1,Global average of foliar projected coverage,mo_veg_memory_class.f90
+q_vegetation,gpp_gsum,2D,surface,diagnostic,yes,,Pg yr-1,Global sum of GPP,mo_veg_memory_class.f90
+q_vegetation,npp_gsum,2D,surface,diagnostic,yes,,Pg yr-1,Global sum of NPP,mo_veg_memory_class.f90
+q_vegetation,nuptake_gsum,2D,surface,diagnostic,yes,,Tg yr-1,Global sum of N uptake by vegetation,mo_veg_memory_class.f90
+radiation,sw_srf_net,2D,surface,diagnostic,yes,BASIC,,Net surface shortwave radiation,mo_rad_memory_class.f90
+radiation,swvis_srf_net,2D,surface,diagnostic,yes,MEDIUM,,Net surface shortwave radiation in VIS,mo_rad_memory_class.f90
+radiation,swnir_srf_net,2D,surface,diagnostic,yes,MEDIUM,,Net surface shortwave radiation in NIR,mo_rad_memory_class.f90
+radiation,lw_srf_net,2D,surface,diagnostic,yes,BASIC,,Net surface longwave radiation,mo_rad_memory_class.f90
+radiation,rad_srf_net,2D,surface,diagnostic,yes,BASIC,,Net surface radiation,mo_rad_memory_class.f90
+radiation,alb_background,2D,surface,diagnostic,yes,MEDIUM,,,mo_rad_memory_class.f90
+radiation,alb_vis,2D,surface,prognostic,yes,BASIC,,,mo_rad_memory_class.f90
+radiation,alb_nir,2D,surface,prognostic,yes,BASIC,,,mo_rad_memory_class.f90
+radiation,alb_vis_snow,2D,surface,prognostic,yes,MEDIUM,,,mo_rad_memory_class.f90
+radiation,alb_nir_snow,2D,surface,prognostic,yes,MEDIUM,,,mo_rad_memory_class.f90
+radiation,alb_vis_lnd,2D,surface,prognostic,yes,MEDIUM,,,mo_rad_memory_class.f90
+radiation,alb_nir_lnd,2D,surface,prognostic,yes,MEDIUM,,,mo_rad_memory_class.f90
+radiation,alb_vis_soil,2D,surface,prognostic,yes,MEDIUM,,,mo_rad_memory_class.f90
+radiation,alb_nir_soil,2D,surface,prognostic,yes,MEDIUM,,,mo_rad_memory_class.f90
+radiation,alb_vis_mineralsoil,2D,surface,prognostic,yes,MEDIUM,,,mo_rad_memory_class.f90
+radiation,alb_nir_mineralsoil,2D,surface,prognostic,yes,MEDIUM,,,mo_rad_memory_class.f90
+radiation,alb_vis_pond,2D,surface,conditional,yes,,,,mo_rad_memory_class.f90
+radiation,alb_nir_pond,2D,surface,conditional,yes,,,,mo_rad_memory_class.f90
+radiation,alb_vis_can,2D,surface,diagnostic,yes,MEDIUM,,,mo_rad_memory_class.f90
+radiation,alb_nir_can,2D,surface,diagnostic,yes,MEDIUM,,,mo_rad_memory_class.f90
+radiation,snow_age,2D,surface,prognostic,yes,MEDIUM,-,Factor used to calculate snow ageing,mo_rad_memory_class.f90
+radiation,sky_view_fract,2D,surface,prognostic,yes,,,,mo_rad_memory_class.f90
+radiation,sky_view_fract_stem,2D,surface,prognostic,yes,,,,mo_rad_memory_class.f90
+radiation,par,2D,surface,diagnostic,yes,MEDIUM,,,mo_rad_memory_class.f90
+radiation,par_down_mol,2D,surface,diagnostic,yes,MEDIUM,,,mo_rad_memory_class.f90
+radiation,fapar,2D,surface,diagnostic,yes,BASIC,,,mo_rad_memory_class.f90
+radiation,par_down_mol_nacc,2D,surface,prognostic,yes,,,,mo_rad_memory_class.f90
+radiation,par_down_mol_tavg,2D,surface,diagnostic,yes,,,,mo_rad_memory_class.f90
+radiation,soil_reflectivity_par,2D,surface,diagnostic,no,,,,mo_rad_memory_class.f90
+radiation,fract_par_direct,2D,surface,diagnostic,yes,,,,mo_rad_memory_class.f90
+radiation,lai_cl,3D,canopy_layer,diagnostic,yes,,,,mo_rad_memory_class.f90
+radiation,fapar_cl,3D,canopy_layer,diagnostic,yes,,,,mo_rad_memory_class.f90
+radiation,apar_per_lai_cl,3D,canopy_layer,diagnostic,no,,,,mo_rad_memory_class.f90
+radiation,apar_per_lai_cl_nacc,3D,canopy_layer,prognostic,yes,,,,mo_rad_memory_class.f90
+radiation,apar_per_lai_cl_tavg,3D,canopy_layer,diagnostic,yes,,,,mo_rad_memory_class.f90
+radiation,apar_nacc,2D,surface,prognostic,yes,,,,mo_rad_memory_class.f90
+radiation,rad_net_lwtr,2D,surface,diagnostic,yes,MEDIUM,,Net surface radiation over lake water,mo_rad_memory_class.f90
+radiation,albedo_lwtr,2D,surface,prognostic,yes,MEDIUM,,Albedo of open water on lakes,mo_rad_memory_class.f90
+radiation,rad_net_lice,2D,surface,diagnostic,yes,MEDIUM,,Net surface radiation over lake ice,mo_rad_memory_class.f90
+radiation,albedo_lice,2D,surface,prognostic,yes,MEDIUM,,Albedo of ice on lake water,mo_rad_memory_class.f90
+radiation,alb_vis_noon,2D,surface,diagnostic,yes,FULL,,,mo_rad_memory_class.f90
+radiation,alb_nir_noon,2D,surface,diagnostic,yes,FULL,,,mo_rad_memory_class.f90
+radiation,alb_vis_soil_and_snow,2D,surface,diagnostic,yes,NONE,,,mo_rad_memory_class.f90
+radiation,alb_nir_soil_and_snow,2D,surface,diagnostic,yes,NONE,,,mo_rad_memory_class.f90
+radiation,albedo_noon,2D,surface,prognostic,yes,BASIC,,,mo_rad_memory_class.f90
+radiation,fapar_noon,2D,surface,prognostic,yes,BASIC,,,mo_rad_memory_class.f90
+radiation,ppfd_sunlit_cl,3D,canopy_layer,diagnostic,yes,NONE,micro-mol m-2 s-1,Photosynthetically Active Photon Flux Density on sunlit leaves,mo_rad_memory_class.f90
+radiation,ppfd_shaded_cl,3D,canopy_layer,diagnostic,yes,NONE,micro-mol m-2 s-1,Photosynthetically Active Photon Flux Density on shaded leaves,mo_rad_memory_class.f90
+radiation,ppfd_sunlit_daytime_cl,3D,canopy_layer,conditional,yes,NONE,micro-mol m-2 s-1,average PPFD on sunlit leaves of the previous day,mo_rad_memory_class.f90
+radiation,ppfd_shaded_daytime_cl,3D,canopy_layer,conditional,yes,NONE,micro-mol m-2 s-1,average PPFD on shaded leaves of the previous day,mo_rad_memory_class.f90
+radiation,ppfd_sunlit_daytime_dacc_cl,3D,canopy_layer,conditional,yes,NONE,micro-mol m-2 d-1,daily accumulated PPFD on sunlit leaves,mo_rad_memory_class.f90
+radiation,ppfd_shaded_daytime_dacc_cl,3D,canopy_layer,conditional,yes,NONE,,,mo_rad_memory_class.f90
+radiation,ppfd_sunlit_tfrac_mavg_cl,3D,canopy_layer,conditional,yes,NONE,micro-mol m-2 s-1,average PPFD on sunlit leaves at tfrac-timescale,mo_rad_memory_class.f90
+radiation,ppfd_shaded_tfrac_mavg_cl,3D,canopy_layer,conditional,yes,NONE,micro-mol m-2 s-1,average PPFD on shaded leaves at tfrac-timescale,mo_rad_memory_class.f90
+radiation,ppfd_sunlit_tcnl_mavg_cl,3D,canopy_layer,conditional,yes,NONE,micro-mol m-2 s-1,average PPFD on sunlit leaves at tcnl-timescale,mo_rad_memory_class.f90
+radiation,ppfd_shaded_tcnl_mavg_cl,3D,canopy_layer,conditional,yes,NONE,micro-mol m-2 s-1,average PPFD on shaded leaves at tcnl-timescale,mo_rad_memory_class.f90
+radiation,canopy_reflectance_sp,3D,vgrid_spectral,diagnostic,yes,FULL,,,mo_rad_memory_class.f90
+soil_snow_energy,vol_heat_cap,2D,surface,diagnostic,yes,,J m-3 K-1,,mo_sse_memory_class.f90
+soil_snow_energy,vol_heat_cap_sl,3D,soil_e,diagnostic,yes,,J m-3 K-1,,mo_sse_memory_class.f90
+soil_snow_energy,vol_heat_cap_snow,2D,surface,diagnostic,yes,,J m-3 K-1,,mo_sse_memory_class.f90
+soil_snow_energy,heat_cond,2D,surface,diagnostic,yes,,J m-1 s-1 K-1,,mo_sse_memory_class.f90
+soil_snow_energy,heat_cond_sl,3D,soil_e,diagnostic,yes,,J m-1 s-1 K-1,,mo_sse_memory_class.f90
+soil_snow_energy,heat_cond_snow,2D,surface,diagnostic,yes,,J m-1 s-1 K-1,,mo_sse_memory_class.f90
+soil_snow_energy,thermal_diffusivity,2D,surface,diagnostic,yes,,m2 s-1,,mo_sse_memory_class.f90
+soil_snow_energy,t_soil_sl,3D,soil_e,diagnostic,yes,BASIC,K,,mo_sse_memory_class.f90
+soil_snow_energy,t_soil_acoef,3D,soil_e,diagnostic,yes,,,,mo_sse_memory_class.f90
+soil_snow_energy,t_soil_bcoef,3D,soil_e,diagnostic,yes,,,,mo_sse_memory_class.f90
+soil_snow_energy,snow_depth_sl,3D,snow_e,prognostic,yes,BASIC,m,Depth of snow layers,mo_sse_memory_class.f90
+soil_snow_energy,t_snow,3D,snow_e,diagnostic,yes,BASIC,K,,mo_sse_memory_class.f90
+soil_snow_energy,t_snow_acoef,3D,snow_e,diagnostic,yes,,,,mo_sse_memory_class.f90
+soil_snow_energy,t_snow_bcoef,3D,snow_e,diagnostic,yes,,,,mo_sse_memory_class.f90
+soil_snow_energy,hcap_grnd,2D,surface,diagnostic,yes,MEDIUM,J m-2 K-1,Ground heat capacity,mo_sse_memory_class.f90
+soil_snow_energy,hcap_grnd_old,2D,surface,diagnostic,yes,,J m-2 K-1,Ground heat capacity (old),mo_sse_memory_class.f90
+soil_snow_energy,grnd_hflx,2D,surface,diagnostic,yes,BASIC,J m-2 s-1,Ground heat flux,mo_sse_memory_class.f90
+soil_snow_energy,grnd_hflx_old,2D,surface,diagnostic,yes,,J m-2 s-1,Ground heat flux (old),mo_sse_memory_class.f90
+soil_snow_energy,thaw_depth,2D,surface,diagnostic,yes,,m,Thawing depth,mo_sse_memory_class.f90
+soil_snow_energy,thaw_depth_max,2D,surface,prognostic,yes,BASIC,m,Maximum thaw depth,mo_sse_memory_class.f90
+soil_snow_energy,thaw_depth_max_ym1,2D,surface,prognostic,yes,NONE,m,Last years maximum thaw depth,mo_sse_memory_class.f90
+soil_snow_energy,bulk_dens_sl,3D,soil_e,prognostic,no,NONE,kg m-3,soil bulk density,mo_sse_memory_class.f90
+soil_snow_energy,sand_sl,3D,soil_e,prognostic,no,NONE,,soil sand proportion,mo_sse_memory_class.f90
+soil_snow_energy,silt_sl,3D,soil_e,prognostic,no,NONE,,soil silt proportion,mo_sse_memory_class.f90
+soil_snow_energy,clay_sl,3D,soil_e,prognostic,no,NONE,,soil clay proportion,mo_sse_memory_class.f90
+srf_energy_bal,t,2D,surface,diagnostic,yes,BASIC,K,surface temperature,mo_seb_memory_class.f90
+srf_energy_bal,t_rad**4,2D,surface,diagnostic,yes,,K,surface radiative temperature **4,mo_seb_memory_class.f90
+srf_energy_bal,t_old,2D,surface,prognostic,yes,,K,surface temperature at previous timestep,mo_seb_memory_class.f90
+srf_energy_bal,t_unfilt,2D,surface,diagnostic,yes,,K,unfiltered surface temperature,mo_seb_memory_class.f90
+srf_energy_bal,le_phase_change,2D,surface,diagnostic,yes,MEDIUM,,,mo_seb_memory_class.f90
+srf_energy_bal,heat_cap,2D,surface,diagnostic,yes,MEDIUM,J m-2 K-1,surface layer heat capacity,mo_seb_memory_class.f90
+srf_energy_bal,latent_hflx,2D,surface,diagnostic,yes,BASIC,W m-2,latent heat flux density at surface,mo_seb_memory_class.f90
+srf_energy_bal,sensible_hflx,2D,surface,diagnostic,yes,BASIC,W m-2,sensible heat flux at surface,mo_seb_memory_class.f90
+srf_energy_bal,forc_hflx,2D,surface,diagnostic,yes,BASIC,W m-2,additional heat flux at surface,mo_seb_memory_class.f90
+srf_energy_bal,net_srf_rad_balance,2D,surface,diagnostic,yes,BASIC,,,mo_seb_memory_class.f90
+srf_energy_bal,richardson,2D,surface,prognostic,yes,,-,Richardson number,mo_seb_memory_class.f90
+srf_energy_bal,t_eff**4,2D,surface,diagnostic,yes,,K,effective surface temperature**4,mo_seb_memory_class.f90
+srf_energy_bal,s_star,2D,surface,diagnostic,yes,FULL,m2 s-2,surface dry static energy,mo_seb_memory_class.f90
+srf_energy_bal,qsat_star,2D,surface,prognostic,yes,FULL,m2 s-2,surface specific humidity at saturation,mo_seb_memory_class.f90
+srf_energy_bal,q_sat_srf,2D,surface,prognostic,yes,BASIC,[?],surface saturated specific humidity,mo_seb_memory_class.f90
+srf_energy_bal,t_unfilt_old,2D,surface,diagnostic,yes,,K,unf. surface temperature at previous timestep,mo_seb_memory_class.f90
+srf_energy_bal,t_filt,2D,surface,diagnostic,yes,,K,filtered surface temperature,mo_seb_memory_class.f90
+srf_energy_bal,t_srf,2D,surface,conditional,yes,BASIC,K,soil or snow surface temperature,mo_seb_memory_class.f90
+srf_energy_bal,dt_sk_dt_srf,2D,surface,diagnostic,yes,,K,derivative of skin w.r.t. surface temperature,mo_seb_memory_class.f90
+srf_energy_bal,latent_hflx_lnd,2D,surface,diagnostic,yes,,W m-2,latent heat flux density at surface (lnd),mo_seb_memory_class.f90
+srf_energy_bal,sensible_hflx_lnd,2D,surface,diagnostic,yes,,W m-2,sensible heat flux at surface (lnd),mo_seb_memory_class.f90
+srf_energy_bal,previous_day_temp_mean,2D,surface,prognostic,yes,,,,mo_seb_memory_class.f90
+srf_energy_bal,previous_day_temp_min,2D,surface,prognostic,yes,,,,mo_seb_memory_class.f90
+srf_energy_bal,previous_day_temp_max,2D,surface,prognostic,yes,,,,mo_seb_memory_class.f90
+srf_energy_bal,pseudo_soil_temp,2D,surface,prognostic,yes,,,,mo_seb_memory_class.f90
+srf_energy_bal,day_temp_sum,2D,surface,prognostic,yes,,,,mo_seb_memory_class.f90
+srf_energy_bal,day_temp_min,2D,surface,prognostic,yes,,,,mo_seb_memory_class.f90
+srf_energy_bal,day_temp_max,2D,surface,prognostic,yes,,,,mo_seb_memory_class.f90
+srf_energy_bal,N_pseudo_soil_temp,2D,surface,prognostic,yes,,,,mo_seb_memory_class.f90
+srf_energy_bal,F_pseudo_soil_temp,2D,surface,prognostic,yes,,,,mo_seb_memory_class.f90
+srf_energy_bal,skin_conductivity,2D,surface,diagnostic,yes,,W m-2 K-1,skin conductivity,mo_seb_memory_class.f90
+srf_energy_bal,t_lwtr,2D,surface,diagnostic,yes,,K,lake surface temperature wtr ,mo_seb_memory_class.f90
+srf_energy_bal,s_lwtr,2D,surface,diagnostic,yes,,m2 s-2,surface dry static energy (lake wtr),mo_seb_memory_class.f90
+srf_energy_bal,qsat_lwtr,2D,surface,diagnostic,yes,,m2 s-2,surface specific humidity at saturation (lake wtr),mo_seb_memory_class.f90
+srf_energy_bal,latent_hflx_wtr,2D,surface,prognostic,yes,,W m-2,latent heat flux over lake water,mo_seb_memory_class.f90
+srf_energy_bal,sensible_hflx_wtr,2D,surface,prognostic,yes,,W m-2,sensible heat flux over lake water,mo_seb_memory_class.f90
+srf_energy_bal,fract_lice,2D,surface,diagnostic,yes,,,fraction of ice on lake,mo_seb_memory_class.f90
+srf_energy_bal,t_lice,2D,surface,diagnostic,yes,,K,lake surface temperature ice ,mo_seb_memory_class.f90
+srf_energy_bal,s_lice,2D,surface,diagnostic,yes,,m2 s-2,surface dry static energy (lake ice),mo_seb_memory_class.f90
+srf_energy_bal,qsat_lice,2D,surface,diagnostic,yes,,m2 s-2,surface specific humidity at saturation (lake ice),mo_seb_memory_class.f90
+srf_energy_bal,latent_hflx_ice,2D,surface,prognostic,yes,,W m-2,latent heat flux over lake ice,mo_seb_memory_class.f90
+srf_energy_bal,sensible_hflx_ice,2D,surface,prognostic,yes,,W m-2,sensible heat flux over lake ice,mo_seb_memory_class.f90
+srf_energy_bal,depth_lice,2D,surface,diagnostic,yes,,m,thickness of ice on lake,mo_seb_memory_class.f90
+srf_energy_bal,hflx_form_ice,2D,surface,diagnostic,yes,,W m-2),heat flux for ice formation on lake ice,mo_seb_memory_class.f90
+srf_energy_bal,hflx_cond_ice,2D,surface,diagnostic,yes,,W m-2),conductive heat flux on lake ice,mo_seb_memory_class.f90
+srf_energy_bal,hflx_melt_lice,2D,surface,diagnostic,yes,,W m-2),heat flux from ice melt on lakes,mo_seb_memory_class.f90
+srf_energy_bal,hflx_melt_snow,2D,surface,diagnostic,yes,,W m-2),heat_flux from snow melt on lakes,mo_seb_memory_class.f90
+srf_energy_bal,t_gmean,2D,surface,diagnostic,yes,,K,Global land mean surface temperature,mo_seb_memory_class.f90
+turbulence,kh,2D,surface,diagnostic,yes,FULL,,surface exchange coefficient for heat,mo_turb_memory_class.f90
+turbulence,km,2D,surface,diagnostic,yes,FULL,,surface exchange coefficient for momentum,mo_turb_memory_class.f90
+turbulence,kh_neutral,2D,surface,diagnostic,yes,FULL,,neutral surface exchange coefficient for heat,mo_turb_memory_class.f90
+turbulence,km_neutral,2D,surface,diagnostic,yes,FULL,,neutral surface exchange coefficient for momentum,mo_turb_memory_class.f90
+turbulence,ch,2D,surface,diagnostic,yes,FULL,,surface transfer coefficient for heat,mo_turb_memory_class.f90
+turbulence,rough_m,2D,surface,prognostic,yes,FULL,m,surface roughness length for momentum,mo_turb_memory_class.f90
+turbulence,rough_h,2D,surface,prognostic,yes,FULL,m,surface roughness length for heat,mo_turb_memory_class.f90
+turbulence,rough_m_star,2D,surface,diagnostic,no,,,rough_m_star,mo_turb_memory_class.f90
+turbulence,rough_h_star,2D,surface,diagnostic,no,,,rough_h_star,mo_turb_memory_class.f90
+turbulence,fact_q_air,2D,surface,diagnostic,yes,FULL,,,mo_turb_memory_class.f90
+turbulence,fact_qsat_srf,2D,surface,diagnostic,yes,FULL,,,mo_turb_memory_class.f90
+turbulence,fact_qsat_trans_srf,2D,surface,diagnostic,yes,FULL,,,mo_turb_memory_class.f90
+turbulence,drag_srf_stdalone,2D,surface,prognostic,yes,FULL,,,mo_turb_memory_class.f90
+turbulence,pch_stdalone,2D,surface,diagnostic,yes,FULL,,,mo_turb_memory_class.f90
+turbulence,t_acoef_stdalone,2D,surface,diagnostic,yes,FULL,,,mo_turb_memory_class.f90
+turbulence,t_bcoef_stdalone,2D,surface,diagnostic,yes,FULL,,,mo_turb_memory_class.f90
+turbulence,q_acoef_stdalone,2D,surface,diagnostic,yes,FULL,,,mo_turb_memory_class.f90
+turbulence,q_bcoef_stdalone,2D,surface,diagnostic,yes,FULL,,,mo_turb_memory_class.f90
