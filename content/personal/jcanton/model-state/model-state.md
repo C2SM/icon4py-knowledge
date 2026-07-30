@@ -185,7 +185,7 @@ Notes on the ones that matter most:
   profiled `update_derived_quantities()` barrier over a closed, enumerated set. That removes
   E3 and E4 at ~10% of the cost and stays compatible with full M5 later.
 
-### On "unlimited dynamic labels"
+### On "unlimited labels"
 
 ICON validates the idea and bounds it. The label is declared **at the field's definition
 site, by the field's owner** — new field + right group string ⇒ it appears automatically in
@@ -206,12 +206,13 @@ Three amendments from ICON's own scars:
 
 ### On naming and placement
 
-Recommendation, following your preference for internal names: key on
-`(quantity, placement)` where `placement` is the dims tuple, and treat the flat string
-`theta_v_at_cells_on_half_levels` as its *rendering*, not the primary key. This makes `dims`
-and `is_on_half_levels` derived rather than independently maintained (fixes E8), and makes
-regridding an edge over a fixed quantity — `theta_v@(Cell,K) → theta_v@(Edge,K)` — which is
-impossible if placement is welded into an opaque string. CF names stay as output metadata only.
+Recommendation: key on `(quantity, placement)` where `placement` is the dims
+tuple, and treat the flat string `theta_v_at_cells_on_half_levels` as its
+*rendering*, not the primary key. This makes `dims` and `is_on_half_levels`
+derived rather than independently maintained (fixes E8), and makes regridding
+an edge over a fixed quantity — `theta_v@(Cell,K) → theta_v@(Edge,K)` — which
+is impossible if placement is welded into an opaque string. CF names stay as
+output metadata only.
 
 Escape hatch required: not everything factorises (`rbf_vec_coeff_e` on `(Edge, E2C2E)`; `vn`
 vs `u,v` differ by more than placement). Those stay plain named fields with no derivation rules.
