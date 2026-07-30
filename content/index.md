@@ -24,13 +24,17 @@ _None yet._
 
 Work-in-progress proposals, organized by contributor.
 
+### egparedes
+
+- [[personal/egparedes/layered-architecture-refactor|Layered architecture: analysis and refactoring proposal]] — keywords: architecture, layers, tach, packaging, refactoring, components, protocol, model-state, tendencies, field-factory, registry, grid, domain, decomposition, testing, validation, serialbox, py2fgen, bindings, config, precision, io
+
 ### havogt
 
 - [[personal/havogt/declarative-testing-harness/declarative-testing-harness|Declarative testing harness]] — keywords: testing, verification, serialbox, stencil-tests, datatests, pytest, tolerances, benchmarking
 
 ### iomaganaris
 
-- [[personal/iomaganaris/standalone-driver-startup-opt|Optimize the startup of the standalone-driver]] — keywords: standalone-driver, driver, GPU, optimization
+- [[personal/iomaganaris/standalone-driver-startup-opt/standalone-driver-startup-opt|Optimize the startup of the standalone-driver]] — keywords: standalone-driver, driver, GPU, optimization
 - [[personal/iomaganaris/domain-minimalization.md|Verify that the domains of all the GT4Py programs are as minimal as possible using an LLM]] - keywords: dycore, diffusion, tracer_advection, autoresearch
 - [[personal/iomaganaris/specialize-domain-bounds.md|Specialize GT4Py programs with runtime-varying domain bounds via the variants parameter]] - keywords: dycore, diffusion, tracer_advection, setup_program, gt4py, performance, specialization
 
