@@ -1,9 +1,9 @@
 ---
 title: Model state — requirements and design options
 author: jcanton
-tags: [state, model-state, components, fields, registry, metadata, duplication, allocation, lazy-evaluation, labels, halo-exchange, prior-art]
+tags: [state, model-state, components, fields, registry, metadata, duplication, allocation, lazy-evaluation, labels, halo-exchange, restart, prior-art]
 created: 2026-07-29
-status: draft
+status: reviewed
 ---
 
 > **TL;DR** Four incompatible designs for "how components get their fields" are open
@@ -63,14 +63,51 @@ more places break, the better specified the design is.
 | R5 | Whatever reaches a `gtx.program` must be a static named collection | gt4py (see below) |
 | R6 | Absence must be first-class — optional IAU increments, inactive tracers — not a zero allocation | `dummy_field_factory` |
 | R7 | Multi-buffer/time-level must be expressible, at *different rates* (dyn substep vs tracer step) | `TimeStepPair`, PR 1404 |
-| R8 | Cross-cutting sweeps (output, restart, halo sets) must be queries, not hand-written lists | restart absent; tracers have no IO path |
+| R8 | Cross-cutting sweeps (output, restart, halo sets) must be queries, not hand-written lists | restart lists hand-picked; tracers have no IO path |
 | R9 | Granule call sites must keep naming their actual inputs | havogt/msimberg objection; also R5 |
 | R10 | No new per-stencil-call overhead | ~100 stencil calls per 20–50 ms timestep |
+| R11 | A field's **role is not implied by which container it sits in** — some diagnostics must be checkpointed, some prognostics need no halo, most fields need neither | restart inventory (below) |
 
-R8 is worth naming: **there is no checkpoint/restart at all** today (one TODO in `io.py:290`),
-tracers appear in no output list, and physics precipitation diagnostics cannot reach IO.
-Every prior-art system says restart is the consumer that forces a registry. Designing the
-container before answering the restart requirement means designing it twice.
+### Restart is the requirement that settles R8 and R11
+
+[[personal/msimberg/checkpoint-restart/checkpoint-restart|msimberg's checkpoint/restart doc]] is
+the best-specified consumer we have, and it decides two arguments.
+
+State of play (verified; msimberg's doc cites some pre-rename paths — `model/driver/` is now
+egg-info only and `TimeLoop.restart_mode` is gone):
+
+- `main` has a **read** path — `read_restart_from_file` (`initial_condition/from_file.py:142`),
+  serialbox-based, restoring prognostics + `exner_pr` + the predictor/corrector advective
+  tendencies. No **write** path.
+- `origin/ibm_02` has a serial prototype writer: `io/restart.py`, `RestartManager`, pickle,
+  two-file rolling scheme.
+
+**R11 comes straight out of the restart inventory.** The fields that must be checkpointed are
+prognostics *plus* the dycore diagnostics carried across steps — `exner_pr`,
+`ddt_vn_apc_pc`, `ddt_w_adv_pc` — while metrics, interpolation coefficients and compiled
+stencils must not be. So "is this restartable" is **orthogonal** to "is this in the prognostic
+or the diagnostic container". The current prog/diag split cannot express it, and `ibm_02` is
+consequently forced to hand-pick three specific `DiagnosticStateNonHydro` members by name. That
+is precisely the hand-written list ICON's `in_group('dwd_fg_atm_vars')` abolishes — declared by
+the field's owner, at the field's definition site. It is the strongest concrete argument in this
+document for per-field labels over container-membership-as-role, and for `restart: bool` being
+in M2's metadata from the start rather than retrofitted.
+
+Three more constraints the doc surfaces:
+
+- **Exact vs scientific restart is a per-field decision.** Exact needs every time-dependent
+  quantity (tendencies, previous-step fields, random seeds); scientific needs prognostics plus a
+  date. Either way the answer is a label set, chosen once, not a code path.
+- **Restart needs to allocate fields that do not exist yet**, which is the one thing reading
+  metadata off a live field cannot do — see the evidence appendix. This is the
+  `QuantityFactory`/`GridSizer` argument (M2 + M1) arriving from a second direction.
+- **Tracer restart fails today for a naming reason, not a technical one.** `from_file.py:162`:
+  *"the solve-nonhydro savepoints do not carry them, they are in the advection-init savepoint of
+  the same date."* A grouping problem, stated as a `NotImplementedError`.
+
+Also note what the container should **not** own: `ndyn_substeps_var`, CFL-watch mode, elapsed
+time and random seeds are all restart state but are not fields. The container holds fields; the
+integration control state is someone else's problem, and conflating them is a scope error.
 
 ## The central question: is the container a compiler or a runtime?
 
@@ -289,7 +326,13 @@ Design/science/political, not answerable by more investigation:
 8. Do we accept a hard declare → bind → freeze → run lifecycle with no field addable after
    init? That is what makes it safe, and it forbids plugin-style late registration.
 9. Do we commit to a controlled name vocabulary, and **which domain scientist owns it**?
-10. What is the restart requirement, and by when?
+10. **Exact or scientific restart?** This is the highest-leverage open question in the list,
+    because it is the only one that forces a per-field decision on every field in the model
+    (R11), and because [[personal/msimberg/checkpoint-restart/checkpoint-restart|the restart doc]]
+    has a 2-week appetite while this design does not. If restart ships first with a hand-picked
+    field list, that list becomes the de-facto role vocabulary — so it is worth spending one
+    conversation on `restart: bool` as metadata *before* the restart work starts, even if
+    nothing else here is adopted.
 
 ## Appendices
 

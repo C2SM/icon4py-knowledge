@@ -118,6 +118,20 @@ Four disjoint metadata dicts plus one orphan: `states/metadata.py` (17 entries, 
 production factory), `states/data.py` (18, IO only), `geometry_attributes.py` (50),
 `interpolation_attributes.py` (23), `metrics_attributes.py` (49).
 
+And **six places where a field's `(name, dims, units)` is independently re-derived**, none of
+which can see the others:
+
+| Site | What it re-derives | From |
+|---|---|---|
+| the three factory attribute dicts | `standard_name`, `units`, `dims`, `dtype` | hand-written |
+| `states/data.py` | CF attrs + `icon_var_name` | hand-written, IO only |
+| `states/metadata.py` | same, orphaned | hand-written, no consumer |
+| `bindings/.../dycore_wrapper.py:370` | ICON name → icon4py field, per timestep | hand-written |
+| `driver_io.py:224` | output key → field | hand-written |
+| `ibm_02` `io/restart.py:204` | `dims` for the restart file | read off the **live field** |
+
+The last one is the interesting case — see "Restart, as it actually stands" below.
+
 CF coverage: metrics ~0/49 are real CF names (the pattern is literally
 `standard_name=<raw ICON name>`), interpolation 0/23, geometry ~1/50, `data.py` ~7/18.
 `units=""` for most geometry/interpolation/metrics entries. Headers carry
@@ -188,9 +202,10 @@ Consequences:
 
 ### What does not exist
 
-- **Checkpoint/restart.** Eight grep hits across `model/`, all docstrings or config help,
-  plus `io/io.py:290 # TODO (jcanton): take care of this when implementing restart`. No writer,
-  no reader, no per-field restart flag.
+- **A checkpoint *write* path.** `io/io.py:290` carries
+  `# TODO (jcanton): take care of this when implementing restart` (output-file overwrite
+  protection). A **read** path does exist — see below — and a prototype writer exists on
+  `origin/ibm_02`. What is missing on `main` is the write side and any per-field restart flag.
 - **Any invalidation machinery.** `grep -i "invalidat|stale|recompute|dirty|version"` over
   `states/`, `geometry.py`, `metrics_factory.py`, `interpolation_factory.py` returns **zero**
   hits. Once `provider._fields[k] is not None` the value is returned forever; there is no
@@ -206,6 +221,62 @@ Consequences:
   (`PROGNOSTIC_VARIABLES` / `DIAGNOSTIC_VARIABLES` in `driver_io.py`); tracers appear in
   neither. Physics precipitation outputs land on `State` attributes and are unreachable by IO;
   `MICROPHYSICS_PRECIP_CF_ATTRIBUTES` is defined and wired to nothing.
+
+### Restart, as it actually stands
+
+Assembled from [[personal/msimberg/checkpoint-restart/checkpoint-restart|msimberg's doc]] and
+verified against the tree. Note his doc cites some pre-rename paths: `model/driver/` is now
+egg-info only, and `TimeLoop.restart_mode` no longer exists (`standalone_driver` has
+`is_first_step_in_simulation`, `driver_states.py:83`).
+
+**Read path on `main`** — `read_restart_from_file` (`initial_condition/from_file.py:142`),
+gated by `FromFileConfig.is_restart` (`:50`). Serialbox-based: restores prognostics, `exner_pr`
+and the predictor/corrector advective tendencies from the savepoint of the step ending at
+`start_of_timestepping`. Tracers raise `NotImplementedError` (`:162`) for a **naming** reason,
+quoted verbatim:
+
+> the solve-nonhydro savepoints do not carry them, they are in the advection-init savepoint of
+> the same date.
+
+**Write prototype on `origin/ibm_02`** — `io/restart.py`, `RestartManager`, pickle, alternating
+`restart_0/1.pkl` with `.meta` sidecars and temp-file-then-rename. Saves prognostics for both
+`.current` and `.next`, plus three hand-picked `DiagnosticStateNonHydro` members
+(`perturbed_exner_at_cells_on_model_levels`, `vertical_wind_advective_tendency.predictor`,
+`.corrector`). No tracers, no diffusion diagnostics, no advection prep, no real datetime, no
+adaptive-substep state.
+
+**A sixth reinvention of field metadata.** `restart.py:204-210`:
+
+```python
+def _store_field(self, state_dict, key, field):
+    state_dict[key] = {
+        "data": field.asnumpy(),
+        "dims": [d.value for d in field.domain.dims],
+    }
+```
+
+and on read (`:75-77`, `:100-106`):
+
+```python
+dims_tuple = tuple(getattr(dims, name + "Dim") for name in dim_names)
+field = gtx.as_field(dims_tuple, arr, allocator=backend)
+```
+
+The string round-trip itself is sound — checked for `CellDim`/`EdgeDim`/`KDim`/`KHalfDim`, all
+four survive `d.value + "Dim"`. The problem is where the dims come from: **they are read off a
+live field at write time**, because there is no declaration to read them from. Consequences:
+
+1. It cannot allocate a field that does not exist yet — which is exactly what restarting into a
+   fresh process needs. `main`'s read path sidesteps this by requiring the caller to pass
+   already-allocated `prognostic_state_now` and `solve_nonhydro_diagnostic_state` in.
+2. Half-levelness cannot reach the file, because the factory already erased `KHalfDim → KDim` at
+   allocation (E8) — so a half-level field's live domain reports `K` with length nlev+1.
+3. Add `_store_field` to the list in E9: field metadata is now independently re-derived in
+   `states/metadata.py`, `states/data.py`, the three factory attribute dicts, the bindings
+   repack, `driver_io`'s output dict, and here.
+
+This is the `QuantityFactory`/`GridSizer` argument (declare `dims` once, resolve to an
+allocation through one object) arriving from a second, independent direction.
 
 ### Dead or near-dead containers
 
