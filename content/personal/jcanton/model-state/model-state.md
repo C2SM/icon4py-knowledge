@@ -34,19 +34,27 @@ Verified in `main` (details and file:line in [[personal/jcanton/model-state/mode
 
 | # | Defect | Severity |
 |---|---|---|
-| E1 | `PrepAdvection` and `AdvectionPrepAdvState` hold the same 3 quantities, are allocated separately, and **nothing copies one into the other** — standalone-driver tracer advection runs on zero trajectory velocity and mass fluxes | correctness |
-| E2 | The two disagree on vertical extent (`nlev+1` vs `nlev`), so even adding a copy would not be shape-compatible | correctness |
+| E1 | `PrepAdvection` and `AdvectionPrepAdvState` held the same 3 quantities, allocated separately, with **nothing copying one into the other** — standalone-driver tracer advection ran on zero trajectory velocity and mass fluxes. **Fixed 2026-07-30 by PR 1404** — see below | correctness (fixed) |
+| E2 | Their `mass_flx_ic` disagreed on vertical extent (`nlev+1` vs `nlev`), so even adding a copy would not have been shape-compatible. Fixed with E1 | correctness (fixed) |
 | E3 | `T`/`Tv`/`p` derived in ≥3 places with **different hydrometeor inputs** — IO uses permanently-zero hydrometeors, physics uses real tracers. The temperature written to output is not the temperature physics computed with | science |
 | E4 | `vn → u,v` computed 3× with different domain bounds; one path omits the halo exchange | correctness |
-| E5 | `dycore.InterpolationState` ⊇ `DiffusionInterpolationState` exactly; `geofac_div` declared in 3 containers; `ddqz_z_full` in 3 | duplication |
-| E6 | ~175 lines of hand-mapping factory outputs into granule dataclasses, replicated ≥3× | boilerplate |
-| E7 | Two shipped wrong-key bugs in those hand-maps (`fac1_mc` into `fac2_mc`; edge-normal into a dual-normal slot) — both type-check | correctness |
+| E5 | `dycore.InterpolationState`'s 16 fields are a strict superset of `DiffusionInterpolationState`'s 8; `geofac_div` declared in 3 containers; `ddqz_z_full` in 3 | duplication |
+| E6 | ~90 `.get()` calls of hand-mapping factory outputs into granule dataclasses, replicated at **7** further sites — 5 in tests, **2 in the production Fortran binding wrappers** | boilerplate |
+| E7 | Three live wrong-key bugs of two kinds in the *replicated* hand-maps (`fac1_mc` into `fac2_mc`; edge-normal into a dual-normal slot) — all type-check. `driver_utils` itself is correct, which is the argument for deleting the replication | correctness |
 | E8 | Location is recorded **three** times: name string, `dims=(CellDim, KHalfDim)`, and `is_on_half_levels: bool` | drift |
 | E9 | Five parallel namespaces per field, four disjoint metadata dicts, ~0/49 metrics entries are real CF names, `units=""` for most | drift |
 | E10 | PR 1360 adds **seven** new state dataclasses for one component; `TmxInputState` re-declares `qv…qg`, `rho`, `w` | trend |
 
 E10 is the important one: the duplication is currently being created faster than it is
 being removed, because every new component pays the full adapter-stack tax.
+
+**E1/E2 were fixed on 2026-07-30 ([PR 1404](https://github.com/C2SM/icon4py/pull/1404),
+`3c8c69342`) — and the fix is itself the argument.** It added `initialize_prep_tracer_advection`,
+a hand-written function whose whole job is to alias three buffers into a second container, plus
+an identity test asserting the aliasing holds. Both are now permanent maintained surface. Under
+M1 neither would need to exist, and the *class* of defect would be unrepresentable rather than
+fixed once — the same function's no-dycore branch still allocates fresh zeros, and every future
+producer→consumer pair starts from the same footing.
 
 Per msimberg, this list is **not a migration bill** — it is the requirement source. The
 more places break, the better specified the design is.
@@ -412,6 +420,7 @@ Design/science/political, not answerable by more investigation:
 
 ## Appendices
 
+- [[personal/jcanton/model-state/model-state_walkthrough|Walkthrough]] — the proposal explained concretely, as before/after pseudocode over icon4py's actual pipeline. **Start here if the mechanism list reads as abstract.**
 - [[personal/jcanton/model-state/model-state_evidence|Evidence]] — verified defects with file:line, and claims that could not be verified.
 - [[personal/jcanton/model-state/model-state_prior-art|Prior art]] — ICON, MPAS, CCPP, sympl, NDSL, ClimaAtmos, LFRic, WRF, CAM, MAPL, NUOPC; steal/avoid lists.
 - [[personal/jcanton/model-state/model-state_icon-sc|What ICON-sc settles]] — egparedes' prototype: what it confirms, what it refutes, what to lift, and 12 unfiled upstream icon4py bugs.

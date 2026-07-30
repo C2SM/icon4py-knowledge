@@ -6,8 +6,15 @@ created: 2026-07-29
 status: draft
 ---
 
-> Appendix to [[personal/jcanton/model-state/model-state|Model state — requirements and design options]].
-> Defects found in `main` at `4ae9fba50`. Paths relative to the icon4py repo root.
+> Appendix to [[personal/jcanton/model-state/model-state|Model state]].
+> Defects found in `main` at `4ae9fba50`; re-checked against `origin/main` at `f94d2d44e`
+> (2026-07-30). Paths relative to the icon4py repo root.
+>
+> **E1 and E2 were fixed on 2026-07-30** by [PR 1404](https://github.com/C2SM/icon4py/pull/1404)
+> (`3c8c69342`), which aliases the dycore's buffers into `AdvectionPrepAdvState` instead of
+> allocating fresh ones, and adds an identity test. They are kept below as the record of what the
+> container shape cost, and because the *fix* — a permanent hand-written aliasing function — is
+> the argument for M1. `#1407` separately removed the deep-atmosphere advection metrics.
 
 ## Verified defects
 
@@ -39,9 +46,13 @@ rename, the advection kept the Fortran name.
 ### E2 — the two disagree on vertical extent
 
 `dycore_states.py:239` allocates `dynamical_vertical_mass_flux_at_cells_on_half_levels` with
-`extend={dims.KDim: 1}` (nlev+1). `driver_states.py:294` allocates `mass_flx_ic` as plain
-`zero_field(grid, CellDim, KDim)` (nlev). Even adding a copy would not be shape-compatible.
-The annotation `fa.CellKField[float]` cannot express the difference. Unresolved in PR 1404.
+`extend={dims.KDim: 1}` (nlev+1). `driver_states.py:294` allocated `mass_flx_ic` as plain
+`zero_field(grid, CellDim, KDim)` (nlev). Even adding a copy would not have been
+shape-compatible. The annotation `fa.CellKField[float]` cannot express the difference.
+
+Only `mass_flx_ic` disagreed — `vn_traj` and `mass_flx_me` were allocated identically on both
+sides. Resolved by PR 1404's aliasing, which sidesteps the shape question entirely; the
+type-system gap that let two containers claim different extents for one quantity remains.
 
 ### E3 — `T`/`Tv`/`p` derived ≥3× with divergent hydrometeors *(science)*
 
@@ -72,8 +83,11 @@ rather than duplicated across IO and physics."*
 
 ### E5 — structural redundancy across interpolation/metric states
 
-- `dycore.InterpolationState` ⊇ `DiffusionInterpolationState` **exactly** (all 8 fields,
-  identical names and shapes); `AdvectionInterpolationState` is a strict subset.
+- `dycore.InterpolationState`'s 16 dataclass fields are a strict superset of
+  `DiffusionInterpolationState`'s 8, and the overlap is exactly those 8. (At *class* level
+  diffusion also carries two `cached_property` members the dycore has no counterpart for, and
+  the two annotate the shared fields with `float` vs `ta.wpfloat` — same runtime type, different
+  declarations.) `AdvectionInterpolationState` is a strict subset.
 - `geofac_div` declared in 3 containers; `ddqz_z_full` in 3 live / 4 declared; `wgtfac_c` ×2.
 - `MetricStateSaturationAdjustment` and `MetricStateIconGraupel` are byte-identical one-field
   dataclasses over the same field.
@@ -82,21 +96,31 @@ rather than duplicated across IO and physics."*
 
 ### E6 — the hand-mapping, replicated
 
-`driver_utils.py:229-439` is ~175 lines / ~90 `.get()` calls turning factory outputs into 9
-granule dataclasses. Repeated in `diffusion/tests/diffusion/fixtures.py`,
-`dycore/tests/dycore/utils.py`, `test_benchmark_diffusion.py`, `test_benchmark_solve_nonhydro.py`,
-`tracer_advection/tests/.../utils.py`. Adding one field to `MetricStateNonHydro` (34 members)
-touches ≥3 call sites in 3 packages.
+`driver_utils.initialize_granules` spans `:215-458` on `origin/main` (~90 `.get()` calls),
+turning factory outputs into 9 granule dataclasses. Repeated at **7** more sites — 5 in tests
+(`diffusion/tests/diffusion/fixtures.py:43`, `dycore/tests/dycore/utils.py:25`,
+`test_benchmark_diffusion.py:123`, `test_benchmark_solve_nonhydro.py:111`,
+`tracer_advection/tests/.../utils.py:28`) and **2 in production** — the Fortran binding wrappers
+`bindings/.../dycore_wrapper.py:197,238` and `diffusion_wrapper.py:215,233`. Adding one field to
+`MetricStateNonHydro` (32 members) touches ≥3 call sites in 3 packages.
 
-### E7 — two shipped wrong-key bugs in exactly that hand-mapping
+### E7 — wrong-key bugs in exactly that hand-mapping
 
-- `test_benchmark_solve_nonhydro.py:162` — `D2DEXDZ2_FAC1_MC` assigned to `d2dexdz2_fac2_mc`.
-- `test_benchmark_diffusion.py:101,105` — `EDGE_NORMAL_VERTEX_V` assigned to
-  `dual_normal_vert_y`, where the tangent was meant (cf. `driver_utils.py:253`, which uses
-  `EDGE_TANGENT_VERTEX_V`).
+Three live occurrences of two kinds, all still present on `origin/main`:
 
-Both type-check, both run, neither is detectable by any current mechanism. Wide constructors
-of same-typed fields make this class of bug free to write.
+- `test_benchmark_solve_nonhydro.py:163` — `D2DEXDZ2_FAC1_MC` assigned to `d2dexdz2_fac2_mc`
+  (`:162` correctly assigns `d2dexdz2_fac1_mc` from the same key).
+- `test_benchmark_solve_nonhydro.py:98` and `test_benchmark_diffusion.py:105` —
+  `EDGE_NORMAL_VERTEX_V` assigned to `dual_normal_vert_y`, where the tangent was meant
+  (cf. `driver_utils.py:253`, which uses `EDGE_TANGENT_VERTEX_V`).
+
+Both type-check, both run, neither is detectable by any current mechanism. Wide constructors of
+same-typed fields make this class of bug free to write.
+
+**They live in the *replicated* sites, not the primary one** — `driver_utils.py:252-253` and
+`:340-341` are correct. That is an argument for deleting the replication, not for distrusting
+`driver_utils`. And "shipped" overstates it: these are benchmark paths, not the production
+driver.
 
 ### E8 — placement recorded three times
 
