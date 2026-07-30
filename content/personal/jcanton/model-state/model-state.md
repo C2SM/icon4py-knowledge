@@ -1,5 +1,5 @@
 ---
-title: Model state — requirements and design options
+title: Model state
 author: jcanton
 tags: [state, model-state, components, fields, registry, metadata, duplication, allocation, lazy-evaluation, labels, halo-exchange, restart, prior-art]
 created: 2026-07-29
