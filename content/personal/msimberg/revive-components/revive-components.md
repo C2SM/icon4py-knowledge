@@ -8,6 +8,8 @@ status: draft
 
 > **TL;DR** Revive and flesh out the `Component` Protocol from `model/common/src/icon4py/model/common/components/components.py` into a usable, well-documented interface for model building blocks.
 
+> **Current direction (2026-07-29):** the design has moved to a **directed-graph composition layer above the `Component`** (chaining, looping, branching, I/O as a sink, conversions as components). The primitives are defined once and are stable across a D0 (today) -> D1 (no-IR eDSL) -> D2 (introspectable steps, opt-in export) -> D3 (serializable IR plus a second interpreter) layering; D3 is a non-breaking addition, not a fork. See the v3 spec in the appendices. NOT FROZEN.
+
 ## Problem / motivation
 
 The codebase already defines a `Component` Protocol ([[https://github.com/C2SM/icon4py/blob/main/model/common/src/icon4py/model/common/components/components.py|components.py]]) that declares the shape a model component should have: typed inputs and outputs with CF metadata, and a `__call__` that transforms model state. However, it is currently a stub: the abstract methods (`inputs_properties`, `outputs_properties`) are unimplemented, the open TODOs are unresolved, and no concrete components in the codebase adopt the protocol.
@@ -34,4 +36,5 @@ Not yet evaluated. This is a placeholder to start the discussion.
 
 ## Appendices
 
-- [[personal/msimberg/revive-components/revive-components_spec|SPEC reference]] — frozen specification from one exploration of a concrete `Component` interface, included as an additional starting point. **Unreviewed; not yet agreed.**
+- [[personal/msimberg/revive-components/revive-components_spec_v3|SPEC v3 (composition layer)]] - current proposal: a directed-graph composition layer above the `Component`, with a D0->D1->D2->D3 layering and concrete worked examples for the standalone driver, physics driver, dycore sub-stepping, and tracer advection. **NOT FROZEN.**
+- [[personal/msimberg/revive-components/revive-components_spec|SPEC v2 (superseded)]] - earlier per-component frozen input/output dataclasses proposal. Superseded by v3; kept as history.
