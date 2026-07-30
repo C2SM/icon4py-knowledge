@@ -1,7 +1,7 @@
 ---
 title: Model state
 author: jcanton
-tags: [state, model-state, components, fields, registry, metadata, duplication, allocation, lazy-evaluation, labels, halo-exchange, restart, prior-art]
+tags: [state, model-state, components, fields, registry, metadata, duplication, allocation, lazy-evaluation, labels, halo-exchange, restart, icon-sc, contracts, prior-art]
 created: 2026-07-29
 status: reviewed
 ---
@@ -9,9 +9,9 @@ status: reviewed
 > **TL;DR** Four incompatible designs for "how components get their fields" are open
 > at once and none states its requirements. This proposes the requirements first, then
 > argues the container should be a **setup-time wiring step that emits ordinary typed
-> dataclasses** — not a global bucket passed around at run time. Nine mechanisms are
+> dataclasses** — not a global bucket passed around at run time. The mechanisms are
 > separated so they can be adopted one at a time; only one of them genuinely needs
-> run-time state.
+> run-time state, and even that one is cheaper than expected.
 
 ## Why now
 
@@ -125,18 +125,29 @@ decisive observation:
 > recurs per timestep. The fix therefore belongs at setup time, and a setup-time fix needs
 > no global mutable bucket at all.
 
-So: the container consumes *declarations* and emits *bindings*. If any object it created is
-still reachable when the first stencil runs, it has failed. Three tests for any proposal:
+So: the container consumes *declarations* and emits *bindings*. Three tests for any proposal:
 
-1. **Freeze test** — can it be frozen (no add, no rebind) before the time loop? For icon4py
-   yes: the tracer set is a pure function of `TracerConfig`, the output set of the namelist,
-   the component set of config. Two-phase lock is what CCPP (`lock_table`/`lock_data`), ICON
-   (`add_var` after the secondary constructor is fatal) and NUOPC (advertise→realize) all
-   converged on.
-2. **Reachability test** — does any granule hold a reference to the container? If yes you
-   have built MPAS's pools, which MPAS-Ocean deleted for GPU ("a large user-defined type did
-   not perform well on GPUs") and whose successor Omega dropped entirely.
+1. **Freeze test** — can the *schema* be settled before the time loop? For icon4py yes: the
+   tracer set is a pure function of `TracerConfig`, the output set of the namelist, the
+   component set of config. But a **hard freeze is not required** — see below.
+2. **Reachability test** — can a **granule** reach the container? If yes you have built MPAS's
+   pools, which MPAS-Ocean deleted for GPU ("a large user-defined type did not perform well on
+   GPUs") and whose successor Omega dropped entirely.
 3. **Emission test** — is the output an ordinary dataclass gt4py accepts?
+
+Two earlier versions of these tests were **too strong, and ICON-sc's working system refutes
+them** ([[personal/jcanton/model-state/model-state_icon-sc|appendix]]):
+
+- *"If any object it created is still reachable when the first stencil runs, it has failed"* —
+  ICON-sc's vault **is** live at run time, and for two load-bearing reasons: something must hold
+  the buffers so a time-level swap can retarget the public view, and something must carry the
+  staleness counters so a stale wiring raises instead of silently binding dead buffers. The
+  correct test is narrower: *nothing a **component** can reach; what survives is index-addressed
+  only, holds no names on the step path, and is an instance rather than a module-level global.*
+- *Two-phase lock with a hard freeze* (CCPP `lock_table`/`lock_data`, ICON's fatal post-`add_var`,
+  NUOPC advertise→realize). ICON-sc shows a **staleness guard beats a freeze**: mutation stays
+  legal, and running against a stale wiring raises. That forbids nothing and costs ~100 LOC.
+  See M6 below and open question 8.
 
 ### gt4py already forces the answer
 
@@ -155,6 +166,22 @@ A name-keyed map is structurally barred from being a program argument. Whatever 
 the last mile is always an explicit typed dataclass — so R9 is not a compromise, it is
 mandatory. (Incidentally: PR 1404 removing the `tracer` field flips `PrognosticState` to
 conformant.)
+
+**Do not argue this on speed.** ICON-sc measured its entire negotiation/execution split at
+**6.7 %** of step time on a real model (JW R02B04×35, gtfn_cpu, 3.68 → 3.43 s/step); the
+eye-catching 64–101× figures are from a kernel-free toy. Its architecture doc is blunt about
+why: *"a dict lookup is ~40–60 ns and slotted attribute access ~20–40 ns, but those were never
+the real cost."* The case for typed dataclasses rests on the structural prohibition above (R5),
+on Fortran buffer adoption (R4), and on type-checkability and explicit ownership — **not** on
+lookup cost.
+
+**The strongest objection to this document comes from the same source** and deserves answering
+head-on. egparedes, with our exact use case in view: *"The schema is configuration-dependent
+(the tracer set alone varies), so **no static dataclass can be the public state type**."* That
+is correct about a *static* type and beside the point for a setup-time **emitter** — but only if
+**M11 (conditional allocation from config predicates) is real**. M11 is entirely absent from
+ICON-sc. Leaving it as a one-line row in the table below does not defuse the objection; it is
+the load-bearing mechanism for the whole thesis.
 
 The same conclusion is reached independently by everyone who has shipped this:
 
@@ -191,6 +218,8 @@ mutable name→field map at run time.
 | M4 | Declared I/O → automatic wiring (emit the dataclass) | setup | No | M2 | M |
 | M7 | Labels/groups, materialized at setup | setup | No | M2 | S / M vocab |
 | M8 | Units: validate, don't convert | setup | No | M2 | S |
+| **M12** | **Declared handoff + single-consumer arity check** | setup | No | M1, M2 | S (~90 LOC) |
+| **M14** | **Parameters as a structure distinct from state** | setup | No | M2 | S/M |
 | M5 | Lazy derived-field computation | run | No | M2, M6 | **H** |
 | M6 | Staleness / generation counters | **run** | **Yes** | M1, M2 | M / H discipline |
 | M9 | Automatic regridding as registered rules | run | No | M2, M5, M6 | **H** |
@@ -210,11 +239,30 @@ Notes on the ones that matter most:
   *without* a scope tag makes memory strictly worse, by making every private buffer globally
   reachable and never freed. NDSL's `Local` poisons the buffer at init, sets DaCe
   `transient=True` so the compiler can elide it, and enforces scope at run time.
-- **M6 is the only genuinely run-time mechanism, and the only one with no prior art to copy.**
-  ICON, MPAS, CAM `pbuf` and NDSL track nothing; sympl's only mechanism is wall-clock interval;
-  ClimaAtmos replaced it with one explicit barrier. Use revision counters, not content hashing.
-  It can never be a correctness guarantee: gt4py's `Field` has no immutability concept and
-  `.ndarray` hands out a writable buffer, so anyone can desynchronize the bookkeeping.
+- **M6 splits in two, and only one half is worth building.** *Structural* staleness — "is my
+  wiring still valid?" — is cheap, has prior art, and replaces the freeze requirement entirely.
+  ICON-sc uses three separate invalidation domains in ~100 LOC: `epoch` (a field identity changed
+  ⇒ the wiring is stale ⇒ **raise**), `generation` (a swap changed the view ⇒ only cached views
+  drop), `schema_hash` (the slot set changed), plus a debug-build `renegotiate_and_diff` that
+  re-runs the wiring every N steps and diffs it line by line. In-place value writes stale
+  nothing — *"values are the user's business, identities are the plan's."* **Adopt this.**
+  *Scientific* staleness — "is this derived field still consistent with its inputs?" — is the one
+  with no prior art (ICON, MPAS, CAM `pbuf` and NDSL track nothing; sympl's only mechanism is
+  wall-clock interval; ClimaAtmos replaced it with one explicit barrier). It can never be a
+  correctness guarantee: gt4py's `Field` has no immutability concept and `.ndarray` hands out a
+  writable buffer. **Defer it**; M5-lite's barrier removes the need.
+- **M12 gives R1 a mechanism.** R1 has been a requirement with no mechanism. Declare each
+  producer→consumer handoff and check the arity at setup: 0 consumers *or* ≥2 both reject —
+  *"a dangling tendency silently loses physics, a double consumer double-applies it."* No runtime
+  object; the check runs once and no data ever passes through it. **It catches E1 only under
+  one-quantity ⇒ one-name ⇒ one-buffer (M1+M2)** — without those, `PrepAdvection.vn_traj` and
+  `AdvectionPrepAdvState.vn_traj` are two legitimate slots and the check is decorative. Note
+  ICON-sc's own hole: it never checks *publisher* count, while ICON genuinely sums multiple
+  publishers into `ddt_*`, so publisher multiplicity must be declared rather than assumed.
+- **M14 keeps calibration constants out of state.** Tunable scheme parameters (entrainment
+  coefficients, autoconversion thresholds) declared as a structure *separate from* state, so they
+  are never smuggled through state fields. Needs zero JAX despite originating in ICON-sc's
+  differentiability work; equally right for ensembles, perturbed physics, and namelist provenance.
 - **M5/M9 carry the loudest warnings.** CCPP has wanted `theta_v,exner→T,p` derivation for
   years, has not built it, and scopes the issue "*this is not an open-ended task!*". The
   `theta_v,exner ↔ T,p` cycle is real (ClimaAtmos documents the identical `ᶜK↔ᶜT↔ᶜp` cycle and
@@ -258,16 +306,34 @@ vs `u,v` differ by more than placement). Those stay plain named fields with no d
 
 Each step independently shippable, each with standalone value.
 
-1. **M2** — metadata on dataclass fields (NDSL's form), plus start the standard-name file.
-   Unblocks everything, breaks nothing, gt4py-safe (`metadata=` sets no default).
+0. **Free wins, no design commitment required.** Add the coverage test (hand-map keys ≡
+   `dataclasses.fields(Target)`, ~10 lines per site) so E6/E7 drift turns red *today*; adopt
+   units-as-identity-validation (~110 LOC, no dependencies); adopt the `icon:`-namespace
+   two-way invariant. All three are lifted from ICON-sc and commit us to nothing —
+   see [[personal/jcanton/model-state/model-state_icon-sc|the ICON-sc appendix]], §Adopt now.
+1. **M2** — metadata on dataclass fields (NDSL's form), plus start the name file. Unblocks
+   everything, breaks nothing, gt4py-safe (`metadata=` sets no default). Include `origin`/K-domain
+   from the start: gt4py fields carry a *domain*, not a shape, and that omission cost ICON-sc two
+   work units of misdiagnosis.
 2. **M10 + M11** — scope tag and config-predicate allocation. The only two mechanisms that
-   *reduce* memory, and both prevent the rest from regressing it.
-3. **M3** — validation. Highest value/line; already agreed by both existing specs.
-4. **M1** — canonical allocation, frozen at setup. Kills E1 by construction. No signature changes.
-5. **M4** — auto-wiring, **gated on M2's vocabulary being real**. Deletes E6.
-6. **M7** — labels. Unlocks output/restart/checkpoint sets; gives tracers an IO path at all.
-7. **M5-lite** — one derived-quantities barrier over a closed set. Kills E3 and E4.
-8. **M6, M9, M5-full** — defer; each needs a written justification.
+   *reduce* memory, both prevent the rest from regressing it — and **M11 is what answers the
+   strongest objection to this whole document** (see the gt4py section).
+3. **M3** — validation, at class creation rather than first call. Highest value/line; already
+   agreed by both existing specs.
+4. **M1** — canonical allocation, settled at setup. Kills E1 by construction. No signature changes.
+5. **M12** — handoff arity check. Cheap once M1+M2 exist, and it is what makes E1 *unrepresentable*
+   rather than merely fixed once.
+6. **M4** — auto-wiring, **gated on M2's vocabulary being real**. Deletes E6.
+7. **M7** — labels. Unlocks output/restart/checkpoint sets; gives tracers an IO path at all.
+8. **M5-lite** — one derived-quantities barrier over a closed set. Kills E3 and E4.
+9. **M6-structural** (`epoch`/`generation`/`schema_hash` + debug renegotiate-and-diff) — adopt
+   whenever setup-time wiring lands; it replaces the freeze requirement.
+10. **M14** — parameters separate from state. Independent of everything else.
+11. **M6-scientific, M9, M5-full** — defer; each needs a written justification.
+
+Acceptance criterion for the whole sequence, from ICON-sc: **the old and new wiring must agree
+bitwise, as a release blocker, never a tolerance to widen.** They demonstrated exactly this over
+288 composed steps / 1440 dycore substeps.
 
 Step 5 has a hard dependency worth repeating: **auto-wiring keyed on today's vocabulary will
 silently bind the wrong field.** `metrics_attributes.py:106` already declares two distinct
@@ -319,13 +385,23 @@ Design/science/political, not answerable by more investigation:
 4. Is `mass_flx_ic` on half or full levels? The two containers disagree and PR 1404 does not
    resolve it. Science question.
 5. When IO and physics disagree, which temperature is *the* model temperature? (E3)
-6. Do we require bitwise reproducibility across the refactor? A yes rules out lazy derivation
-   and pins the savepoints as reference.
-7. What per-timestep Python overhead is acceptable, **as a number**? Everything downstream
-   (labels vs precomputed buckets, dict vs dataclass, staleness bookkeeping) is decided by it.
-8. Do we accept a hard declare → bind → freeze → run lifecycle with no field addable after
-   init? That is what makes it safe, and it forbids plugin-style late registration.
-9. Do we commit to a controlled name vocabulary, and **which domain scientist owns it**?
+6. ~~Do we require bitwise reproducibility across the refactor?~~ **Answered — yes, and it is
+   achievable.** ICON-sc demonstrated old-wiring ≡ new-wiring bitwise over 288 composed steps
+   against a real dycore. Adopt it as a release blocker, never a tolerance to widen. It does
+   *not* rule out setup-time derivation; it rules out **lazy** derivation, whose evaluation order
+   is data-dependent.
+7. What per-timestep Python overhead is acceptable, **as a number**? Still open, but now with a
+   datapoint: ICON-sc's entire negotiation/execution split bought **6.7 %** on a real model, and
+   its author states dict-vs-attribute lookup "was never the real cost". Whatever we build should
+   not be justified on this axis.
+8. ~~Do we accept a hard declare → bind → freeze → run lifecycle?~~ **Answered — no, and we
+   don't need to.** A staleness guard beats a freeze: mutation stays legal, and running against
+   a stale wiring raises. ~100 LOC, forbids nothing (M6-structural).
+9. Do we commit to a controlled name vocabulary, and **which domain scientist owns it**? The
+   *shape* is now settled — unprefixed ⇒ claims CF identity, no CF name ⇒ must be `icon:<name>`,
+   both directions enforced at registration. ICON-sc's measured split is **18 CF / 72 `icon:`**:
+   80 % of an atmospheric model has no CF name, which is the argument to take to the domain
+   scientists. **Ownership remains open.**
 10. **Exact or scientific restart?** This is the highest-leverage open question in the list,
     because it is the only one that forces a per-field decision on every field in the model
     (R11), and because [[personal/msimberg/checkpoint-restart/checkpoint-restart|the restart doc]]
@@ -338,6 +414,7 @@ Design/science/political, not answerable by more investigation:
 
 - [[personal/jcanton/model-state/model-state_evidence|Evidence]] — verified defects with file:line, and claims that could not be verified.
 - [[personal/jcanton/model-state/model-state_prior-art|Prior art]] — ICON, MPAS, CCPP, sympl, NDSL, ClimaAtmos, LFRic, WRF, CAM, MAPL, NUOPC; steal/avoid lists.
+- [[personal/jcanton/model-state/model-state_icon-sc|What ICON-sc settles]] — egparedes' prototype: what it confirms, what it refutes, what to lift, and 12 unfiled upstream icon4py bugs.
 
 Related: [[personal/msimberg/revive-components/revive-components|Revive components]],
 [[personal/OngChia/physics-driver-and-components|Physics driver and component design]],
