@@ -256,7 +256,7 @@ class of bug is not retired by fixing one instance of it**; the fallback branch 
 function still allocates fresh zeros, and every future producer→consumer pair starts from the
 same footing.
 | **E5** (`geofac_div` in 3 containers) | Still declared in 3 containers — that is fine and stays typed. But it is now *provably* one buffer, because they name one quantity |
-| **E6** (175 lines × ≥3 sites) | Deleted. `reg.build(T)` is one line per container |
+| **E6** (~90 hand-typed mappings × 8 sites) | Deleted. `reg.build(T)` is one line per container |
 | **E7** (wrong-key bugs) | `reg.build` fills by declared quantity name, not by hand-typed keyword. There is no keyword list left to mistype |
 | **E8** (placement in 3 places) | `dims` in the declaration is the only source; the name string and `is_on_half_levels` become derived |
 
