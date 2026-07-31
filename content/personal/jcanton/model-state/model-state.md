@@ -20,7 +20,7 @@ Five designs for the same problem are in flight, mutually unaware:
 | Design | Component signature | State shape |
 |---|---|---|
 | [PR 1301](https://github.com/C2SM/icon4py/pull/1301) / [1360](https://github.com/C2SM/icon4py/pull/1360) | `__call__(dict[str, DataField], datetime) -> dict` | per-process `PhysicsState` gather/scatter adapter |
-| [PR 1358](https://github.com/C2SM/icon4py/pull/1358) (egparedes, draft) | `__call__(state: ModelState, step: StepInfo) -> None` | one shared `ModelState`, in-place writes |
+| [[personal/egparedes/layered-architecture-refactor\|egparedes architecture refactor]] (draft) | `__call__(state: ModelState, step: StepInfo) -> None` | one shared `ModelState`, in-place writes |
 | [[personal/msimberg/revive-components/revive-components_spec\|msimberg spec]] | `run(state: InputT, dtime) -> OutputT` | typed frozen dataclass both ways |
 | [[personal/OngChia/physics-driver-and-components\|OngChia design]] | `__call__(state: StateView, time) -> dict` | run-time `StateProvider` + freshness |
 
@@ -373,7 +373,8 @@ fields (cell and edge) under one `standard_name`.
   recently", not "is this consistent" — a hole he documents himself. Its per-component call
   frequency and Jacobi/Gauss-Seidel selection are genuinely not covered elsewhere and should
   be kept.
-- **PR 1358** independently reaches the same duplication finding and proposes merging
+- **[[personal/egparedes/layered-architecture-refactor|The layered-architecture refactor]]**
+  independently reaches the same duplication finding and proposes merging
   `PrepAdvection` into a shared `ModelState`. Its `-> None` in-place contract is the most
   GPU-honest of the four.
 - **Neither existing spec covers**: allocation, scope/lifetime, conditional allocation, labels,
@@ -388,7 +389,7 @@ Design/science/political, not answerable by more investigation:
    the container is a host-side convenience only. *(Confirmed hard requirement — stated here
    so reviewers can challenge it.)*
 2. Has standalone-driver tracer advection ever produced validated results, given E1? Who signs that off?
-3. **PR 1301/1360 vs 1358 vs the two specs: which protocol wins?** Four open signatures is the
+3. **PR 1301/1360 vs [[personal/egparedes/layered-architecture-refactor|the layered-architecture refactor]] vs the two specs: which protocol wins?** Four open signatures is the
    real blocker. Reconciling them is a precondition, not a follow-up.
 4. Is `mass_flx_ic` on half or full levels? The two containers disagree and PR 1404 does not
    resolve it. Science question.
@@ -427,4 +428,5 @@ Design/science/political, not answerable by more investigation:
 
 Related: [[personal/msimberg/revive-components/revive-components|Revive components]],
 [[personal/OngChia/physics-driver-and-components|Physics driver and component design]],
-[[personal/msimberg/checkpoint-restart/checkpoint-restart|Checkpoint/restart]].
+[[personal/msimberg/checkpoint-restart/checkpoint-restart|Checkpoint/restart]],
+[[personal/egparedes/layered-architecture-refactor|Layered architecture refactor]].
