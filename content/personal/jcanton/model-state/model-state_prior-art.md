@@ -1,12 +1,12 @@
 ---
 title: Model state — prior art
 author: jcanton
-tags: [state, model-state, prior-art, icon, mpas, ccpp, sympl, ndsl, lfric, registry, labels, ecs]
+tags: [state, model-state, prior-art, icon-sc, icon, mpas, ccpp, sympl, ndsl, lfric, registry, labels, ecs]
 created: 2026-07-29
 status: draft
 ---
 
-> Appendix to [[personal/jcanton/model-state/model-state|Model state — requirements and design options]].
+> Appendix to [[personal/jcanton/model-state/model-state|Model state]].
 > What other codes do about field containers and components declaring their inputs.
 > Line numbers for ICON, LFRic and gt4py come from local checkouts; the rest are
 > paraphrase-grade — spot-check before citing externally.
@@ -15,6 +15,7 @@ status: draft
 
 | System | Container | Components declare inputs? | Resolution | Verdict for icon4py |
 |---|---|---|---|---|
+| **ICON-sc** | `dict[str, DataArray]` at the boundary → slotted `StateVault` at run time | **yes**, sympl property contracts | **bind time**, emits a frozen execution plan | the closest test of this document's thesis: **confirms it, and refutes three of its claims**. Take the small pieces, leave the compiler |
 | **ICON** (Fortran) | typed derived types **+** parallel `var_list` registry | no | run time, I/O only | steal the *metadata-at-definition-site* + *labels*; do not pay the dual declaration |
 | **MPAS** | `mpas_pool_type`, dynamic hash tables | no | run time, string-keyed | **avoid** — its successor dropped it |
 | **CCPP** | host model's, unchanged | **yes**, `.meta` files | **build time**, generates the glue | closest to the goal; the framework is not in the executable |
@@ -25,6 +26,84 @@ status: draft
 | **CAM** `pbuf` | runtime-addressable buffer | index requested at init | init-time index, run-time access | two-phase lookup is the right shape |
 | **WRF** | `Registry` text table → generated derived types | no | build time | codegen for state + IO + nesting + halos from one table |
 | **NUOPC** | `ESMF_State` / `FieldBundle` | **yes**, advertise→realize | init-time negotiation | unconnected exports cost zero memory |
+
+## ICON-sc — the only system built against our exact problem
+
+egparedes' prototype: a sympl+Tasmania composition layer over a zero-copy device-field boundary,
+**hosting** icon4py granules rather than forking them. Unlike everything else in this document it
+was built to solve *our* problem on *our* codebase, so it carries the most weight — and needs the
+most calibration.
+
+**Calibration.** Six days, agent-driven (work units S01–S14, 2026-07-08→13); **nothing pushed to
+any remote**; 7 human sign-offs still `pending`. **Zero GPU execution, ever** (`test-gpu.yml`
+runs on `ubuntu-latest` and asserts GPU tests *skip*). **Zero MPI** (`test-mpi.yml`'s `mpirun -n 4`
+is a shell comment). 2 of ~11 NWP schemes; no real data; tiers T2/T3 are 5-line roadmap stubs.
+Its architecture doc is a **design proposal** — much of what it describes most confidently is
+unbuilt. Its internal review discipline is genuinely strong (it caught a tolerance loosening
+across six fields with fabricated provenance); that is not the same as production contact.
+
+**What it confirms.** `plan/bind.py` is **1732 lines**; `state/vault.py` is **203** — the compiler
+is 8.5× the container. A test proves **zero name lookups per step** with an instrumented dict, and
+forbids `xarray`/`pint`/contract frames inside `run_step`. No component can reach the container.
+Buffer *adoption* is the primary path: `from_state` never allocates, adopts `.data`, *"never
+`.values`: no duck-array coercion"*. Its architecture doc states our thesis independently:
+*"nothing about the interfaces changes during execution … every lookup performed in the loop is
+recomputing an invariant."*
+
+**What it refutes** — the three corrections are folded into the main document, recorded here so
+the source is traceable: (1) "nothing the container created may survive into the time loop" is too
+strong — its vault *is* live, because something must hold buffers across a swap and carry the
+staleness counters; (2) the performance case is wrong — the whole negotiation/execution split
+measured **6.7 %** on a real model (3.68 → 3.43 s/step), and its author notes dict-vs-attribute
+lookup *"was never the real cost"*; (3) a static dataclass genuinely cannot be the *public* state
+type, because the schema is config-dependent — which is why M11 is load-bearing rather than a
+footnote. It also does **not** solve R4: it is the driver, owns allocation, and its two hosted
+granules copy in and out **17 full-field memcpys per Δt (~100 MB)**.
+
+**Steal**
+
+| Idea | Size |
+|---|---|
+| **Units as identity-validation, never conversion** — one canonical unit per name, checked at class creation; Pint lazily imported and quarantined by a subprocess test proving it never enters `sys.modules` on the apply path | ~110 LOC, no deps |
+| **`icon:` namespace, two-way invariant** — unprefixed ⇒ claims CF identity; no CF name ⇒ *must* be `icon:<name>`; enforced at registration. Measured split **18 CF / 72 `icon:`** — 80 % of an atmospheric model has no CF name | S |
+| **`origin`/K-domain as first-class metadata** — gt4py fields carry a *domain*, not a shape. Omitting it cost them ~2 work units of misdiagnosis; publish the symptom signature (*"bitwise-unequal across identical rebuilds"* ⇒ out-of-domain reads, not physics) | S |
+| **Two counters instead of a freeze** — `epoch` (identity changed ⇒ wiring stale ⇒ raise) vs `generation` (swap ⇒ only cached views drop); *"values are the user's business, identities are the plan's"*. Plus a debug `renegotiate_and_diff` | ~100 LOC |
+| **Declared I/O validated at class creation** (`__init_subclass__`), cross-dict dims/units consistency, and `ContractViolation(field, component, kind, actual, target)` batched into one error | ~40 LOC |
+| **Single-consumer arity check on handoffs** — 0 or ≥2 both reject. Close their hole: they never check *publisher* count, while ICON sums multiple publishers into `ddt_*` | ~90 LOC |
+| **Parameters as a structure distinct from state** — tunable scheme constants never smuggled through state fields. Zero JAX needed | S/M |
+| **`lock.toml`** — an append-only SHA-pinned provenance ledger for every borrowed constant and tolerance; plus the reviewer rules (re-derive every tolerance from the pinned upstream test; mutation-probe every oracle) | M |
+| **T0 ≡ T1 bitwise as a release blocker, "never a tolerance to widen"** — demonstrated over 288 composed steps / 1440 dycore substeps | process |
+
+**Avoid**
+
+- **The plan compiler** (2090 LOC + 1603 LOC of tests). 1732 lines exist to *dissolve a
+  sympl/Tasmania composition tree*; icon4py has no such algebra to dissolve. Carries 42
+  `PlanCompileError` refusal sites; hosting *one* dycore required inventing a new hook quartet.
+  Transferable residue ≈300 LOC.
+- **`dict[str, DataArray]` as the state type.** They needed vault + compiler + swap variants +
+  cadence masks + guards to recover what a typed dataclass gives free. **ICON-sc built a
+  1732-line compiler whose main job is erasing a dict its own interpreted tier introduced —
+  icon4py never has to introduce it.**
+- **The coupling algebra** — 7 combinators, **2 used**; a hand-written closure in their own preset
+  is bitwise equivalent to the federation it replaces.
+- **The F-tier / JAX** — not a lowering but a *second physics implementation* (763 hand-ported
+  lines); the `custom` route has zero implementations. It would *cost* design: `functional_state()`
+  abolishes component privacy, and `CallingFrequency` lowers to running radiation unconditionally
+  every step.
+- **The halo story** — `HaloPolicy`, `halos="auto"`, the composition-time validator. **Entirely
+  unbuilt**: `HaloState.DIRTY` is never assigned anywhere in `src/`, `HaloPolicy` has no consumer,
+  and `communicates_internally=True` is declared by both real components and read by nothing —
+  both delegate halos back into the icon4py granule. The architecture calls it "the single most
+  valuable safety net"; the annotation is 8 lines and the consumer is the entire cost.
+- **Ping-pong SSA for time levels** — only n=2, no `nsav`, and **their own dycore opted out**,
+  keeping `nnow/nnew` component-private.
+
+Note on the zero-copy wrap they use (`gtx_common._field(buffer, domain=...)` aliases with
+write-through; public `gtx.as_field` copies): **this is not an ICON-sc asset** — icon4py already
+uses it in `bindings/icon4py_export.py:96`, `states/factory.py:93` and `solve_nonhydro.py:1030`.
+What remains is the inconsistency: `DiagnosticState.surface_pressure` still uses `as_field` and
+copies on every attribute read. `_field` is private API; they pin it via `lock.toml`, which is the
+right way to depend on it.
 
 ## ICON — validates labels, warns about everything else
 
@@ -256,10 +335,19 @@ and loose coupling."* Their proposed fix is to push data back onto the object it
 5. Labels declared at the definition site, O(1) membership, materialized at setup, **unknown
    label raises** (ICON, minus its auto-create).
 6. Conditional allocation from config predicates (MPAS `packages`, climt `get_default_state`).
-7. Two-phase lifecycle: declare → bind → **hard freeze** → run (CCPP, ICON, NUOPC).
+7. A two-phase lifecycle — declare → bind → run. CCPP, ICON and NUOPC all end it with a **hard
+   freeze**; ICON-sc shows a **staleness guard is strictly better** (mutation stays legal, using
+   a stale wiring raises), costs ~100 LOC, and forbids nothing.
 8. Resolve names once into typed handles; never look up a string in a kernel (CAM, Omega).
 9. Capability vs request separation (ICON).
-10. Unit *algebra* at setup; unit *conversion* only at the file boundary (sympl, ICON `post_op`).
+10. Unit *algebra* at setup; unit *conversion* only at the file boundary (sympl, ICON `post_op`),
+   with ICON-sc's sharpening: one canonical unit per name, checked at declaration, and the
+   conversion path quarantined so it cannot be reached in production.
+11. A namespace invariant for the ~80 % of model fields CF cannot name — no CF name ⇒ mandatory
+   `icon:` prefix, enforced at registration (ICON-sc).
+12. `origin`/K-domain as first-class metadata: gt4py fields carry a *domain*, not a shape
+   (ICON-sc, learned the hard way).
+13. Bitwise old-wiring ≡ new-wiring as a release blocker, never a tolerance to widen (ICON-sc).
 
 **Avoid**
 
@@ -270,3 +358,6 @@ and loose coupling."* Their proposed fix is to push data back onto the object it
    entirely (CCPP's 66% interstitial glue).
 5. Per-call unit conversion (sympl's own performance issues).
 6. Assuming CF standard names cover model-internal fields. They do not, and never will.
+7. Building a compiler to erase a dict you were never forced to introduce (ICON-sc) — and,
+   generally, adopting the *unbuilt* parts of a prototype: its halo validator is the most quoted
+   idea in its architecture and has no consumer anywhere in its source.

@@ -27,8 +27,8 @@ containers granules already take, then it is done.
 
 Two names used throughout:
 
-- **ICON-sc** ([[personal/jcanton/model-state/model-state_icon-sc|appendix]]) — egparedes'
-  prototype, the only working system in this space we can measure against.
+- **ICON-sc** ([[personal/jcanton/model-state/model-state_prior-art|prior art]], §ICON-sc) —
+  egparedes' prototype, the only working system in this space we can measure against.
 - **named collection** — gt4py's term for something it will accept as a `gtx.program` argument.
   A plain dataclass qualifies; a `dict` never does; **a dataclass with any defaulted field does
   not** (`named_collections.py:34-48`). This constrains the design more than anything else here.

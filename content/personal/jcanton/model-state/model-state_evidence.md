@@ -314,6 +314,28 @@ allocation through one object) arriving from a second, independent direction.
 Deleting the first is one line. Promoting the second to *the* shared diagnostic container is
 the whole refactor.
 
+## Unrelated icon4py defects found along the way
+
+Not about state containers, and actionable independently of everything else in this proposal.
+Found by ICON-sc (see [[personal/jcanton/model-state/model-state_prior-art|prior art]]) while
+hosting icon4py granules. **None was ever filed** — its work unit `0023-upstream-reports/`
+contains only a `plan.md`.
+
+| ID | Finding | Status |
+|---|---|---|
+| **U1** | **Graupel cold-glaciation water-budget leak.** Supercooled qc at T ≲ 233 K near the moist-domain top *gains* total water — a fixed absolute amount per column, independent of qc magnitude: **+1.59e-4 kg/m² per Δt=30 s**, worst in-domain relative 4.32e-4. Suppressed entirely by any coexisting ice-phase seed | **Has a runnable, wrapper-free reproducer** on public icon4py APIs, bounded so it visibly collapses when fixed |
+| **U9** | **`is_surface` index bug in the graupel scan.** `k_lev` is a scan carry starting at 0 relative to `vertical_start=kstart_moist` (`graupel_stencils.py:827`), compared at `:218` against `ground_level = num_levels-1` (absolute). The surface minimum-fall-speed clamps **only fire when `kstart_moist == 0`** | **Verified independently.** One line |
+| **U2** | **`wgtfacq_c`/`wgtfacq_e` shifted-K-domain footgun** — both the metrics factory and the serialbox reader emit these on K-domain `[nlev−3, nlev)`; the convention is visible only in the factory registration | Cost ICON-sc ~2 work units. Same class as E8 |
+| **U3/4/5** | One grid-factory issue: `mean_cell_area` off **4e-5 relative** deterministically → 3.6e-6 m/s on `vn` after one Δt; RBF pentagon divide warnings; `GridManager(keep_skip_values=False)` doesn't pad file-sourced vertex tables, and `_replace_skip_values` then makes the RBF matrix **exactly singular** | Latent trap for grid-from-file rather than savepoint |
+| **U6** | `SPECIFIC_HEAT_CAPACITY_ICE = 2108.0` vs ICON `ci = 2106.0_wp`; live only in the temperature-dependent latent-heat branch, dead under the default | Real, latent, covered by no verification data |
+| **U7** | satad: ICON silently caps at `maxiter`; **icon4py raises `ConvergenceError`** | Bites the first non-default configuration |
+| **U8** | The multi-substep dycore test is **MCH-only**, with a literal `# why is this not run for APE?` at `test_solve_nonhydro.py:784` | Test-coverage gap |
+| **U11** | `total_precipitation_flux` computed only under `do_latent_heat_nudging=True` (else exact zeros) | Exposing it as a diagnostic would mislead |
+| **U12** | icon4py xfails every `solve_nonhydro`/diffusion integration test on `embedded`; the diffusion granule cannot be *constructed* there | Rules out "embedded as reference tier" for a wiring-equivalence harness |
+
+U1 and U9 are filable today with evidence attached. U3/U4/U5 file as one issue. U6/U7/U11 are
+one-liners. U8 is a test-coverage PR.
+
 ## Claims I could not verify — treat with suspicion
 
 - **All memory numbers.** Figures circulated during this investigation (~185 MB redundancy,

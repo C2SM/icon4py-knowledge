@@ -144,7 +144,7 @@ So: the container consumes *declarations* and emits *bindings*. Three tests for 
 3. **Emission test** — is the output an ordinary dataclass gt4py accepts?
 
 Two earlier versions of these tests were **too strong, and ICON-sc's working system refutes
-them** ([[personal/jcanton/model-state/model-state_icon-sc|appendix]]):
+them** (see [[personal/jcanton/model-state/model-state_prior-art|prior art]], §ICON-sc):
 
 - *"If any object it created is still reachable when the first stencil runs, it has failed"* —
   ICON-sc's vault **is** live at run time, and for two load-bearing reasons: something must hold
@@ -318,7 +318,7 @@ Each step independently shippable, each with standalone value.
    `dataclasses.fields(Target)`, ~10 lines per site) so E6/E7 drift turns red *today*; adopt
    units-as-identity-validation (~110 LOC, no dependencies); adopt the `icon:`-namespace
    two-way invariant. All three are lifted from ICON-sc and commit us to nothing —
-   see [[personal/jcanton/model-state/model-state_icon-sc|the ICON-sc appendix]], §Adopt now.
+   see [[personal/jcanton/model-state/model-state_prior-art|prior art]], §ICON-sc → Steal.
 1. **M2** — metadata on dataclass fields (NDSL's form), plus start the name file. Unblocks
    everything, breaks nothing, gt4py-safe (`metadata=` sets no default). Include `origin`/K-domain
    from the start: gt4py fields carry a *domain*, not a shape, and that omission cost ICON-sc two
@@ -424,7 +424,6 @@ Design/science/political, not answerable by more investigation:
 - [[personal/jcanton/model-state/model-state_walkthrough|Walkthrough]] — the proposal explained concretely, as before/after pseudocode over icon4py's actual pipeline. **Start here if the mechanism list reads as abstract.**
 - [[personal/jcanton/model-state/model-state_evidence|Evidence]] — verified defects with file:line, and claims that could not be verified.
 - [[personal/jcanton/model-state/model-state_prior-art|Prior art]] — ICON, MPAS, CCPP, sympl, NDSL, ClimaAtmos, LFRic, WRF, CAM, MAPL, NUOPC; steal/avoid lists.
-- [[personal/jcanton/model-state/model-state_icon-sc|What ICON-sc settles]] — egparedes' prototype: what it confirms, what it refutes, what to lift, and 12 unfiled upstream icon4py bugs.
 
 Related: [[personal/msimberg/revive-components/revive-components|Revive components]],
 [[personal/OngChia/physics-driver-and-components|Physics driver and component design]],
