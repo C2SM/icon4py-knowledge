@@ -19,7 +19,10 @@ status: draft
 > apart from this frontmatter and the closing
 > [Related proposals and conflicts](#related-proposals-and-conflicts) section — which is the
 > part that matters most, since several proposals here propose an incompatible component
-> interface.
+> interface. Note that the original PR carries review comments from team members discussing
+> several of the points below, so it is worth reading the
+> [PR thread](https://github.com/C2SM/icon4py/pull/1358) alongside this document — that
+> discussion is not reproduced here.
 
 ## Context
 
