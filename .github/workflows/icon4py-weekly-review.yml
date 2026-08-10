@@ -6,8 +6,6 @@ on:
     - cron: "0 22 * * 0"
       timezone: "Europe/Zurich"
   workflow_dispatch:
-  # TODO: Remove this before merge.
-  pull_request:
 
 permissions:
   contents: write
