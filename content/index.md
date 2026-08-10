@@ -10,6 +10,13 @@ topics a document discusses — scan them to find overlapping or conflicting ide
 See `AGENTS.md` in the repository root for how to add a proposal and keep this
 index current. (Keep entries and their keywords in sync with each document's `tags`.)
 
+## Knowledge
+
+Reference material, not proposals — the practice proposals here are written and
+reviewed against.
+
+- [[knowledge/software-engineering/principles|Working Principles]] — keywords: software-design, principles, complexity, modularity, dry, domain-modelling, architecture, code-review, checklist
+
 ## Shared
 
 Proposals the group broadly agrees are implementation-ready.

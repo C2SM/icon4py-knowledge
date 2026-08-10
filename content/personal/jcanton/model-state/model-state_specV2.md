@@ -9,7 +9,7 @@ status: draft
 > Appendix to [[personal/jcanton/model-state/model-state|Model state]].
 > **Proposed** revision of the main document — nothing here has been applied to it. Two inputs:
 > a consistency review of the whole doc set, and
-> [Working Principles](https://github.com/) (`gt4py_knowledge/content/knowledge/software-engineering/principles.md`).
+> [[knowledge/software-engineering/principles|Working Principles]].
 > Split out rather than edited in so the reviewed document stays stable and the changes can be
 > argued individually.
 
