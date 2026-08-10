@@ -28,7 +28,9 @@ status: draft
 
 ## 1. The problem, and why now
 
-Four designs for the component/state interface exist, mutually aware only after the fact:
+Four designs for the component/state interface exist inside the icon4py orbit, mutually aware
+only after the fact — and a fifth exists *outside* the tree as a working experimental
+prototype (ICON-sc, §10):
 
 | Design | Component signature | State shape | Status (2026-08-10) |
 |---|---|---|---|
@@ -36,6 +38,7 @@ Four designs for the component/state interface exist, mutually aware only after 
 | [[personal/egparedes/layered-architecture-refactor\|egparedes architecture refactor]] | `__call__(state: ModelState, step: StepInfo) -> None` | one shared typed `ModelState`, in-place writes | draft (PR 1358 closed; doc lives here) |
 | [[personal/msimberg/revive-components/revive-components\|msimberg revive-components]] | v3: `run(state: InputT) -> OutputT`, `dtime` a field of `InputT` | typed frozen dataclasses + a graph-composition layer (`chain`/`loop`/`when`, `CarrySpec`) | **v3 spec** supersedes the v2 this document set originally argued against |
 | [[personal/OngChia/physics-driver-and-components\|OngChia design]] | `__call__(state: StateView, time) -> dict` | run-time `StateProvider` + per-field freshness | draft |
+| **ICON-sc** (egparedes) | sympl property contracts: components declare `input_properties`/`output_properties`, dict-based `array_call` | `dict[str, DataArray]` at the public boundary, compiled at **bind time** into a frozen execution plan over a slotted, index-addressed `StateVault` | **experimental architectural prototype**, hosting icon4py granules; local repo, not published — see §10 for references and lessons |
 
 *(revised)* The original document called these "four incompatible designs" (and, inconsistently,
 "five"). That framing conflates **two mostly orthogonal axes**:
@@ -46,11 +49,15 @@ Four designs for the component/state interface exist, mutually aware only after 
 
 Rows 1 and 4 share the same dict signature and differ only in machinery; msimberg's v3 is
 mostly an *orchestration* design (its `CarrySpec(..., initial=...)` takes caller-allocated
-state and says nothing about who allocates it); and this proposal deliberately changes **no
-granule signature** (§4). The genuine conflicts are narrower than "four incompatible designs":
-they are (a) whether a run-time, component-reachable container exists at all — only OngChia's
-requires one, egparedes' passes one whole — and (b) **allocation, on which all four are silent.
-That silence is why the E1 class of defect survives every one of them unchanged.**
+state and says nothing about who allocates it); ICON-sc spans both axes (its own state design
+*and* a coupling algebra); and this proposal deliberately changes **no granule signature**
+(§4). The genuine conflicts are narrower than "five incompatible designs": they are (a)
+whether a run-time, component-reachable container exists at all — only OngChia's requires
+one, egparedes' passes one whole, and ICON-sc keeps a run-time vault but proves components
+cannot reach it and no name is resolved on the step path — and (b) **allocation, on which
+the four in-tree designs are silent.** That silence is why the E1 class of defect survives
+every one of them unchanged. (ICON-sc is the exception that proves the point: it *does* own
+allocation — one buffer per contracted name — and thereby violates C2 instead; §10.)
 
 Reconciling the protocol axis is still necessary — but it is a different decision, owned by
 whoever owns the component protocol, and this proposal is compatible with any of the typed
@@ -541,7 +548,7 @@ ICON, LFRic, gt4py and ICON-sc; the rest are paraphrase-grade.
 
 | System | Container | Resolution | Verdict for icon4py |
 |---|---|---|---|
-| **ICON-sc** (egparedes' prototype) | boundary dict → slotted vault at run time | bind-time, frozen execution plan | closest test of this document's thesis: confirms it, and corrects it in three places (below) |
+| **ICON-sc** (egparedes' prototype) | boundary dict → slotted vault at run time | bind-time, frozen execution plan | closest test of this document's thesis: confirms it, and corrects it in three places (see the dedicated subsection below) |
 | **ICON** (Fortran) | typed derived types **+** parallel `add_var` registry | run time, I/O only | steal metadata-at-definition-site + labels; never pay the dual declaration (~15k lines) |
 | **MPAS** | string-keyed pools | run time | avoid — its own team deleted it for GPU; successor Omega dropped it |
 | **CCPP** | host model's, unchanged | build time, generated glue | the framework is not in the executable; but its #1 regret is the *vocabulary*, and forbidding shared derivation made 66 % of one suite interstitial glue |
@@ -553,27 +560,91 @@ ICON, LFRic, gt4py and ICON-sc; the rest are paraphrase-grade.
 | **WRF Registry** | text table → generated types | build time | one declaration driving many services — as a bespoke DSL, the cautionary form of M4 |
 | **NUOPC** | advertise → realize | init-time negotiation | unconnected exports cost zero memory (M11's shape); errors on ambiguity, never guesses |
 
-**ICON-sc, calibrated.** Built against *our* problem on *our* codebase (hosting icon4py
-granules), so it carries the most weight and needs the most calibration: six agent-driven
-days, nothing pushed to a remote, zero GPU execution ever, zero MPI, 2 of ~11 NWP schemes,
-several of its most-quoted ideas (the halo validator above all) **unbuilt** in its own tree.
-What it *demonstrated*: a compiler 8.5× the size of its container (1732 vs 203 lines), zero
-name lookups per step proven by an instrumented dict, buffer adoption as the primary path, and
-bitwise old≡new wiring over 288 steps. What it **corrects** in this document's earlier drafts:
-(1) "nothing the container created may survive into the time loop" was too strong — something
-must hold buffers across a swap and carry the staleness counters; the right test is that no
-*component* can reach it and nothing on the step path resolves names; (2) the performance
-case is ~6.8 %, not orders of magnitude; (3) a static dataclass genuinely cannot be the public
-state type without M11. What it does **not** solve: C2 — it owns allocation, and its two
-hosted granules copy 17 full fields per Δt (~100 MB) in and out.
+### ICON-sc: an experimental architectural prototype, with its own model-state proposal
 
-**Steal** (beyond the mechanisms already in §5): units as identity-validation with the
-conversion path quarantined (sympl's per-call conversion is its own documented performance
-regret; ICON's `post_op` converts only at the file boundary); capability-vs-request separation
-(`vert_interp` says *how* a field could be interpolated, the namelist says *whether*); ICON-sc's
-`lock.toml` append-only provenance ledger for borrowed constants and tolerances; revision
-counters over content hashes for any invalidation (hashing is O(field bytes) and its payoff
-never fires in floating-point dynamics).
+**What it is.** ICON-sc is an **experimental architectural prototype** of a full alternative
+Python architecture for the ICON model — sympl/Tasmania-lineage composition (property-contracted
+components, a dynamics–physics coupling algebra) over a zero-copy device-field boundary —
+**hosting** icon4py granules rather than forking them. It was built in six agent-driven days
+(work units 001–014, 2026-07-08→13). Because it was built against *our* exact problem on *our*
+codebase, it is the only system in this survey whose evidence is directly transferable — and
+the one whose claims need the most calibration (below).
+
+**References.** The prototype lives in the local `ICON-sc` repository (not yet published to a
+public remote); pointers for reviewers with access:
+
+- `docs/architecture/icon-sc_architecture.md` (v1.3) — the canonical architecture document.
+  For model state specifically: §2 *(state, fields, and the zero-copy protocol — the state
+  dictionary, ingress adapters, contracts/canonical units, naming)* and §8.2 *(bind-time
+  specialization: the negotiation vs execution split)*.
+- `packages/icon-sc-core/src/icon_sc/core/plan/bind.py` (~1730 lines) — the plan compiler;
+  `packages/icon-sc-core/src/icon_sc/core/state/vault.py` (203 lines) — the run-time
+  `StateVault`.
+- `development/REGISTRY.md` — work-unit register, trunk decisions, human sign-offs;
+  `development/references/lock.toml` — the append-only, SHA-pinned provenance ledger for every
+  borrowed constant and tolerance (itself worth stealing as a process artifact).
+- Its README records the merged vertical slice's validation claims: L2 parity at upstream
+  tolerances, 9-day bitwise-zero equivalence against the icon4py standalone driver, and
+  T0 ≡ T1 bitwise through the dycore.
+
+**Its model-state design — the fifth alternative in §1.** State crosses the public boundary
+as `dict[str, DataArray]` under sympl property contracts (each component declares
+`input_properties`/`output_properties` with dims and canonical units). At **bind time** a
+compiler dissolves the composition tree into a frozen execution plan: names are resolved once,
+contracts are checked once, and what survives into the time loop is a slotted,
+**index-addressed** `StateVault` that no component can reach — a test proves **zero name
+lookups per step** with an instrumented dict, and forbids `xarray`/`pint`/contract frames
+inside `run_step`. Mutation stays legal without a freeze via three invalidation domains
+(`epoch`: a field's identity changed ⇒ stale wiring raises; `generation`: a time-level swap ⇒
+only cached views drop; `schema_hash`: the slot set changed), plus a debug-build
+renegotiate-and-diff. Buffer *adoption* is the primary ingress path (`from_state` never
+allocates), units are validated as identity and never converted, and fields without a CF name
+must carry the `icon:` prefix (measured split: 18 CF / 72 `icon:`).
+
+**Calibration.** Zero GPU execution ever (its GPU workflow asserts GPU tests *skip*), zero
+MPI, 2 of ~11 NWP schemes, no real-data ingestion; several of its most-quoted ideas — the
+halo validator above all — are **unbuilt** in its own tree; the validation claims above are
+self-reported, backed by genuinely strong internal review discipline (it caught a tolerance
+loosening with fabricated provenance) but not by production contact.
+
+**Lessons learned**, in decreasing order of weight:
+
+1. **It confirms the central thesis of §4.** Its architecture doc states it independently —
+   *"nothing about the interfaces changes during execution … every lookup performed in the
+   loop is recomputing an invariant"* — and it demonstrated the bitwise old≡new acceptance
+   criterion this document adopts (§7) over 288 composed steps / 1440 dycore substeps.
+2. **It corrects three claims of this document's earlier drafts** (all folded into §4): a
+   container-created object *may* survive into the loop — something must hold buffers across
+   a swap and carry the staleness counters, and the right test is component-unreachability,
+   not non-existence; the performance stake is ~6.8 %, not orders of magnitude; and a static
+   dataclass cannot be the public state type without conditional allocation (M11 — which
+   ICON-sc itself entirely lacks).
+3. **The dict is what costs.** The ~1730-line compiler exists chiefly to *erase* a
+   `dict[str, DataArray]` that its own interpreted tier introduced — the compiler is 8.5× the
+   size of the container it feeds, and icon4py never has to introduce that dict. This is the
+   strongest single argument for emitting typed dataclasses directly.
+4. **It does not solve C2.** ICON-sc is the driver and owns allocation (one buffer per
+   contracted name — its answer to G1), so its two hosted granules copy ~17 full fields per
+   Δt (~100 MB) in and out. Any icon4py-native design must *adopt* buffers instead.
+5. **Its transferable residue is small and already absorbed into §5**: M6-structural (the two
+   counters), M12's arity check (closing its own hole — it never checks *publisher* count,
+   while ICON sums multiple publishers into `ddt_*`), M14 (parameters separate from state),
+   units-as-identity, the `icon:` invariant, `origin`/K-domain as first-class metadata (its
+   omission cost ICON-sc two work units of misdiagnosis), and the `lock.toml` provenance
+   process. Estimated transferable code ≈300 LOC out of ~3700 LOC of compiler + tests.
+6. **Do not adopt its unbuilt or unused parts**: the coupling algebra (7 combinators, 2
+   used — a hand-written closure is bitwise-equivalent to the federation it replaces); the
+   F-tier/JAX lowering (a *second* physics implementation, 763 hand-ported lines, and
+   `functional_state()` abolishes component privacy); the halo story (`HaloState.DIRTY` never
+   assigned, `HaloPolicy` without a consumer); ping-pong SSA time levels (its own dycore
+   opted out, keeping `nnow`/`nnew` component-private).
+
+**Steal** (beyond the mechanisms already in §5 and the ICON-sc items above): units as
+identity-validation with the conversion path quarantined (sympl's per-call conversion is its
+own documented performance regret; ICON's `post_op` converts only at the file boundary);
+capability-vs-request separation (`vert_interp` says *how* a field could be interpolated, the
+namelist says *whether*); revision counters over content hashes for any invalidation (hashing
+is O(field bytes) and its payoff never fires in floating-point dynamics).
 
 **Avoid**: a run-time bucket reachable from compute code; silent lookup failure or
 auto-creation of unknown names; dual declaration kept in sync by hand; a general derivation
