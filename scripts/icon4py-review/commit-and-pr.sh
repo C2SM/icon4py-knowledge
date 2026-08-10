@@ -38,6 +38,10 @@ fi
 
 week=$(date +%G-W%V)
 branch="review/week-${week}-$(date +%s%N)"
+# The commit lands on HEAD, which is detached in CI (actions/checkout on a
+# pull_request event), so create the branch first or the push below has
+# nothing to push.
+git checkout -b "$branch"
 git -c user.name="icon4py-review-bot" \
     -c user.email="icon4py-review-bot@users.noreply.github.com" \
     commit -m "review(week ${week}): update icon4py findings"
