@@ -1,0 +1,66 @@
+name: Weekly icon4py review
+
+on:
+  schedule:
+    # Sunday at 22:00 Europe/Zurich
+    - cron: "0 22 * * 0"
+      timezone: "Europe/Zurich"
+  workflow_dispatch:
+  # TODO: Remove this before merge.
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: icon4py-weekly-review
+  cancel-in-progress: false
+
+env:
+  TZ: Europe/Zurich
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout icon4py-knowledge
+        uses: actions/checkout@v4
+
+      - name: Checkout icon4py
+        uses: actions/checkout@v4
+        with:
+          repository: C2SM/icon4py
+          ref: main
+          path: icon4py-checkout
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.19'
+
+      - name: Install pi
+        run: npm install -g @earendil-works/pi-coding-agent@0.80.6
+
+      - name: Smoke test
+        run: |
+          pi --version
+          bwrap --version | head -1
+
+      - name: Run review
+        env:
+          CSCS_INFERENCE_API_KEY: ${{ secrets.CSCS_INFERENCE_API_KEY }}
+          ICON4PY_CHECKOUT: ${{ github.workspace }}/icon4py-checkout
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/icon4py-review/run.sh --commit-and-pr

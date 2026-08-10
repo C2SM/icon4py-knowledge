@@ -10,6 +10,10 @@ topics a document discusses — scan them to find overlapping or conflicting ide
 See `AGENTS.md` in the repository root for how to add a proposal and keep this
 index current. (Keep entries and their keywords in sync with each document's `tags`.)
 
+## Automated review tracker
+
+- [[review/index|Weekly icon4py review tracker]] — keywords: review, correctness, performance, issues
+
 ## Shared
 
 Proposals the group broadly agrees are implementation-ready.
