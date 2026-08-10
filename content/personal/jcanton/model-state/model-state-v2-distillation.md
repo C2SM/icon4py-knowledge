@@ -22,23 +22,19 @@ status: draft
 > landscape moved since the originals were written: **PR 1301 merged on 2026-08-03**, PR 1404
 > fixed the flagship defect, and several figures and characterizations below have been corrected
 > accordingly. Corrections and disagreements with the original set are marked *(revised)*.
-> This revision also **absorbs the verified findings of the parallel consolidation attempt
-> (knowledge-base PR #18**, verified against `4c858a6a`, 2026-08-06**)** — its E3/E4/E6/E8/E9/E10
-> sharpenings, the ClassVar consequence, the tach finding, and its reading of msimberg v3 —
-> after independent re-verification here where possible, so that PR can be closed. Where a
-> figure could not be re-run it is labelled *reported*; everything else is *verified*.
-> Status is `draft` because this consolidation has not yet been human-reviewed; the
-> pre-consolidation main document had been reviewed.
+> This revision also absorbs the verified findings of the parallel consolidation attempt
+> (knowledge-base PR #18, verified against `4c858a6a`, 2026-08-06) after independent
+> re-verification here where possible, so that PR can be closed. Figures that could not be
+> re-run are labelled *reported*; everything else is *verified*. Status is `draft` because
+> this consolidation has not yet been human-reviewed; the pre-consolidation main document
+> had been reviewed.
 >
-> A meta-lesson this document set keeps re-teaching, recorded so it survives the
-> consolidation: every internal inconsistency found across its revisions (a count stated in
-> four places and updated in two; a `frozen` phase outliving the freeze decision; a
-> characterization of msimberg's spec outliving the spec) was **one fact represented in
-> several places and updated in some** — the DRY principle applied to prose. The mitigation
-> here: this document is self-contained, each count stated once, quoted only where the number
-> *is* the argument — and against the originals kept alongside, the supersession note above
-> applies. If this revision is accepted, the superseded originals should be retired rather
-> than left to drift.
+> A meta-lesson this set keeps re-teaching: every internal inconsistency across its
+> revisions was **one fact represented in several places and updated in some** — DRY applied
+> to prose. Mitigation here: each load-bearing count has one authoritative statement
+> (repeats are pointers; drift between them is a bug to file), and against the originals
+> kept alongside, the supersession note above applies. If this revision is accepted, the
+> superseded originals should be retired rather than left to drift.
 
 > **TL;DR** Several incompatible designs for "how components get their fields" have been in
 > flight at once, none stating its requirements. This document states the requirements first —
@@ -85,7 +81,7 @@ allocation — one buffer per contracted name — and thereby violates C2 instea
 Reconciling the protocol axis is still necessary — but it is a different decision, owned by
 whoever owns the component protocol, and this proposal is compatible with any of the typed
 outcomes. PR 1301's merge has meanwhile made the dict protocol the de-facto incumbent on
-`main`; see open question 3.
+`main`; see open question 4.
 
 ### The design space at a glance
 
@@ -114,7 +110,8 @@ element in its own right — icon4py currently has five parallel namespaces per 
 live name collision (E8, E9), and the honest cost estimate of the metadata mechanism (M2)
 is "small mechanism, large vocabulary".
 
-**The two walls** — constraints, not tensions; they delete otherwise-attractive designs:
+**The two hardest walls** — constraints, not tensions; they delete whole design families
+outright (§3 holds two further constraints: C3, which deletes whole-state arguments, and C4):
 
 - **C1**: whatever reaches a `gtx.program` must be a static named collection — a name-keyed
   map can never cross the stencil boundary, so *some* typed container always exists at the
@@ -130,7 +127,8 @@ less in structure than in *when* they answer: CCPP resolves working sets at buil
 ICON-sc at bind time, sympl and the merged physics driver per call. The thesis of this
 document, in one line: **push every answer to the earliest phase that can hold it — and for
 everything here except the derived-quantity barrier (M5-lite) and halo exchange, that phase
-is setup or earlier.**
+is setup or earlier** (M6-structural's wiring-validity checks fire only when a binding
+changes, not per step).
 
 The map, with each tension's options and where its evidence and mechanism live (E/M
 references are forward pointers into §2 and §5 — this table doubles as a reading guide):
@@ -166,13 +164,13 @@ source**; each defect forces a requirement in §3.
 |---|---|---|---|
 | E1 | `PrepAdvection` and `AdvectionPrepAdvState` held the same 3 quantities, allocated separately, with **nothing copying one into the other** — standalone-driver tracer advection ran on identically-zero trajectory velocity and mass fluxes | **fixed** by [PR 1404](https://github.com/C2SM/icon4py/pull/1404) (2026-07-30) — see below | correctness |
 | E2 | Their `mass_flx_ic` disagreed on vertical extent (`nlev+1` vs `nlev`), so even a copy would not have been shape-compatible; `fa.CellKField[float]` cannot express the difference | **fixed** with E1; PR 1404's zero-field fallback now also allocates `extend={KDim: 1}`, settling the extent as half-levels | correctness |
-| E3 | `T`/`Tv`/`p` derived in ≥4 places from **different inputs** — and worse than first stated: the IO path runs the diagnosis **fully dry**. `driver_io.py:146-147` allocates `qv, qc, qi, qr, qs, qg` once, all permanently zero (*"dry air: all hydrometeors stay zero (never written, so allocated once)"*) — `qv` included — so on the output path `virtual_temperature ≡ temperature` identically, and the temperature icon4py publishes is a **dry-air** temperature no physics component ever uses | **live** (`driver_io.py:181`, muphys `state.py`, `jablonowski_williamson.py`; PR 1360 adds a fourth) | science |
+| E3 | `T`/`Tv`/`p` derived in at least three places on `main` from **different inputs** — and worse than first stated: the IO path runs the diagnosis **fully dry**. `driver_io.py:146-147` allocates `qv, qc, qi, qr, qs, qg` once, all permanently zero (*"dry air: all hydrometeors stay zero (never written, so allocated once)"*) — `qv` included — so on the output path `virtual_temperature ≡ temperature` identically, and the temperature icon4py publishes is a **dry-air** temperature no physics component ever uses | **live** (`driver_io.py:181`, muphys `state.py`, `jablonowski_williamson.py`; PR 1360 adds a fourth) | science |
 | E4 | `vn → u,v` computed at **two** production sites into two different buffers — `driver_states.py:290` writes `diagnostic_state.u/.v` and halo-exchanges after (`:302`); `driver_io.py:199` writes its private `_u/_v` and does **not**. The domain bounds do *not* differ (both run `lateral_boundary_level_2 → END`); the defect is the duplicated buffers plus the missing exchange. `driver_io.py:115` carries `TODO(kotsaloscv)` asking for exactly this refactor | **live** | correctness |
 | E5 | `dycore.InterpolationState` (16 fields) is a strict superset of `DiffusionInterpolationState` (8); `geofac_div` declared in 3 containers; `ddqz_z_full` in 3; byte-identical one-field dataclasses in microphysics | **live** | duplication |
 | E6 | `driver_utils.initialize_granules`: **91** hand-typed `.get()` mappings (count drifts upward with each merge), replicated at **~12 further sites** — the union of every file hand-constructing a granule interpolation/metric container (the earlier "7 sites" was an undercount; 11–13 depending on tree date and definition), of which **2 are the production Fortran binding wrappers** | **live** | boilerplate |
 | E7 | Wrong-key bugs in exactly that replicated hand-mapping: `d2dexdz2_fac2_mc=…get(D2DEXDZ2_FAC1_MC)` and edge-normal into a dual-normal slot. The *intended* mapping is confirmed independently at three other sites (`driver_utils`, `test_diffusion`, `test_parallel_geometry`), so these are **filable today** with the evidence attached | **live** (`integration_tests/test_benchmark_solve_nonhydro.py:98,163`; `test_benchmark_diffusion.py`) — both type-check, both run; benchmark paths, not the production driver, and the *primary* site `driver_utils` is correct, which argues for deleting the replication rather than distrusting it | correctness |
 | E8 | Placement recorded three times per field: name string (`…_at_cells_on_half_levels`), `dims=(CellDim, KHalfDim)`, `is_on_half_levels: bool` — the factory **rewrites `KHalfDim → KDim` at allocation** (`factory.py:540,545,823`, *"remove once gt4py supports vertically staggered dimension"*), so half-levelness survives only in a metadata tuple nothing validates. And the triplication is now **tested into place**: `is_on_half_levels` is read at `driver_io.py:83,242`, and a `test_driver_io` docstring states that `dims` and `is_on_half_levels` are *"stated independently"* — deliberately | **live** | drift |
-| E9 | Five parallel namespaces per field (catalog key / CF name / ICON Fortran name / dataclass attribute / port name); four disjoint metadata dicts plus one orphan; ~0/49 metrics entries are real CF names; `units=""` for essentially all metrics and interpolation entries (though *not* geometry — the earlier "most" was too broad); and a **live collision**: `metrics_attributes.py:106-107` declares two distinct fields (cell and edge) under one `standard_name`, which the IO writer's `filter_by_standard_name` resolves variable identity by — they would silently alias into one netCDF variable | **live** | drift |
+| E9 | Five parallel namespaces per field (catalog key / CF name / ICON Fortran name / dataclass attribute / port name); four disjoint metadata dicts plus one orphan; none of the 49 metrics entries is a real CF name; `units=""` for essentially all metrics and interpolation entries (though *not* geometry — the earlier "most" was too broad); and a **live collision**: `metrics_attributes.py:106-107` declares two distinct fields (cell and edge) under one `standard_name`, which the IO writer's `filter_by_standard_name` resolves variable identity by — they would silently alias into one netCDF variable | **live** | drift |
 | E10 | The trend, verified on `origin/physics_driver_tmx` (2026-08-05): PR 1360 adds **seven** state dataclasses and **92 declared fields** for one component (`TmxDiagnosticState` 31, `TmxMetricState` 17, `TmxInputState` 16, …). `TmxInputState` re-declares all six fields of the common `DiagnosticState`, all six tracers, and `rho`/`w`; `TmxMetricState` re-declares five metrics fields; `TmxInterpolationState` makes `geofac_div` a **fourth** container; `gather_from_prognostic` re-derives `T`/`Tv`/`p` a fourth time | **live** (PR open) | trend |
 
 E10 is the important row: duplication is being created faster than it is removed, because every
@@ -188,8 +186,8 @@ sharper point: with no dycore, the same function allocates fresh zeros, and to g
 comment explaining why (*"one more level than KDim, like the dycore's … it stands in for"*)
 — E2's knowledge, one quantity's vertical extent, now represented a third time, and that
 representation was *created by the fix*. Under M1 (one quantity → one buffer, §5) neither
-the function nor the test would need to exist, and the *class* of defect would be
-unrepresentable rather than fixed once.
+the function nor the test would need to exist, and the *class* of defect would become
+unrepresentable **on the registry path** — see §6 for the honest scope of that claim.
 
 **Claims from the original investigation that remain unverified — treat with suspicion:**
 
@@ -228,9 +226,11 @@ a checked-in artifact. What is **unexamined** is the assumption that the embedde
 exists, and if it ever stops being true the design gets materially simpler. Worth re-asking
 explicitly before committing (open question 1).
 
-C4 is real but is satisfied **by construction** in the setup-time reading — nothing is added
-to the step path at all. Listing it as a peer constraint invites a performance debate the
-design does not need and, per §4, should not be argued on.
+C4 is real but nearly satisfied **by construction** in the setup-time reading: the two
+run-time admissions are M5-lite (one profiled per-step barrier) and M6-structural's checks,
+which fire only at wiring/rebinding events plus an optional debug-mode sweep — nothing
+touches the per-stencil path. Listing C4 as a peer constraint invites a performance debate
+the design does not need and, per §4, should not be argued on.
 
 **Goals** — ranked; a team taking "G1–G3 and stopping" is a coherent outcome.
 
@@ -296,7 +296,8 @@ tests for any proposal in this space:
    argument — egparedes' `ModelState` — is a different, milder failure: no string lookup, no
    dynamic hash, gt4py-compatible per member. What it violates is C3: the call site no longer
    names its inputs, so the reviewer cannot answer "what does this component read?" from the
-   signature. Both fail the test, for different reasons of different weight.
+   signature. Strictly these are two tests — reachability of a name-keyed store (structural),
+   and interface honesty (= C3) — and the two designs fail one each.
 3. **Emission test** — is the output an ordinary dataclass gt4py accepts?
 
 ### gt4py forces the last mile (verified from source)
@@ -327,7 +328,8 @@ tree:
 
 **Do not argue this on speed.** ICON-sc measured the entire benefit of moving all
 negotiation/lookup out of the step loop at **~6.8 % of step time on a real model** (JW
-R02B04×35, gtfn_cpu, 3.68 → 3.43 s/step); the eye-catching 64–101× figures circulated earlier
+R02B04×35, gtfn_cpu, 3.68 → 3.43 s/step; *reported* — ICON-sc's own measurement, not re-run
+here); the eye-catching 64–101× figures circulated earlier
 are from a kernel-free toy, and ICON-sc's own architecture doc is blunt: *"a dict lookup is
 ~40–60 ns and slotted attribute access ~20–40 ns, but those were never the real cost."* The
 case for typed dataclasses rests on the structural prohibition above (C1), on Fortran buffer
@@ -348,21 +350,18 @@ already how `tracer_advection.run(p_tracer_now=…)` works today.
 
 ### Everyone who shipped this converged on the same answer
 
-- **ICON** registers every field twice (typed member *and* `add_var`), pays ~15k lines of
-  boilerplate — and the compute path never queries the registry (8 group-query sites
-  model-wide, all I/O-ish).
-- **CCPP** resolves everything at build time; the framework is not in the executable.
-- **NDSL/Pace** — the only other GT4Py model — kept rigid dataclasses and put the intelligence
-  in `dataclasses.field(metadata=…)` plus a generic allocator.
-- **ClimaAtmos** built the dynamic bag and is migrating back to explicit structs (*"over 60
-  fields accumulated through splatting, unpacking and merging"*).
-- **LFRic** built the global keyed store; its own retrospective calls it *"an ever expanding
-  pool of global scope data… becoming unwieldy."*
+Every surveyed production system either resolves state wiring before the loop or regrets
+not doing so: ICON's compute path never queries its registry, CCPP resolves at build time,
+NDSL/Pace stayed with rigid dataclasses plus field metadata, ClimaAtmos is migrating back to
+explicit structs, and LFRic's own retrospective rejects its global store. The per-system
+verdicts and quotes are in §10's table.
 
-**Political corollary:** the setup-time reading changes no granule call signature. The whole
-intervention lands in `driver_utils.initialize_granules`, `driver_states.assemble_driver_states`
-and the test-side repacking — precisely the code that is already replicated and already
-contains the shipped wrong-key bugs (E6, E7).
+**Political corollary:** the setup-time reading changes no granule call signature. The
+*wiring* intervention lands in `driver_utils.initialize_granules`,
+`driver_states.assemble_driver_states` and the test-side repacking — precisely the code that
+is already replicated and already contains the shipped wrong-key bugs (E6, E7). The
+*declarations* — one `spec()` per field — land in the state-class modules across the granule
+packages; §6 costs that honestly.
 
 ## 5. Mechanisms
 
@@ -378,13 +377,20 @@ mutable name→field map at run time.
 | M1 | Canonical allocation registry, signatures unchanged | setup, sealed | No | (M10) | M |
 | M4 | Declared I/O → automatic wiring (emit the dataclass) | setup | No | M2 | M |
 | M7 | Labels/groups, materialized at setup | setup | No | M2 | S / M vocab |
-| M8 | Units: validate, don't convert | setup | No | M2 | S |
+| M8 | Units: validate, don't convert | setup | No | (M2) | S |
 | M12 | Declared handoff + consumer/producer arity check | setup | No | M1, M2 | S (~90 LOC) |
 | M13 | Ordering constraints as declared data (`must_follow` / `must_precede`) | setup | No | M2 | S |
 | M14 | Parameters as a structure distinct from state | setup | No | M2 | S/M |
-| M5 | Lazy derived-field computation | run | No | M2, M6 | **H** |
-| M6 | Staleness / generation counters | **run** | **Yes** | M1, M2 | M / H discipline |
-| M9 | Automatic regridding as registered rules | run | No | M2, M5, M6 | **H** |
+| M5-lite | One named `update_derived_quantities()` barrier over a closed, enumerated set | **run**, per step | No | M2 | S/M |
+| M6-structural | Wiring-validity counters (`epoch`/`generation`/`schema_hash`) | setup; checks fire on rebinding events | No | M1, M2 | S (~100 LOC) |
+| M5 | Lazy derived-field computation | run | No | M2, M6-scientific | **H** — deferred |
+| M6-scientific | Derived-field consistency tracking | **run** | **Yes** | M1, M2 | **H** — deferred |
+| M9 | Automatic regridding as registered rules | run | No | M2, M5, M6-scientific | **H** — deferred |
+
+A parenthesized requirement is soft — the mechanism works without it but is materially
+better with it: M1 without M10 makes granule-private scratch globally reachable; M8 can
+bootstrap over the existing `*_attributes.py` dicts before M2 lands (which is why it also
+appears as a step-0 free win).
 
 Notes on the ones that matter most:
 
@@ -401,7 +407,14 @@ Notes on the ones that matter most:
   units of misdiagnosis. The **vocabulary** is the real cost: ~80 % of an atmospheric model's
   fields have no CF name (ICON-sc measured 18 CF / 72 `icon:`-namespaced). Adopt the two-way
   invariant — unprefixed ⇒ claims CF identity; no CF name ⇒ must be `icon:<name>` — enforced at
-  registration. Who owns the vocabulary is open question 7.
+  registration. Two precisions that keep the vocabulary from becoming yet another namespace:
+  the canonical identity is the `(standard_name, dims)` pair — `standard_name` being the one
+  canonical quantity name (CF where one exists, else `icon:`-prefixed; §6's `quantity=` is
+  this same key, not a sixth namespace) — and G1's *declared once* is realized through the
+  **name file** of adoption step 1: it is the single authority for name → (dims, units,
+  origin), per-container `spec()` entries repeat the name, and `seal()` rejects any entry
+  that contradicts the file. Declared once, referenced N times, checked mechanically. Who
+  owns the vocabulary is open question 6.
 - **M3 is the highest value per line** (~150 lines) and the one thing every proposal already
   agrees on. The current `Component` protocol's declared properties are completely inert —
   re-verified after PR 1301's merge: the shipped `physics_driver.run` never consults
@@ -426,7 +439,9 @@ Notes on the ones that matter most:
   It catches the E1 class **only on top of M1+M2** (one quantity ⇒ one name ⇒ one buffer);
   without those, two same-named slots in different containers are both legitimate and the check
   is decorative. Do **not** assume one producer: ICON genuinely sums multiple publishers into
-  `ddt_*` slots, so publisher multiplicity must be declared rather than assumed.
+  `ddt_*` slots, so publisher multiplicity must be declared rather than assumed. And as with
+  M13, the production API should take references rather than free-form strings — the string
+  form in §6's sketch is illustrative only.
 - **M13 is the safety net a configurable component order needs and does not have.** ICON's
   fast-physics ordering carries implicit contracts (saturation adjustment twice per step,
   surface transfer last, turbulence on old-time-level inputs) that live today in tutorial
@@ -513,7 +528,8 @@ reg.adopt_sources(static_sources)       # adopt the memoized factories, don't re
 reg.declare(PrognosticState, DiagnosticStateNonHydro, PrepAdvection,
             AdvectionPrepAdvState, DiffusionInterpolationState, ...)
 reg.declare_handoff("vn_traj", producer="dycore", consumer="advection")   # M12
-reg.seal()                              # no NEW quantities after this; not a freeze
+reg.seal()   # the QUANTITY SET is now fixed; rebinding a quantity to a different
+             # buffer stays legal (bumps epoch), and values are unrestricted
 
 prep_adv        = reg.build(PrepAdvection)
 tracer_prep_adv = reg.build(AdvectionPrepAdvState)   # same quantities ⇒ SAME buffers
@@ -542,29 +558,52 @@ coincidental.
   type-checks, runs, and produces wrong numbers.
 - **Tests keep working untouched.** The containers remain ordinary constructors;
   `reg.build` is an additional path, not a replacement. That matters across ~269 test files.
+  The flip side scopes the headline claim: because direct construction stays legal, E1's
+  class is unrepresentable only *on the registry path*, and prevention off that path is by
+  convention. The backstop must be named, and it is cheap: a test asserting the production
+  drivers construct no state class except through `reg.build` — a grep-level check that
+  cannot be delegated to `tach`, which currently enforces nothing (§8).
 - New machinery on the setup path that must itself be reviewed and maintained.
 
 **The Fortran-embedded path survives (C2).** At `solve_nh_run` (`dycore_wrapper.py:306`) ICON
 owns the memory: 37 raw fields + 10 scalars under ICON Fortran names, re-packed into five
 containers **on every call** (`:370-421`) — a third hand-maintained copy of the ICON↔icon4py
-name map. Under the proposal the wrapper calls `reg.adopt_buffers({...})` (zero-copy wrapping
-is already icon4py's own technique) and `build` reads the same declarations; nothing is held
-across calls on this path today and nothing would be, so `epoch` is not consulted there. If
-ICON's pointers are stable across calls — they are module-level allocatables, so very likely —
-the rebuild is memoizable on pointer identity; that is an optimization to measure, not a
-requirement. Two hard consequences stand: the registry must adopt buffers it did not allocate,
-and no struct can cross the ABI (py2fgen has no record descriptor; the wrapper keeps
-flattening).
+name map (the other two: the `icon_var_name` entries in the `*_attributes.py` vocabularies,
+and the container docstrings). Under the proposal the wrapper calls `reg.adopt_buffers({...})`
+(zero-copy wrapping is already icon4py's own technique) and `build` reads the same
+declarations. Two trade-offs to state rather than bury: per-call `adopt_buffers` + `build`
+adds validation work to a per-timestep call, so its cost must be **measured** before this
+path ships — memoizing on pointer identity (ICON's are module-level allocatables, so very
+likely stable) is the likely fix, not a requirement; and because nothing is held across
+calls on this path, it deliberately forgoes the staleness guard (`epoch` is never consulted
+there) — an accepted asymmetry, not an oversight. Two hard consequences stand: the registry
+must adopt buffers it did not allocate, and no struct can cross the ABI (py2fgen has no
+record descriptor; the wrapper keeps flattening).
+
+**The distributed path is a requirement on determinism, not a new mechanism.** Everything
+above must also hold under the GHEX/MPI decomposition, which adds four rules. The registry
+is built **per rank** from the rank-local grid and decomposition — `dims` metadata describes
+the rank-local allocation, while a field's *identity* stays global (the quantity key). Every
+seal-time check (M3, M11, M12, M13) must be a deterministic function of configuration and
+schema alone, so it passes or fails **identically on every rank** — a raise on a single rank
+inside otherwise-collective setup is a deadlock, and the same determinism requirement binds
+M6-structural's raise-on-stale. G4's "halo sets as label queries" selects *fields*; the
+exchange objects and their scheduling stay owned by the decomposition layer. And M5-lite's
+barrier owns the halo exchanges its derivations declare — which is the half of E4 (the
+missing exchange) that consolidating the derivation alone does not fix.
 
 ### The alternative that must stay on the page: declare and *check*, never generate
 
 Design-it-twice demands the genuine competitor, and it is not a straw man — it is the honest
-stopping point, exactly where the adoption order (§7) sits after step 3:
+stopping point: adoption steps 0–1 plus step 3, i.e. **M2 + M3 only** (B takes neither
+M10/M11 nor anything after):
 
 **Alternative B.** Add per-field metadata (M2) and a validator (M3), then **keep
 `driver_utils` exactly as it is**. The hand-written wiring stays and becomes checked: declared
 `dims` that contradict another container's raise at startup; a ~10-line field-coverage test per
-site catches drift.
+site catches drift. One check must be named explicitly for B's E7 claim to hold: the checker
+compares the *bound value's* declared identity against the *receiving slot's* declaration —
+coverage and dims checks alone pass both shipped wrong-key bugs.
 
 | | A — emit the wiring | B — check the wiring |
 |---|---|---|
@@ -600,15 +639,16 @@ resource (reviewer attention, §3) demands.
 2. **M10 + M11** — scope tag and config-predicate allocation: the only two mechanisms that
    *reduce* memory, and M11 is what answers the strongest objection (§4).
 3. **M3** — validation at class creation. Highest value per line; agreed by every proposal.
-   *— Alternative B stops here, coherently. —*
+   *— Alternative B is steps 0–1 plus this step, coherently. —*
 4. **M1** — canonical allocation, settled at setup. Kills the E1 class. No signature changes.
 5. **M12** — handoff arity check; cheap once M1+M2 exist.
 6. **M4** — auto-wiring, **gated on M2's vocabulary being real**: auto-wiring keyed on today's
    vocabulary will silently bind the wrong field (`metrics_attributes.py:106-107` already
    declares two distinct fields under one `standard_name`). Deletes E6.
 7. **M7** — labels: unlocks output/restart/checkpoint sets; gives tracers an IO path at all.
-8. **M5-lite** — one derived-quantities barrier over a closed set. Kills E3 and E4; the
-   only run-time addition in the whole sequence.
+8. **M5-lite** — one derived-quantities barrier over a closed set, owning the halo
+   exchanges its derivations declare (§6, distributed path). Kills E3 and E4; the only
+   *per-step compute* addition in the whole sequence.
 9. **M6-structural** — adopt whenever setup-time wiring lands; it replaces the freeze.
 10. **M13, M14** — independent of everything else. M14 lands opportunistically; M13 should
     land *with* whichever composition layer wins the protocol question.
@@ -661,18 +701,20 @@ tendencies; no **write** path; `origin/ibm_02` has a serial pickle-based prototy
   groups abolish.
 - **Exact vs scientific restart is a per-field decision** — a label set chosen once, not a
   code path.
-- **Restart must allocate fields that do not exist yet**, which is the one thing reading
-  metadata off a live field cannot do. `ibm_02`'s writer reads `dims` off the live field at
-  write time (a sixth independent reinvention of field metadata), so it cannot restore into a
-  fresh process, and half-levelness cannot reach the file because the factory already erased
-  it (E8). This is the declare-`dims`-once argument arriving from a second direction.
+- **Restart must reconstruct fields *correctly* in a fresh process**, and metadata read off
+  a live field at write time cannot guarantee that. `ibm_02`'s writer stores `{data, dims}`
+  per field (a sixth independent reinvention of field metadata) and can rebuild arrays via
+  `gtx.as_field` — but the reconstruction is incomplete and backend-bound: half-levelness
+  never reaches the file because the factory already erased it at allocation (E8), and
+  origin and dtype are not recorded. This is the declare-`dims`-once argument arriving from
+  a second direction.
 - **Tracer restart fails today for a naming reason, not a technical one** — the savepoint
   grouping, stated as a `NotImplementedError`.
 
 If restart ships first with a hand-picked field list, that list becomes the de-facto role
 vocabulary. The restart doc has a 2-week appetite; this design does not. So the one
 conversation worth having *before* that work starts is `restart: bool` in M2's metadata —
-even if nothing else here is adopted (open question 8).
+even if nothing else here is adopted (open question 7).
 
 ## 10. Prior art, compressed
 
@@ -813,9 +855,10 @@ any prototype.
   per-step repacking disappears, dissolving the conflict. Three further points stand: v3
   says nothing about who allocates, so **the E1 class survives it intact**; its `FlowKind`
   conflates `role` (prognostic/tendency/diagnostic) with `intent` (in-place) with arity
-  (parameter) — the `intent`/`role` split this document recommends dissolves its open
-  question Q1; and its whole-graph `validate()` and M13 are the same idea approached from
-  two directions — build it once.
+  (parameter) — still, even after v3 resolved v2's O1/O4/O5. The refinement this document
+  recommends keeps `intent` in M2's metadata and carries `role` as labels (M7), never as
+  container membership (G5); and its whole-graph `validate()` and M13 are the same idea
+  approached from two directions — build it once.
 - **[[personal/OngChia/physics-driver-and-components|OngChia's design]]** is the only one
   requiring a run-time container. Two specific problems: "each component derives its own
   inputs" is the rule that produced E3 (CCPP ran the same experiment and got 66 % interstitial
@@ -878,6 +921,18 @@ a green-field choice.
     levels (`nlev+1`), both branches of the fix now allocate accordingly — but the answer
     lives in an allocation call and a comment, not in any declaration; the type still cannot
     express it (§8), so the knowledge remains one refactor away from being lost.
+
+## Appendix: numbering maps for inbound references
+
+Other documents cite the v1 requirement and open-question numbers (e.g. the
+layered-architecture refactor cites "model-state's R11" and "its open question 3"). The
+maps, so those references survive if the originals are retired:
+
+- **Requirements → constraints/goals:** R1→G2 · R2→G1 · R3→G3 · R4→C2 · R5→C1 · R6→G6 ·
+  R7→G7 · R8→G4 · R9→C3 · R10→C4 · R11→G5
+- **v1 open questions → here:** 1→Q1 (Fortran path) · 2→Q3 (tracer validation) · 3→Q4
+  (protocol) · 4→Q10 (`mass_flx_ic`) · 5→Q2 (temperature) · 6→Q8 (bitwise) · 7→Q5
+  (overhead) · 8→Q9 (freeze) · 9→Q6 (vocabulary) · 10→Q7 (restart)
 
 ## Appendix: unrelated icon4py defects found along the way
 
