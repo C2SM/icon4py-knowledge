@@ -2,6 +2,9 @@
 *.local.md
 .claude/settings.local.json
 
+# Python cache
+__pycache__/
+
 # Obsidian
 .obsidian/
 
