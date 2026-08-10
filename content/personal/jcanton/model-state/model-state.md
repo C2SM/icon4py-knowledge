@@ -14,8 +14,21 @@ status: draft
 > landscape moved since the originals were written: **PR 1301 merged on 2026-08-03**, PR 1404
 > fixed the flagship defect, and several figures and characterizations below have been corrected
 > accordingly. Corrections and disagreements with the original set are marked *(revised)*.
+> This revision also **absorbs the verified findings of the parallel consolidation attempt
+> (knowledge-base PR #18**, verified against `4c858a6a`, 2026-08-06**)** — its E3/E4/E6/E8/E9/E10
+> sharpenings, the ClassVar consequence, the tach finding, and its reading of msimberg v3 —
+> after independent re-verification here where possible, so that PR can be closed. Where a
+> figure could not be re-run it is labelled *reported*; everything else is *verified*.
 > Status is `draft` because this consolidation has not yet been human-reviewed; the
 > pre-consolidation main document had been reviewed.
+>
+> A meta-lesson this document set keeps re-teaching, recorded so it survives the
+> consolidation: every internal inconsistency found across its revisions (a count stated in
+> four places and updated in two; a `frozen` phase outliving the freeze decision; a
+> characterization of msimberg's spec outliving the spec) was **one fact represented in
+> several places and updated in some** — the DRY principle applied to prose. The mitigation
+> is structural: one document, each count stated once, quoted only where the number *is* the
+> argument.
 
 > **TL;DR** Several incompatible designs for "how components get their fields" have been in
 > flight at once, none stating its requirements. This document states the requirements first —
@@ -74,14 +87,14 @@ source**; each defect forces a requirement in §3.
 |---|---|---|---|
 | E1 | `PrepAdvection` and `AdvectionPrepAdvState` held the same 3 quantities, allocated separately, with **nothing copying one into the other** — standalone-driver tracer advection ran on identically-zero trajectory velocity and mass fluxes | **fixed** by [PR 1404](https://github.com/C2SM/icon4py/pull/1404) (2026-07-30) — see below | correctness |
 | E2 | Their `mass_flx_ic` disagreed on vertical extent (`nlev+1` vs `nlev`), so even a copy would not have been shape-compatible; `fa.CellKField[float]` cannot express the difference | **fixed** with E1; PR 1404's zero-field fallback now also allocates `extend={KDim: 1}`, settling the extent as half-levels | correctness |
-| E3 | `T`/`Tv`/`p` derived in ≥3 places with **different hydrometeor inputs** — IO uses permanently-zero hydrometeors (`driver_io.py:146`: *"dry air: all hydrometeors stay zero"*), physics uses real tracers. The temperature written to output is not the temperature physics computed with | **live** (`driver_io.py:181`, muphys `state.py`, `jablonowski_williamson.py`) | science |
-| E4 | `vn → u,v` computed at multiple sites with divergent halo treatment: `driver_states.py:255` exchanges halos after (`:267`), `driver_io.py:199` does not; `driver_io.py:115` carries `TODO(kotsaloscv)` asking for exactly this refactor | **live** | correctness |
+| E3 | `T`/`Tv`/`p` derived in ≥4 places from **different inputs** — and worse than first stated: the IO path runs the diagnosis **fully dry**. `driver_io.py:146-147` allocates `qv, qc, qi, qr, qs, qg` once, all permanently zero (*"dry air: all hydrometeors stay zero (never written, so allocated once)"*) — `qv` included — so on the output path `virtual_temperature ≡ temperature` identically, and the temperature icon4py publishes is a **dry-air** temperature no physics component ever uses | **live** (`driver_io.py:181`, muphys `state.py`, `jablonowski_williamson.py`; PR 1360 adds a fourth) | science |
+| E4 | `vn → u,v` computed at **two** production sites into two different buffers — `driver_states.py:290` writes `diagnostic_state.u/.v` and halo-exchanges after (`:302`); `driver_io.py:199` writes its private `_u/_v` and does **not**. The domain bounds do *not* differ (both run `lateral_boundary_level_2 → END`); the defect is the duplicated buffers plus the missing exchange. `driver_io.py:115` carries `TODO(kotsaloscv)` asking for exactly this refactor | **live** | correctness |
 | E5 | `dycore.InterpolationState` (16 fields) is a strict superset of `DiffusionInterpolationState` (8); `geofac_div` declared in 3 containers; `ddqz_z_full` in 3; byte-identical one-field dataclasses in microphysics | **live** | duplication |
-| E6 | `driver_utils.initialize_granules`: **91** hand-typed `.get()` mappings (count drifts upward with each merge), replicated at ~7 more sites — 5 in tests/benchmarks, **2 in the production Fortran binding wrappers** | **live** | boilerplate |
-| E7 | Wrong-key bugs in exactly that replicated hand-mapping: `d2dexdz2_fac2_mc=…get(D2DEXDZ2_FAC1_MC)` and edge-normal into a dual-normal slot | **live** (`integration_tests/test_benchmark_solve_nonhydro.py:98,163`; `test_benchmark_diffusion.py`) — both type-check, both run; benchmark paths, not the production driver, and the *primary* site `driver_utils` is correct, which argues for deleting the replication rather than distrusting it | correctness |
-| E8 | Placement recorded three times per field: name string (`…_at_cells_on_half_levels`), `dims=(CellDim, KHalfDim)`, `is_on_half_levels: bool` — and the factory **rewrites `KHalfDim → KDim` at allocation** (`factory.py:540,545,823`, *"remove once gt4py supports vertically staggered dimension"*), so half-levelness survives only in a metadata tuple nothing validates | **live** | drift |
-| E9 | Five parallel namespaces per field (catalog key / CF name / ICON Fortran name / dataclass attribute / port name); four disjoint metadata dicts plus one orphan; ~0/49 metrics entries are real CF names; `units=""` for most; and a **live collision**: `metrics_attributes.py:106-107` declares two distinct fields (cell and edge) under one `standard_name`, which the IO writer resolves variable identity by — they would silently alias into one netCDF variable | **live** | drift |
-| E10 | The trend: PR 1360 adds **seven** state dataclasses for one component; `TmxInputState` re-declares `qv…qg`, `rho`, `w`; its `gather_from_prognostic` re-derives `T`/`Tv`/`p` a fourth time | **live** (PR open) | trend |
+| E6 | `driver_utils.initialize_granules`: **91** hand-typed `.get()` mappings (count drifts upward with each merge), replicated at **~12 further sites** — the union of every file hand-constructing a granule interpolation/metric container (the earlier "7 sites" was an undercount; 11–13 depending on tree date and definition), of which **2 are the production Fortran binding wrappers** | **live** | boilerplate |
+| E7 | Wrong-key bugs in exactly that replicated hand-mapping: `d2dexdz2_fac2_mc=…get(D2DEXDZ2_FAC1_MC)` and edge-normal into a dual-normal slot. The *intended* mapping is confirmed independently at three other sites (`driver_utils`, `test_diffusion`, `test_parallel_geometry`), so these are **filable today** with the evidence attached | **live** (`integration_tests/test_benchmark_solve_nonhydro.py:98,163`; `test_benchmark_diffusion.py`) — both type-check, both run; benchmark paths, not the production driver, and the *primary* site `driver_utils` is correct, which argues for deleting the replication rather than distrusting it | correctness |
+| E8 | Placement recorded three times per field: name string (`…_at_cells_on_half_levels`), `dims=(CellDim, KHalfDim)`, `is_on_half_levels: bool` — the factory **rewrites `KHalfDim → KDim` at allocation** (`factory.py:540,545,823`, *"remove once gt4py supports vertically staggered dimension"*), so half-levelness survives only in a metadata tuple nothing validates. And the triplication is now **tested into place**: `is_on_half_levels` is read at `driver_io.py:83,242`, and a `test_driver_io` docstring states that `dims` and `is_on_half_levels` are *"stated independently"* — deliberately | **live** | drift |
+| E9 | Five parallel namespaces per field (catalog key / CF name / ICON Fortran name / dataclass attribute / port name); four disjoint metadata dicts plus one orphan; ~0/49 metrics entries are real CF names; `units=""` for essentially all metrics and interpolation entries (though *not* geometry — the earlier "most" was too broad); and a **live collision**: `metrics_attributes.py:106-107` declares two distinct fields (cell and edge) under one `standard_name`, which the IO writer's `filter_by_standard_name` resolves variable identity by — they would silently alias into one netCDF variable | **live** | drift |
+| E10 | The trend, verified on `origin/physics_driver_tmx` (2026-08-05): PR 1360 adds **seven** state dataclasses and **92 declared fields** for one component (`TmxDiagnosticState` 31, `TmxMetricState` 17, `TmxInputState` 16, …). `TmxInputState` re-declares all six fields of the common `DiagnosticState`, all six tracers, and `rho`/`w`; `TmxMetricState` re-declares five metrics fields; `TmxInterpolationState` makes `geofac_div` a **fourth** container; `gather_from_prognostic` re-derives `T`/`Tv`/`p` a fourth time | **live** (PR open) | trend |
 
 E10 is the important row: duplication is being created faster than it is removed, because every
 new component pays the full adapter-stack tax.
@@ -89,11 +102,15 @@ new component pays the full adapter-stack tax.
 **E1/E2's fix is itself the strongest argument in this document.** PR 1404 added
 `initialize_prep_tracer_advection` (`driver_states.py:222`): a hand-written function whose
 whole job is to alias three of the dycore's buffers into a second container, plus an identity
-test asserting the aliasing holds. Both are now permanent maintained surface, the same
-function's no-dycore branch still allocates fresh zeros, and every future producer→consumer
-pair starts from the same footing. Under M1 (one quantity → one buffer, §5) neither the
-function nor the test would need to exist, and the *class* of defect would be unrepresentable
-rather than fixed once.
+test asserting the aliasing holds. Both are now permanent maintained surface, and every
+future producer→consumer pair starts from the same footing. The fallback branch is the
+sharper point: with no dycore, the same function allocates fresh zeros, and to get
+`mass_flx_ic` right it must **restate the half-level extent in a second file**, with a
+comment explaining why (*"one more level than KDim, like the dycore's … it stands in for"*)
+— E2's knowledge, one quantity's vertical extent, now represented a third time, and that
+representation was *created by the fix*. Under M1 (one quantity → one buffer, §5) neither
+the function nor the test would need to exist, and the *class* of defect would be
+unrepresentable rather than fixed once.
 
 **Claims from the original investigation that remain unverified — treat with suspicion:**
 
@@ -123,10 +140,18 @@ flag. Split and ranked as the principles demand:
 | C3 | Granule call sites must keep naming their actual inputs | the havogt/msimberg stamp-coupling objection; also implied by C1 |
 | C4 | No new per-stencil-call overhead | ~100 stencil calls per 20–50 ms timestep |
 
-C2 is held on the assumption that the Fortran-embedded path is permanent. **It is an
-unexamined constraint**: it is why the registry may not own allocation and why the
-adopt-external seam exists, and if it ever stops being true the design gets materially simpler.
-Worth re-asking explicitly before committing (open question 1).
+C2 holds *today* with high confidence — py2fgen's whole type model is
+`ParamDescriptor = ArrayParamDescriptor | ScalarParamDescriptor` (no record descriptor, so
+no struct can cross the ABI), and `bindings/tests/test_codegen_references.py` is a
+golden-file test of the generated Fortran/C bindings, so any wrapper-signature change breaks
+a checked-in artifact. What is **unexamined** is the assumption that the embedded path is
+*permanent*: it is why the registry may not own allocation and why the adopt-external seam
+exists, and if it ever stops being true the design gets materially simpler. Worth re-asking
+explicitly before committing (open question 1).
+
+C4 is real but is satisfied **by construction** in the setup-time reading — nothing is added
+to the step path at all. Listing it as a peer constraint invites a performance debate the
+design does not need and, per §4, should not be argued on.
 
 **Goals** — ranked; a team taking "G1–G3 and stopping" is a coherent outcome.
 
@@ -142,7 +167,10 @@ Worth re-asking explicitly before committing (open question 1).
 
 G1 ranks first because it is the only goal that makes defects *unrepresentable* rather than
 merely detected, and because G2, G4 and G5 lean on it. G7 ranks last because `TimeStepPair`
-already works and nothing there is broken.
+already works and nothing there is broken. G6 is not hypothetical: the bindings already fake
+absence with **dummy allocations** (`wrapper_common.cached_dummy_field_factory`, used for
+`hdef_ic`/`div_ic`/`dwdx`/`dwdy` and the optional IAU increments
+`vn_incr`/`rho_incr`/`exner_incr`).
 
 **The budgeted resource is reviewer attention, not runtime.** PR 1301 took **two months and
 102 review events** to merge; PR 1360 sits at +17.5k lines with **zero reviews**. Two
@@ -208,10 +236,15 @@ tree:
   field.
 - *(revised — mechanics the original set had subtly wrong)* A `| None` **annotation alone does
   not disqualify** — the hook never inspects annotations, only defaults. And a `ClassVar`
-  member **does** disqualify (the regular-field clause). This changes where M11's optionality
-  fails: a default-free container holding a `None` value would pass the structural check and
-  fail later, inside extraction — so containers intended as program arguments must be
-  **validated None-free at build time**, not left to gt4py to reject (§5, M11).
+  member **does** disqualify (the regular-field clause; `__dataclass_fields__` retains
+  ClassVar pseudo-fields). Practical consequence: attaching class-level metadata *to a state
+  dataclass* silently strips its named-collection status — the msimberg specs put
+  `inputs_properties`/`outputs_properties` as `ClassVar` on the **Component**, which is safe;
+  putting them on `InputT` would not be. And M11's optionality fails in the wrong place: a
+  default-free container holding a `None` value passes the structural check and fails later,
+  inside extraction — so **whether a container is a wiring object or a program argument must
+  be part of its declaration, checked at `seal()`** (None-free at build for program
+  arguments), not discovered when gt4py rejects a value (§5, M11).
 
 **Do not argue this on speed.** ICON-sc measured the entire benefit of moving all
 negotiation/lookup out of the step loop at **~6.8 % of step time on a real model** (JW
@@ -294,7 +327,9 @@ Notes on the ones that matter most:
   agrees on. The current `Component` protocol's declared properties are completely inert —
   re-verified after PR 1301's merge: the shipped `physics_driver.run` never consults
   `inputs_properties`/`outputs_properties`; they remain decorative on `main` today, and the
-  protocol's own TODOs (unit matching, dimension consistency) are still open.
+  protocol's own TODOs (unit matching, dimension consistency) are still open. One nuance
+  makes M3 cheaper than greenfield: `muphys/component.py:49` *does* declare both properties
+  as plain class attributes — nothing reads them, so **M3 has a first consumer waiting**.
 - **M10 covers the larger memory number.** Granule-private scratch (~29 full-3D fields across
   `SolveNonhydro`/`Diffusion`/`VelocityAdvection`) plausibly exceeds cross-granule duplication
   (unmeasured, §2). A shared container *without* a scope tag makes memory strictly worse by
@@ -334,7 +369,10 @@ Notes on the ones that matter most:
   invalidates nothing. *Scientific* staleness — "is this derived field consistent with its
   inputs?" — has no working prior art anywhere in the survey, can never be a correctness
   guarantee (gt4py fields hand out writable `.ndarray` buffers), and is deferred; M5-lite's
-  barrier removes the need.
+  barrier removes the need. For calibration, icon4py today has **zero invalidation machinery
+  of either kind**: a grep for `invalidat|stale|dirty|recompute` over `states/` and the
+  factories returns nothing, memoized providers return a cached field forever, and there is
+  no evict API.
 - **M5/M9 carry the loudest warnings.** CCPP has wanted `theta_v,exner→T,p` derivation for
   years, has not built it, and scopes its issue "*this is not an open-ended task!*"; the
   `theta_v,exner ↔ T,p` cycle is real (ClimaAtmos documents the identical cycle and breaks it
@@ -370,7 +408,7 @@ phases. **The proposal changes only those.**
 # A: static fields — three memoized factory sources (already lazy, already aliasing;
 #    this half of the problem is solved, but nothing declares or checks the sharing)
 # B: hand-wire granule containers — 91 hand-typed `.get()` keyword mappings in
-#    driver_utils, replicated at ~7 sites  (E5, E6, E7)
+#    driver_utils, replicated at ~12 sites  (E5, E6, E7)
 # C: allocate mutable state — driver_states.assemble_driver_states; before PR 1404
 #    this allocated the same three quantities twice, disconnected  (E1, E2, E8)
 # D: the time loop — dycore accumulates into prep_adv over ndyn_substeps_var substeps;
@@ -419,7 +457,7 @@ coincidental.
 - One `spec()` per field across the model — `MetricStateNonHydro` alone is 32 fields; a few
   hundred declaration lines total. Real work. But it replaces more than it adds: the
   declaration is written once per field; the hand-mapping it deletes was written once per field
-  *per site* (~8 sites), and the ~50-line repack in each Fortran binding wrapper becomes a
+  *per site* (~12 sites), and the ~50-line repack in each Fortran binding wrapper becomes a
   table walk over the same declarations.
 - A wrong `spec` fails at `seal()` naming the field — today the same mistake is E7: it
   type-checks, runs, and produces wrong numbers.
@@ -452,11 +490,17 @@ site catches drift.
 | | A — emit the wiring | B — check the wiring |
 |---|---|---|
 | E7 (wrong keys) | yes — no keyword list survives | yes — the check catches it |
-| E2/E8 (contradictions) | yes | yes |
-| E6 (boilerplate × ~8 sites) | yes | **no** — all of it stays |
+| E2/E8/E9 (contradictions) | yes | yes |
+| E6 (boilerplate × ~12 sites) | yes | **no** — all of it stays |
 | E1's *class* | yes — one buffer per quantity | **no** — a checker can report that two containers disagree; it cannot make them one buffer |
+| E3/E4 (divergent derivations) | needs M5-lite either way | needs M5-lite either way |
 | Cost | M1 + M4, a few hundred declaration lines, allocation moves | M2 + M3 only |
 | Risk | new machinery on the setup path | almost none |
+
+The E3/E4 row deserves its own sentence, because it bounds what *either* design can claim:
+those two defects are not fully setup-time — the divergent values are produced every step —
+so no amount of wiring, emitted or checked, fixes them. They need M5-lite's per-step barrier,
+**the single place where this design admits a run-time mechanism.**
 
 If the team never goes past B, that is a coherent outcome: the correctness defects are fenced
 and the boilerplate remains. A wins only if E6 and E1's class are judged worth the extra
@@ -468,10 +512,12 @@ by drift.
 Each step independently shippable, each with standalone value — which is what the budgeted
 resource (reviewer attention, §3) demands.
 
-0. **Free wins, no design commitment.** The per-site field-coverage test (~10 lines each — E6/E7
-   drift turns red today); units-as-identity-validation (~110 LOC, no dependencies); the
-   `icon:` namespace two-way invariant.
-1. **M2** — metadata on dataclass fields, `origin` included; start the name file.
+0. **Free wins, no design commitment.** File E7's wrong-key bugs now — verified, live, and
+   one-line fixes; the per-site field-coverage test (~10 lines each — E6/E7 drift turns red
+   today); units-as-identity-validation (~110 LOC, no dependencies); the `icon:` namespace
+   two-way invariant.
+1. **M2** — metadata on dataclass fields, `origin` included; start the name file. Reuse the
+   `kind` key `states/model.py` already defines rather than inventing a parallel one.
 2. **M10 + M11** — scope tag and config-predicate allocation: the only two mechanisms that
    *reduce* memory, and M11 is what answers the strongest objection (§4).
 3. **M3** — validation at class creation. Highest value per line; agreed by every proposal.
@@ -482,9 +528,11 @@ resource (reviewer attention, §3) demands.
    vocabulary will silently bind the wrong field (`metrics_attributes.py:106-107` already
    declares two distinct fields under one `standard_name`). Deletes E6.
 7. **M7** — labels: unlocks output/restart/checkpoint sets; gives tracers an IO path at all.
-8. **M5-lite** — one derived-quantities barrier over a closed set. Kills E3 and E4.
+8. **M5-lite** — one derived-quantities barrier over a closed set. Kills E3 and E4; the
+   only run-time addition in the whole sequence.
 9. **M6-structural** — adopt whenever setup-time wiring lands; it replaces the freeze.
-10. **M13, M14** — independent of everything else; land opportunistically.
+10. **M13, M14** — independent of everything else. M14 lands opportunistically; M13 should
+    land *with* whichever composition layer wins the protocol question.
 11. **M6-scientific, M9, M5-full** — deferred; each needs a written justification.
 
 **Acceptance criterion for every step, demonstrated feasible by ICON-sc over 288 composed
@@ -509,6 +557,12 @@ never a tolerance to widen.**
 - **Integration control state** (`ndyn_substeps_var`, CFL-watch mode, elapsed time, random
   seeds) is restart state but not fields; the container holds fields, and conflating the two
   is a scope error.
+- **Module boundaries.** `tach check` currently enforces **nothing**: it resolves zero
+  first-party imports, the tach ≥ 0.27 namespace-package regression documented in
+  [[personal/egparedes/layered-architecture-refactor|the layered-architecture refactor]]'s
+  Phase 0 (re-confirmed by the parallel verification in PR #18). Any argument of the form
+  "the boundary check will stop a shared container from landing in the wrong package" is
+  false today.
 
 ## 9. Restart: the consumer that settles G4 and G5
 
@@ -657,15 +711,26 @@ any prototype.
 - **[[personal/msimberg/revive-components/revive-components|msimberg's revive-components]]**:
   the original conflict analysis targeted the **v2** spec (`run(state, dtime)`,
   `convert_state`, `setflags(write=False)` read-only enforcement — the cupy objection applied
-  to its AC14). **v3 supersedes all of that** and moves the design to a graph-composition
-  layer above `Component` — which makes it mostly *orthogonal* to this proposal: v3 owns
-  control flow (chain/loop/when, `CarrySpec`, schedules), this proposal owns
-  allocation/wiring/metadata. They compose naturally: `reg.build(...)` emits exactly the
-  caller-allocated containers v3's `CarrySpec(..., initial=…)` expects. The two standing
-  observations: v3 still says nothing about who allocates, so **the E1 class survives it
-  intact**; and its per-field `read_only` remains best-effort by its own admission. Its
-  `FlowKind` conflates what this proposal splits into `intent` (read/write) and `role`
-  (prognostic/tendency/diagnostic) — the split this document recommends.
+  to its AC14 and is moot for v3, which already downgrades read-only to best-effort). **v3
+  supersedes all of that** and moves the design to a graph-composition layer above
+  `Component`. Two readings of v3 were argued in the two parallel consolidations of this
+  document, and both are partly right, so state the synthesis precisely. *On the declaration
+  side they compose*: v3 owns control flow (chain/loop/when, schedules), this proposal owns
+  allocation/wiring/metadata, and `reg.build(...)` emits exactly the caller-allocated
+  containers v3's `CarrySpec(..., initial=…)` expects. *On the execution side v3's D1/D2 is
+  a run-time, name-addressed store*: every step reads and writes a shared mutable `Carry`,
+  the component adapters rebuild `InputT` from carry slots **per call**, and `sampler` keeps
+  a name-keyed recycle cache — and v3 concedes the consequence itself (*"read-only is a
+  debugging aid … not a hard guarantee on a shared mutable carry"*). Components never touch
+  the carry directly (the adapters do), so this is not MPAS pools — but the reachability and
+  emission tests of §4 apply to its executor, and the resolution is the bind-once treatment
+  ICON-sc applied: resolve carry-slot → dataclass-field bindings **once at setup** and the
+  per-step repacking disappears, dissolving the conflict. Three further points stand: v3
+  says nothing about who allocates, so **the E1 class survives it intact**; its `FlowKind`
+  conflates `role` (prognostic/tendency/diagnostic) with `intent` (in-place) with arity
+  (parameter) — the `intent`/`role` split this document recommends dissolves its open
+  question Q1; and its whole-graph `validate()` and M13 are the same idea approached from
+  two directions — build it once.
 - **[[personal/OngChia/physics-driver-and-components|OngChia's design]]** is the only one
   requiring a run-time container. Two specific problems: "each component derives its own
   inputs" is the rule that produced E3 (CCPP ran the same experiment and got 66 % interstitial
@@ -701,27 +766,33 @@ a green-field choice.
    shapes the entire adopt-don't-own allocation design. Re-validate explicitly — if it falls,
    the design simplifies materially.
 2. **Which temperature is *the* model temperature?** When IO and physics disagree (E3), which
-   one is written to output is a science decision nobody has signed off.
-3. **Who owns the component protocol?** Four signatures were open; PR 1301's merge made the
+   one is written to output is a science decision nobody has signed off — today the published
+   one is dry.
+3. **Has standalone-driver tracer advection ever produced validated results?** While E1 was
+   live it ran on identically-zero mass fluxes; PR 1404 fixed the wiring, but who signs off
+   that post-fix results are scientifically valid?
+4. **Who owns the component protocol?** Four signatures were open; PR 1301's merge made the
    dict protocol the incumbent while the typed alternatives remain drafts. Someone with design
    authority must either ratify or supersede it — merging the drafts by negotiation will not
    converge.
-4. **What per-timestep Python overhead is acceptable, as a number?** Still open; with the
+5. **What per-timestep Python overhead is acceptable, as a number?** Still open; with the
    datapoint that the entire stake measured ~6.8 % on a real model, whatever is built should
    not be justified on this axis.
-5. **Do we commit to a controlled name vocabulary, and which domain scientist owns it?** The
+6. **Do we commit to a controlled name vocabulary, and which domain scientist owns it?** The
    shape is settled (CF or `icon:`-prefixed, two-way invariant, enforced at registration); the
-   ownership is not, and M4 is gated on it.
-6. **Exact or scientific restart?** The highest-leverage question in the list: it forces a
+   ownership is not, M4 is gated on it — and it is CCPP's documented #1 regret.
+7. **Exact or scientific restart?** The highest-leverage question in the list: it forces a
    per-field decision on every field in the model (G5), and the restart work's 2-week appetite
    means its answer will be set de facto very soon (§9).
-7. ~~Bitwise reproducibility across the refactor?~~ **Answered**: yes, and it is achievable
+8. ~~Bitwise reproducibility across the refactor?~~ **Answered**: yes, and it is achievable
    (ICON-sc, 288 steps); adopt as a release blocker. It rules out lazy derivation, not
    setup-time derivation.
-8. ~~A hard declare→bind→freeze→run lifecycle?~~ **Answered**: no — a staleness guard beats a
+9. ~~A hard declare→bind→freeze→run lifecycle?~~ **Answered**: no — a staleness guard beats a
    freeze (M6-structural); mutation stays legal and stale wiring raises.
-9. ~~Is `mass_flx_ic` on half or full levels?~~ **Answered by PR 1404**: half levels
-   (`nlev+1`); both branches of the fix now allocate accordingly.
+10. ~~Is `mass_flx_ic` on half or full levels?~~ **Answered by PR 1404 as science**: half
+    levels (`nlev+1`), both branches of the fix now allocate accordingly — but the answer
+    lives in an allocation call and a comment, not in any declaration; the type still cannot
+    express it (§8), so the knowledge remains one refactor away from being lost.
 
 ## Appendix: unrelated icon4py defects found along the way
 
