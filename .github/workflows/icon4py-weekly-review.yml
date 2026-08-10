@@ -42,6 +42,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y bubblewrap
 
+      - name: Enable unprivileged user namespaces
+        run: |
+          # Ubuntu 24.04 (the current ubuntu-latest image) restricts
+          # unprivileged user namespaces via AppArmor
+          # (kernel.apparmor_restrict_unprivileged_userns=1), so bwrap fails
+          # with "setting up uid map: Permission denied" because the
+          # bubblewrap package ships no AppArmor profile. Relax the
+          # restriction for this job. See
+          # https://ubuntu.com/blog/ubuntu-23-10-restricted-unprivileged-user-namespaces
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          sudo sysctl -w kernel.unprivileged_userns_clone=1 || true
+
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
