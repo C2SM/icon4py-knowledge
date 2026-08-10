@@ -51,7 +51,7 @@ prototype (ICON-sc, §10):
 | [[personal/egparedes/layered-architecture-refactor\|egparedes architecture refactor]] | `__call__(state: ModelState, step: StepInfo) -> None` | one shared typed `ModelState`, in-place writes | draft (PR 1358 closed; doc lives here) |
 | [[personal/msimberg/revive-components/revive-components\|msimberg revive-components]] | v3: `run(state: InputT) -> OutputT`, `dtime` a field of `InputT` | typed frozen dataclasses + a graph-composition layer (`chain`/`loop`/`when`, `CarrySpec`) | **v3 spec** supersedes the v2 this document set originally argued against |
 | [[personal/OngChia/physics-driver-and-components\|OngChia design]] | `__call__(state: StateView, time) -> dict` | run-time `StateProvider` + per-field freshness | draft |
-| **ICON-sc** (egparedes) | sympl property contracts: components declare `input_properties`/`output_properties`, dict-based `array_call` | `dict[str, DataArray]` at the public boundary, compiled at **bind time** into a frozen execution plan over a slotted, index-addressed `StateVault` | **experimental architectural prototype**, hosting icon4py granules; local repo, not published — see §10 for references and lessons |
+| **ICON-sc** (egparedes) | sympl property contracts: components declare `input_properties`/`output_properties`, dict-based `array_call` | `dict[str, DataArray]` at the public boundary, compiled at **bind time** into a frozen execution plan over a slotted, index-addressed `StateVault` | **experimental architectural prototype**, hosting icon4py granules; published at [github.com/grAItools/ICON-sc](https://github.com/grAItools/ICON-sc/) — see §10 for references and lessons |
 
 *(revised)* The original document called these "four incompatible designs" (and, inconsistently,
 "five"). That framing conflates **two mostly orthogonal axes**:
@@ -624,22 +624,28 @@ components, a dynamics–physics coupling algebra) over a zero-copy device-field
 codebase, it is the only system in this survey whose evidence is directly transferable — and
 the one whose claims need the most calibration (below).
 
-**References.** The prototype lives in the local `ICON-sc` repository (not yet published to a
-public remote); pointers for reviewers with access:
+**References.** The prototype is published: repository at
+[github.com/grAItools/ICON-sc](https://github.com/grAItools/ICON-sc/), documentation site at
+[graitools.github.io/ICON-sc](https://graitools.github.io/ICON-sc/). (The original doc set's
+calibration claim "nothing pushed to any remote" is thereby outdated.) Pointers:
 
-- `docs/architecture/icon-sc_architecture.md` (v1.3) — the canonical architecture document.
+- [The architecture document](https://graitools.github.io/ICON-sc/architecture/icon-sc_architecture.html)
+  (v1.3; source at `docs/architecture/icon-sc_architecture.md`) — the canonical description.
   For model state specifically: §2 *(state, fields, and the zero-copy protocol — the state
   dictionary, ingress adapters, contracts/canonical units, naming)* and §8.2 *(bind-time
   specialization: the negotiation vs execution split)*.
-- `packages/icon-sc-core/src/icon_sc/core/plan/bind.py` (~1730 lines) — the plan compiler;
-  `packages/icon-sc-core/src/icon_sc/core/state/vault.py` (203 lines) — the run-time
-  `StateVault`.
-- `development/REGISTRY.md` — work-unit register, trunk decisions, human sign-offs;
-  `development/references/lock.toml` — the append-only, SHA-pinned provenance ledger for every
-  borrowed constant and tolerance (itself worth stealing as a process artifact).
-- Its README records the merged vertical slice's validation claims: L2 parity at upstream
-  tolerances, 9-day bitwise-zero equivalence against the icon4py standalone driver, and
-  T0 ≡ T1 bitwise through the dycore.
+- [`plan/bind.py`](https://github.com/grAItools/ICON-sc/blob/main/packages/icon-sc-core/src/icon_sc/core/plan/bind.py)
+  (~1730 lines) — the plan compiler;
+  [`state/vault.py`](https://github.com/grAItools/ICON-sc/blob/main/packages/icon-sc-core/src/icon_sc/core/state/vault.py)
+  (203 lines) — the run-time `StateVault`.
+- [`development/REGISTRY.md`](https://github.com/grAItools/ICON-sc/blob/main/development/REGISTRY.md)
+  — work-unit register, trunk decisions, human sign-offs;
+  [`development/references/lock.toml`](https://github.com/grAItools/ICON-sc/blob/main/development/references/lock.toml)
+  — the append-only, SHA-pinned provenance ledger for every borrowed constant and tolerance
+  (itself worth stealing as a process artifact).
+- Its [README](https://github.com/grAItools/ICON-sc/#readme) records the merged vertical
+  slice's validation claims: L2 parity at upstream tolerances, 9-day bitwise-zero equivalence
+  against the icon4py standalone driver, and T0 ≡ T1 bitwise through the dycore.
 
 **Its model-state design — the fifth alternative in §1.** State crosses the public boundary
 as `dict[str, DataArray]` under sympl property contracts (each component declares
