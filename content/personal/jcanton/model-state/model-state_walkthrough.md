@@ -14,6 +14,12 @@ status: draft
 > Checked against `origin/main` at `f94d2d44e` (2026-07-30). **E1 and E2 were fixed the same day**
 > by [PR 1404](https://github.com/C2SM/icon4py/pull/1404) (`3c8c69342`) — they are kept below
 > because *how* they were fixed is the argument, see Part 3.
+>
+> **Line numbers and counts here are from the 2026-07-30 pass and have drifted.**
+> [[personal/jcanton/model-state/model-state_evidence|The evidence appendix]] is the
+> authoritative source, re-verified at `4c858a6a` (2026-08-06); it corrects E4 (two production
+> sites, not three) and E6 (13 replication sites, not 7, and 89 `.get()` calls at `:221-487`).
+> One claim in Part 4 is superseded outright — see the correction box there.
 
 ## The idea in one sentence
 
@@ -366,12 +372,21 @@ the objection collapses on, and it only works if M11 is actually built — which
 step 2 of the adoption order rather than being a footnote. ICON-sc has no equivalent at all.
 
 **A real tension to be honest about.** `| None` is exactly what `TracerState` already does today
-(`tracer_states.py:106-116`) — but an optional field means the container **cannot** be a gt4py
-named collection, so `TracerState` can never be passed to a `gtx.program` as a whole. That is
-fine, and it is already how icon4py works: `tracer_advection.run` takes `p_tracer_now` as a
-single field, not the container. The rule that falls out: **containers that model optionality are
-wiring objects, not program arguments.** Which of the two a container is should be part of its
-declaration, not something discovered when gt4py rejects it.
+(`tracer_states.py:107-118`), and `TracerState` can never be passed to a `gtx.program` as a
+whole. That is fine, and it is already how icon4py works: `tracer_advection.run` takes
+`p_tracer_now` as a single field, not the container. The rule that falls out: **containers that
+model optionality are wiring objects, not program arguments.** Which of the two a container is
+should be part of its declaration, not something discovered when gt4py rejects it.
+
+> **[correction, 2026-08-10] The mechanism above was stated wrongly, and the mechanism matters.**
+> gt4py's `__subclasshook__` never inspects annotations, so `| None` disqualifies nothing —
+> verified empirically: a dataclass with `x: int | None` and *no default* **is** a valid named
+> collection. What disqualifies `TracerState` today is the `= None` **defaults**. Consequently a
+> `TracerState` rewritten as `qv: Field | None = spec(...)` would be *structurally* conformant
+> while some of its *instances* stayed unusable, moving the failure from class-definition time to
+> call time — the wrong direction. The conclusion (wiring object vs. program argument must be
+> declared) survives; the reason changes, and M11 has to state how the wiring/argument
+> distinction is checked at `seal()`. See §4.2 of the main document.
 
 ## Part 5 — the Fortran-embedded path survives
 
