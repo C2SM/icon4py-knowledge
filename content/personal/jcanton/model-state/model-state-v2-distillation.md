@@ -87,6 +87,75 @@ whoever owns the component protocol, and this proposal is compatible with any of
 outcomes. PR 1301's merge has meanwhile made the dict protocol the de-facto incumbent on
 `main`; see open question 3.
 
+### The design space at a glance
+
+Before the evidence, a map — for building intuition rather than making arguments. Every
+design above, and every system surveyed in §10, is an arrangement of the same **four
+elements** standing on a **shared foundation**, inside **two hard walls**, with its
+tensions resolved somewhere on **one timeline**.
+
+**The elements.**
+
+- **Model state** — the storage for every field the discretization needs: the five
+  prognostics, tracers, tendencies, diagnostics, static geometry/metric/interpolation
+  coefficients, and granule-private scratch.
+- **Model components** — dycore, diffusion, advection, physics schemes. Each reads and
+  writes a specific *subset* of the state — its working set — and that subset is the
+  component's public interface, whether declared or merely implied by its code.
+- **The main loop** — orders component execution (including sub-stepping and per-component
+  call frequency), owns time-level swaps, and applies or delegates state updates.
+- **Cross-cutting services** — output, checkpoint/restart, halo exchange, nudging. Not
+  components: they need to select fields *by role* ("everything restartable"), not by
+  dataflow, and today each keeps its own hand-written list.
+
+**The foundation** all four stand on is the **vocabulary**: a field name must mean exactly
+one thing before any interface can be declared or any subset selected. This is a design
+element in its own right — icon4py currently has five parallel namespaces per field and a
+live name collision (E8, E9), and the honest cost estimate of the metadata mechanism (M2)
+is "small mechanism, large vocabulary".
+
+**The two walls** — constraints, not tensions; they delete otherwise-attractive designs:
+
+- **C1**: whatever reaches a `gtx.program` must be a static named collection — a name-keyed
+  map can never cross the stencil boundary, so *some* typed container always exists at the
+  last mile.
+- **C2**: in the Fortran-embedded path ICON owns the memory, so the state layer must be able
+  to *adopt* buffers it did not allocate — designs that insist on owning allocation
+  (including ICON-sc's) do not fit this deployment.
+
+**The timeline** is the dimension that actually separates the designs. Each tension below
+can be answered at one of four phases — **declaration** (in the source), **setup** (once,
+before the loop), **per step**, or **per stencil call** — and the surveyed systems differ
+less in structure than in *when* they answer: CCPP resolves working sets at build time,
+ICON-sc at bind time, sympl and the merged physics driver per call. The thesis of this
+document, in one line: **push every answer to the earliest phase that can hold it — and for
+everything here except the derived-quantity barrier (M5-lite) and halo exchange, that phase
+is setup or earlier.**
+
+The map, with each tension's options and where its evidence and mechanism live (E/M
+references are forward pointers into §2 and §5 — this table doubles as a reading guide):
+
+| Element | Tension | Options (phase in parentheses) | See |
+|---|---|---|---|
+| Vocabulary | what is a field's identity? | flat string vs `(quantity, placement)` key; CF vs `icon:`; declared once vs re-derived per subsystem | E8, E9 / M2 |
+| State | is the element set static or config-dependent? | fixed type with config-dependent *allocation* (setup) vs dynamic registry (run) | §4 / M11 |
+| State | who allocates, who owns? | registry allocates (setup) vs every caller allocates (the status quo) vs adopt external buffers (C2) | E1, E2 / M1 |
+| State | lifetime and visibility | persistent vs granule-private scratch vs first-class absence | M10, G6 |
+| Components | how is the interface declared? | explicit metadata (sympl, CCPP) vs bare Python signature vs metadata *on* the signature (NDSL, this proposal) | M2, M3 |
+| Components | who builds the working set, and when? | component gathers per call (run) vs orchestrator emits a typed container (setup) | E6, E7 / M4 |
+| Components | update policy | in-place mutation vs returned tendencies applied by the loop | ADR 0001; the five designs |
+| Loop | how is the graph assembled? | hand-coded driver vs combinators vs config/IR — ordering contracts declared or implicit | M13; msimberg v3 |
+| Loop | at what rates do parts run? | one loop vs dyn substeps vs per-component frequency | G7; OngChia |
+| Loop | derived-quantity consistency | per-consumer re-derivation (run, the status quo) vs one named barrier over a closed set (run, bounded) vs lazy recompute (rejected) | E3, E4 / M5-lite |
+| Services | how do sweeps select their sets? | hand-written lists (the status quo) vs label queries materialized at setup | G4, G5 / M7 |
+
+Note the split hiding inside "slicing", because it decides two different mechanisms: a
+component's working set is **dataflow subsetting** — static per component, resolvable once
+at setup into a typed container (M4) — while a service's sweep is **role subsetting** — a
+config-dependent query over field metadata (M7). Conflating them is how "which container a
+field sits in" ends up standing in for "what role it has", which is exactly the confusion
+G5 exists to remove.
+
 ## 2. Evidence: what the current shape has cost
 
 Defects verified in icon4py `main`; status re-checked at `de151fad8` (2026-08-10). Paths
