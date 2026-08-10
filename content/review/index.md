@@ -8,7 +8,9 @@ This page tracks automated review findings for C2SM/icon4py. Individual issue fi
 
 ## Open issues
 
-_No open issues._
+- [[review/issues/icon4py-2026-08-10-1440baa.md|Global reductions issue a redundant MPI.Allreduce and device synchronization on every min/max/sum/mean call]] - severity: high, tags: allreduce, global-reduction, gpu, hot-path, mpi, synchronization
+- [[review/issues/icon4py-2026-08-10-89ecd75.md|PPM4GPU integer vertical tracer flux sums out-of-bounds K levels at the top and bottom]] - severity: high, tags: k-offset, out-of-bounds, ppm, tracer-advection, vertical-advection
+- [[review/issues/icon4py-2026-08-10-8de4796.md|PPM4GPU fractional vertical tracer flux sums out-of-bounds K levels at the top and bottom]] - severity: high, tags: k-offset, out-of-bounds, ppm, tracer-advection, vertical-advection
 
 ## Fixed issues
 
@@ -20,4 +22,4 @@ _No invalid issues._
 
 ## Reports
 
-_No reports._
+- [[review/reports/2026-08-10-1905.md|Weekly icon4py review 2026-08-10]]
