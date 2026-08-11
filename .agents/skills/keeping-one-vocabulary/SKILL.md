@@ -20,9 +20,8 @@ changes only through reviewed pull requests.
 
 ## Bootstrap: if the glossary does not exist
 
-On first use, create `content/glossary.md` from
-[references/glossary-template.md](references/glossary-template.md), then replace the
-`_Not yet created._` placeholder under **Glossary** in `content/index.md`:
+On first use, copy `content/templates/glossary.md` to `content/glossary.md`, then
+replace the `_Not yet created._` placeholder under **Glossary** in `content/index.md`:
 
 ```markdown
 - [[glossary|Glossary]] — keywords: glossary, vocabulary, ubiquitous-language, naming, terms

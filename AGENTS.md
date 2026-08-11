@@ -43,7 +43,7 @@ content/
         <proposal>_research.md  # optional appendix: background, research, prior art
         <proposal>_<topic>.md   # optional further appendices
   shared/               # proposals accepted and implementation-ready (only touch with PR review)
-  templates/            # idea template (NOT published — see ignorePatterns)
+  templates/            # idea + glossary skeletons (NOT published — see ignorePatterns)
 ```
 
 - **`index.md`** — the map of everything here; every add, rename, move or removal
@@ -59,7 +59,8 @@ content/
 - **`shared/`** — flat directory of proposals the group broadly agrees, which
   should be concrete enough to implement in icon4py; a proposal can be moved here
   only with PR review.
-- **`templates/`** — the idea skeleton to copy when authoring. Not published.
+- **`templates/`** — skeletons to copy: `idea.md` for a proposal, `glossary.md`
+  for the glossary on first use. Not published.
 - An accepted idea that becomes concrete graduates to real work in icon4py (a PR,
   or a formal ADR in the icon4py repo); it can then be retired from here.
 

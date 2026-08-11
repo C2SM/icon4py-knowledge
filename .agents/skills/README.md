@@ -100,5 +100,10 @@ Neither does anything `AGENTS.md` already says. It is loaded into every agent's 
 in this repository, so a skill restating its frontmatter fields, `status` semantics or
 index rules is not progressive disclosure — it is a second copy of something already
 present, and the two drift. Carry only what `AGENTS.md` does not, and point at it for
-the rest. A `references/` file earns its place when the material is genuinely extra and
-genuinely occasional; `keeping-one-vocabulary`'s glossary template is the example.
+the rest.
+
+No skill here has a `references/` directory, and each one is a `SKILL.md` plus its
+evals. Content a skill writes into the repository belongs in the repository —
+skeletons live in `content/templates/` next to `idea.md`, where a human doing the same
+job by hand will find them. Before adding a `references/` file, check that what you are
+deferring is neither of those two things.
