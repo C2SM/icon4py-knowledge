@@ -12,19 +12,20 @@ hides. Two proposals using *state* for different things read as if they agree. A
 reviewer, a newcomer, and a future implementer each pay for that agreement being
 false.
 
-The glossary is `content/knowledge/glossary.md`. It is indexed under **Knowledge** and
-is the one document there that agents both read and write — the rest of that directory
-is written for humans and is not an agent's to consult or edit. Like every document
-under `content/knowledge/`, it changes only through reviewed pull requests.
+The glossary is `content/glossary.md`, indexed under **Glossary**. It is a registry of
+the terms actually in use — read and written by humans and agents alike — which is why
+it sits at the root of `content/` and not under `content/knowledge/`. That directory is
+written for humans and is not an agent's to read. Like everything here, the glossary
+changes only through reviewed pull requests.
 
 ## Bootstrap: if the glossary does not exist
 
-On first use, create `content/knowledge/glossary.md` from
-[references/glossary-template.md](references/glossary-template.md), then add its index
-entry under **Knowledge** in `content/index.md`:
+On first use, create `content/glossary.md` from
+[references/glossary-template.md](references/glossary-template.md), then replace the
+`_Not yet created._` placeholder under **Glossary** in `content/index.md`:
 
 ```markdown
-- [[knowledge/glossary|Glossary]] — keywords: glossary, vocabulary, ubiquitous-language, naming, terms
+- [[glossary|Glossary]] — keywords: glossary, vocabulary, ubiquitous-language, naming, terms
 ```
 
 Seed it **only from terms already in use**, each with the document that uses it. Do not

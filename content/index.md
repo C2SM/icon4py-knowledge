@@ -10,10 +10,21 @@ topics a document discusses — scan them to find overlapping or conflicting ide
 See `AGENTS.md` in the repository root for how to add a proposal and keep this
 index current. (Keep entries and their keywords in sync with each document's `tags`.)
 
+## Glossary
+
+The shared vocabulary — one term, one meaning. Read and maintained by everyone,
+human and agent alike.
+
+_Not yet created._
+
+<!-- Entry format:
+- [[glossary|Glossary]] — keywords: glossary, vocabulary, ubiquitous-language, naming, terms
+-->
+
 ## Knowledge
 
-Reference material, not proposals — the practice proposals here are written and
-reviewed against.
+Reference material for humans, not proposals — the practice proposals here are
+written and reviewed against. Written for a person to weigh; not consulted by agents.
 
 - [[knowledge/software-engineering/principles|Working Principles]] — keywords: software-design, principles, complexity, modularity, dry, domain-modelling, architecture, code-review, checklist
 

@@ -13,10 +13,12 @@ is trading away".
 
 Review **proposals**: documents under `content/personal/<handle>/` and
 `content/shared/`. The rest of `content/` is not a proposal and this workflow does not
-apply to it — `content/index.md` is a map, `content/templates/` is a skeleton, and
-`content/knowledge/` is reference material written for humans, not a design to be
-critiqued or a rule set for an agent to execute. If asked to review one of those, say
-which it is and review it as ordinary documentation instead.
+apply to it — `content/index.md` is a map, `content/glossary.md` is a term registry,
+and `content/templates/` is a skeleton. If asked to review one of those, say which it
+is and review it as ordinary documentation instead.
+
+`content/knowledge/` is written for humans and is not an agent's to read, cite, or
+apply — including here. Decline to review it and say why.
 
 ## The standard is in this skill
 

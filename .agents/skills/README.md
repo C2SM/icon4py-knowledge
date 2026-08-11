@@ -8,15 +8,15 @@ skill applies lives in the skill.
 ## What is not an agent's to read
 
 `content/knowledge/` is written **for humans** — material a person consults while
-deciding how to write or judge a design. It is deliberately not wired into any skill,
-and not into `AGENTS.md`: guidance a human weighs is not a procedure an agent executes,
-and an agent reciting a checklist over every proposal produces the appearance of review
-rather than review.
+deciding how to write or judge a design. No skill reads it, cites it, or depends on it:
+guidance a human weighs is not a procedure an agent executes, and an agent reciting a
+checklist over every proposal produces the appearance of review rather than review.
 
-The one exception is `content/knowledge/glossary.md`, which agents both read and write —
-it is a registry of terms in use, not guidance. Anything else added under
-`content/knowledge/` is human-facing by default; making it available to a skill is a
-case-by-case decision, not the rule.
+The rule takes no exceptions, which is what makes it applicable without judgement: if
+a document lives under `content/knowledge/`, a skill does not touch it. Artifacts both
+humans and agents maintain live outside that directory — which is why the shared
+vocabulary is `content/glossary.md`. When adding a document, that placement *is* the
+decision about who reads it; there is no second decision to make later.
 
 ## Location
 

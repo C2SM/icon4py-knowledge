@@ -83,9 +83,10 @@ agents consult. **Every** add, rename, move or removal updates it in the same ch
 - Group under a `### <person>` subsection of **Personal**.
 - Index **only the main proposal** — never its appendices or implementation subdirs.
 - Keywords must match the document's `tags`.
-- Documents under `content/knowledge/` are indexed under **Knowledge**; they are
-  reference material, never move to **Shared**, and are not retired when a proposal
-  graduates.
+- `content/knowledge/` is indexed under **Knowledge** and `content/glossary.md` under
+  **Glossary**. Neither is a proposal: they never move to **Shared** and are not retired
+  when a proposal graduates. `content/knowledge/` is additionally written for humans —
+  do not read or edit it; index entries are the only contact a skill has with it.
 
 ## Supersession header
 

@@ -81,8 +81,8 @@ verdict. A promotion without a review is a promotion on vibes.
 - Check for inbound wikilinks first and repoint them at the icon4py PR or ADR. A
   retired proposal that other documents still link to leaves dead ends on the published
   site.
-- Documents under `content/knowledge/` are never retired this way — they are reference
-  material, not proposals.
+- `content/knowledge/` and `content/glossary.md` are never retired this way — they are
+  reference material and a term registry, not proposals.
 
 ### 3. Stop at the human boundary
 
