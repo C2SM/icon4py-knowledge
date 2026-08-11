@@ -16,9 +16,6 @@ here). No local build is needed to author; just edit Markdown.
 ```
 content/
   index.md              # landing page = the keyworded, hierarchical index (see below)
-  knowledge/            # reference material — not proposals
-    software-engineering/
-      principles.md     # design/engineering principles proposals are held to
   personal/
     <person>/                   # one subdirectory per contributor
       <proposal>.md             # a single-file proposal/idea
@@ -30,9 +27,6 @@ content/
   templates/            # idea template (NOT published — see ignorePatterns)
 ```
 
-- **`knowledge/`** — shared reference material rather than proposals: distilled
-  practice that proposals are written and reviewed against. Read it before
-  authoring; change it only with PR review.
 - **`personal/<person>/`** — your working area. Use your GitHub handle as the
   directory name. Filenames are free-form kebab-case slugs; no numbering.
 - **`shared/`** — flat directory of proposals the group broadly agrees, which
@@ -43,16 +37,11 @@ content/
 
 ## Authoring a proposal
 
-1. Read `content/knowledge/software-engineering/principles.md`. It is the design
-   vocabulary this repo argues in — deep modules, information hiding, ubiquitous
-   language, bounded contexts — and its red-flag checklist is what a reviewer will
-   run over your proposal. Justify a proposal in those terms, or say explicitly
-   which principle you are trading away and why.
-2. Copy `content/templates/idea.md` to `content/personal/<your-handle>/<slug>.md`.
+1. Copy `content/templates/idea.md` to `content/personal/<your-handle>/<slug>.md`.
    If the proposal later grows beyond one file (appendices, implementation
    sketches, etc.), move it into a dedicated `content/personal/<your-handle>/<slug>/`
    directory and rename the main note to `<slug>/<slug>.md`.
-3. Fill the frontmatter:
+2. Fill the frontmatter:
    ```yaml
    ---
    title: Human-readable title
@@ -69,12 +58,12 @@ content/
    - `final` — clear proposal that could be implemented, but should still be reviewed
       by another person.
 
-4. Before writing, **skim the index and existing proposals** for overlap; link
+3. Before writing, **skim the index and existing proposals** for overlap; link
    related/conflicting documents with `[[wikilinks]]` and call out the conflict
    explicitly. Surfacing conflicts is the whole point of this repo.
-5. Cross-reference other notes with Obsidian-style `[[path/to/note|label]]`
+4. Cross-reference other notes with Obsidian-style `[[path/to/note|label]]`
    links — Quartz resolves them.
-6. **Update `content/index.md`** (next section). This is required.
+5. **Update `content/index.md`** (next section). This is required.
 
 ## Python version assumptions
 
@@ -110,9 +99,6 @@ and agents consult. It must stay current and keyword-rich:
   move its index entry from **Personal** to **Shared**, keeping the keywords.
   After a proposal is implemented and merged to icon4py, delete the file and its
   index entry.
-- Documents under `content/knowledge/` are indexed under **Knowledge**. They are
-  reference material, so they never move to **Shared** and are not retired when a
-  proposal graduates.
 - Prefer one consistent keyword vocabulary across entries (e.g. reuse `dace`,
   `unstructured`, `type-system`) so related ideas cluster and conflicts surface.
 
