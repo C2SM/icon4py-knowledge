@@ -11,6 +11,23 @@ It is **not** the icon4py source tree and **not** the formal ADR record. It is a
 push to `main` (the workflow clones Quartz at build time — nothing is vendored
 here). No local build is needed to author; just edit Markdown.
 
+## Skills
+
+Repository-specific agent skills live in `.agents/skills/` (`.claude/skills` is a
+symlink to it). If your agent does not discover them automatically, read the relevant
+`SKILL.md` directly — they carry the procedures this file only summarizes:
+
+| Skill | Use it when |
+|---|---|
+| `drafting-a-proposal` | writing up a new idea, or restructuring/superseding an existing one |
+| `cross-checking-proposals` | asking how a proposal relates to what already exists |
+| `reviewing-a-proposal` | judging a proposal against `knowledge/software-engineering/principles.md` |
+| `keeping-one-vocabulary` | introducing, renaming, or disputing a domain term |
+| `graduating-a-proposal` | moving a proposal to `shared/`, changing its status, or retiring it |
+
+See [`.agents/skills/README.md`](.agents/skills/README.md) for how they compose and how
+their triggers are evaluated.
+
 ## Layout
 
 ```
