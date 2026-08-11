@@ -18,19 +18,8 @@ it sits at the root of `content/` and not under `content/knowledge/`. That direc
 written for humans and is not an agent's to read. Like everything here, the glossary
 changes only through reviewed pull requests.
 
-## Bootstrap: if the glossary does not exist
-
-On first use, copy `content/templates/glossary.md` to `content/glossary.md`, then
-replace the `_Not yet created._` placeholder under **Glossary** in `content/index.md`:
-
-```markdown
-- [[glossary|Glossary]] — keywords: glossary, vocabulary, ubiquitous-language, naming, terms
-```
-
-Seed it **only from terms already in use**, each with the document that uses it. Do not
-invent definitions for contested terms — record the competing meanings as contested and
-leave the resolution to humans. A glossary that asserts a winner nobody agreed to is
-worse than no glossary.
+It records **only terms already in use**, each with the document that uses it. A term
+nobody has written down yet does not belong there.
 
 ## Workflow
 
@@ -66,7 +55,8 @@ it aligns with or departs from.
 
 Where the meaning is genuinely contested between open proposals, do **not** resolve it.
 Record it under *Contested terms* with each meaning, its document, and what decision
-would settle it. Then treat it as a conflict.
+would settle it. Then treat it as a conflict. A glossary that asserts a winner nobody
+agreed to is worse than no glossary.
 
 ### 4. Record collisions as conflicts
 
