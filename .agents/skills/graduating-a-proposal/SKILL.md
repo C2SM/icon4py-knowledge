@@ -69,10 +69,12 @@ verdict. A promotion without a review is a promotion on vibes.
   repository is neither. Prepare the content; the icon4py maintainers own the merge.
 - Carry the *decision and its rationale*, not the exploration. The ADR wants context,
   decision, alternatives, consequences.
-- Link back to the proposal with a **commit-pinned permalink**
-  (`.../blob/<full-sha>/content/personal/...`), not a branch link. Retirement deletes
-  that path, and a branch link dies with it; the exploration stays findable only if the
-  link names the commit that still contains it.
+- Link back to the proposal with a **commit-pinned permalink** — `.../blob/<full-sha>/`
+  followed by the proposal's path *as it is at that commit*, which is usually
+  `content/shared/...` by the time anything graduates. Do not assume
+  `content/personal/`, and do not use a branch link: retirement deletes the path, so
+  the exploration stays findable only if the link names a commit that still contains
+  it.
 
 **Retiring:**
 

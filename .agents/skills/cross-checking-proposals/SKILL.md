@@ -29,8 +29,9 @@ decide *where field lifetimes are owned* are, whatever they call it.
 ### 2. Shortlist from the index
 
 `content/index.md` is a keyword map precisely so this step is cheap. Intersect the
-document's `tags` and problem terms with the index keywords, and read across **all**
-sections — Personal, Shared, and Knowledge.
+document's `tags` and problem terms with the index keywords across **Personal** and
+**Shared** — the sections that hold proposals. **Knowledge** is written for humans and
+is not an agent's to open; a keyword match there is not a candidate.
 
 Widen once, deliberately: search for the *concept* under other names. A proposal about
 `StateProvider` will not match the keyword `model-state`, and that mismatch is itself a
