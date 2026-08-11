@@ -34,9 +34,7 @@ their triggers are evaluated.
 content/
   index.md              # landing page = the keyworded, hierarchical index (see below)
   glossary.md           # shared vocabulary: one term, one meaning
-  knowledge/            # reference material written FOR HUMANS — agents do not read it
-    software-engineering/
-      principles.md     # design and engineering practice, for a person to weigh
+  knowledge/            # written for humans — agents do not read it
   personal/
     <person>/                   # one subdirectory per contributor
       <proposal>.md             # a single-file proposal/idea
@@ -53,8 +51,9 @@ content/
 - **`glossary.md`** — the shared vocabulary: one term, one meaning. Both humans
   and agents read **and** write it; it is a registry of the terms actually in
   use, not advice. Changes only through reviewed pull requests.
-- **`knowledge/`** — **reference material written for humans, not for agents.**
-  See the rule below.
+- **`knowledge/`** — reference material written for humans. **Agents must not
+  read, cite, or apply it**, and no skill may depend on it. Shared human/agent
+  artifacts live outside it — hence `glossary.md` at the root.
 - **`personal/<person>/`** — your working area. Use your GitHub handle as the
   directory name. Filenames are free-form kebab-case slugs; no numbering.
 - **`shared/`** — flat directory of proposals the group broadly agrees, which
@@ -63,21 +62,6 @@ content/
 - **`templates/`** — the idea skeleton to copy when authoring. Not published.
 - An accepted idea that becomes concrete graduates to real work in icon4py (a PR,
   or a formal ADR in the icon4py repo); it can then be retired from here.
-
-### `content/knowledge/` is for humans
-
-Everything under `content/knowledge/` is written for a **person** deciding how to
-write or judge a design. **Agents must not read it, cite it, or apply it**, and no
-agent skill may depend on it. It is guidance a human weighs, not a procedure to
-execute — an agent reciting a checklist over every proposal produces the appearance
-of review rather than review.
-
-The rule is absolute and takes no exceptions: `content/knowledge/` holds nothing an
-agent reads. Shared human/agent artifacts live outside it — that is why the glossary
-is `content/glossary.md` and not `content/knowledge/glossary.md`.
-
-Knowledge documents are never proposals: they are indexed under **Knowledge**, never
-move to `shared/`, and are not retired when a proposal graduates.
 
 ## Authoring a proposal
 
