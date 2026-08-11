@@ -67,9 +67,20 @@ different things is the most expensive kind of conflict here, because it hides.
 ### 5. Write the document
 
 Copy `content/templates/idea.md` and fill it. The mechanics — frontmatter fields,
-file layout, appendix naming, index entry format, status semantics — are in
-[references/authoring-mechanics.md](references/authoring-mechanics.md). Read it before
-creating files.
+`status` semantics, file layout, appendix naming, index entry format — are in
+`AGENTS.md`, which is already in your context. Follow it there rather than working
+from a second copy. Four things it does not cover:
+
+- **The TL;DR is load-bearing.** `> **TL;DR** …` is what `cross-checking-proposals`
+  reads when scanning candidates, and what a reviewer reads before deciding whether to
+  read the rest. State the *decision*, not the topic.
+- **`tags` reuse existing vocabulary.** Prefer terms already in the index — `dace`,
+  `unstructured`, `type-system`, `components`, `model-state` — over synonyms of them,
+  so related ideas cluster and conflicts surface instead of hiding behind a new word.
+- **Wikilinks always carry a label**:
+  `[[personal/jcanton/model-state/model-state|Model state]]`, never a bare path. Paths
+  are relative to `content/`, and unlabelled ones read badly on the published site.
+- **`updated: YYYY-MM-DD`** is an optional frontmatter field, used by revised specs.
 
 Keep the main document reviewable. Evidence, benchmarks, prior art and transcripts go
 into appendices; the main note carries the decisions and their rationale. A proposal
@@ -92,7 +103,14 @@ Same skill, different entry point: the content exists and the problem is its sha
 2. **Declare the supersession.** A new version states plainly what it replaces, and —
    more important — **what was dropped and why**. A design's trajectory is worth as
    much as its endpoint; a v3 that silently loses v2's constraints has lost the
-   argument that produced them.
+   argument that produced them. Open the document with an explicit block:
+
+   ```markdown
+   > **Supersedes** [[personal/<handle>/<slug>/<slug>_specV2|spec v2]].
+   > **Dropped:** the global mutable container (v2 §4) — incompatible with restart, see
+   > [[personal/jcanton/model-state/model-state#Restart is the requirement that settles R8 and R11]].
+   > **Carried forward:** the field-metadata contract, unchanged.
+   ```
 3. **Never delete the superseded version silently.** Mark it, link it, and let
    `graduating-a-proposal` handle retirement.
 4. **Re-sync the surface**: `status`, `tags`, and the `content/index.md` entry. Only

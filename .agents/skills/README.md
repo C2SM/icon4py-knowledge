@@ -95,3 +95,10 @@ negatives are the existing skills' positives.
 What is mechanical does not belong here: index currency, frontmatter validity, and
 keyword/`tags` drift want a checker in CI, not a skill. A skill that has an agent
 repeat what a script could do reliably is a skill in the wrong place.
+
+Neither does anything `AGENTS.md` already says. It is loaded into every agent's context
+in this repository, so a skill restating its frontmatter fields, `status` semantics or
+index rules is not progressive disclosure — it is a second copy of something already
+present, and the two drift. Carry only what `AGENTS.md` does not, and point at it for
+the rest. A `references/` file earns its place when the material is genuinely extra and
+genuinely occasional; `keeping-one-vocabulary`'s glossary template is the example.
