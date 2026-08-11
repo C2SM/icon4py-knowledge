@@ -15,11 +15,7 @@ index current. (Keep entries and their keywords in sync with each document's `ta
 The shared vocabulary — one term, one meaning. Read and maintained by everyone,
 human and agent alike.
 
-_Not yet created._
-
-<!-- Entry format:
 - [[glossary|Glossary]] — keywords: glossary, vocabulary, ubiquitous-language, naming, terms
--->
 
 ## Knowledge
 
