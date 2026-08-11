@@ -12,9 +12,10 @@ hides. Two proposals using *state* for different things read as if they agree. A
 reviewer, a newcomer, and a future implementer each pay for that agreement being
 false.
 
-The glossary is `content/knowledge/glossary.md`. It is reference material, indexed
-under **Knowledge**, and — like `principles.md` — it changes only through reviewed
-pull requests.
+The glossary is `content/knowledge/glossary.md`. It is indexed under **Knowledge** and
+is the one document there that agents both read and write — the rest of that directory
+is written for humans and is not an agent's to consult or edit. Like every document
+under `content/knowledge/`, it changes only through reviewed pull requests.
 
 ## Bootstrap: if the glossary does not exist
 

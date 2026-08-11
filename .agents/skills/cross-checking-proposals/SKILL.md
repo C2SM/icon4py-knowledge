@@ -1,6 +1,6 @@
 ---
 name: cross-checking-proposals
-description: Use when someone asks whether an idea for icon4py already exists or clashes with an existing one — "does this overlap with anything?", "has anyone proposed this?", "check this against the other component and state proposals", "what conflicts with model-state?" — and before any proposal in this knowledge base is reviewed, moved to content/shared/, or merged. Scans content/index.md keywords and document tags, reads candidate TL;DRs, classifies each relation as duplicate, conflicting decision, or complementary, and records the conflict explicitly in both documents with [[wikilinks]]. Do not use to judge whether a single proposal is well designed, for literature or web research, or to find duplicated code in the icon4py source tree.
+description: Use when someone asks whether an idea for icon4py already exists or clashes with an existing one — "does this overlap with anything?", "has anyone proposed this?", "check this against the other component and state proposals", "what conflicts with model-state?" — and before any proposal in this knowledge base is moved to content/shared/ or merged. Scans content/index.md keywords and document tags, reads candidate TL;DRs, classifies each relation as duplicate, conflicting decision, or complementary, and records the conflict explicitly in both documents with [[wikilinks]]. Do not use to judge whether a single proposal is well designed, for literature or web research, or to find duplicated code in the icon4py source tree.
 ---
 
 # Cross-checking proposals

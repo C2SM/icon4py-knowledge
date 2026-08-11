@@ -11,9 +11,10 @@ other before anyone writes code. A proposal earns its place here by being
 stated need, named users, ranked goals, and at least one alternative considered and
 rejected.
 
-Read `content/knowledge/software-engineering/principles.md` first. It is the
-vocabulary this repo argues in; §6 is the checklist a reviewer will run over the
-result.
+Those four are what this skill secures. Judging whether the resulting design is *good*
+is `reviewing-a-proposal`'s job and happens later — do not try to pass that gate while
+drafting, or the document becomes an argument with an imaginary reviewer instead of a
+proposal.
 
 ## Workflow
 

@@ -2,8 +2,21 @@
 
 Repository-specific skills for agents working in the icon4py knowledge base. They
 encode *this repository's* workflow — its artifacts, its index, its status gates — and
-are not general software-engineering advice. The design vocabulary they argue in lives
-in [`content/knowledge/software-engineering/principles.md`](../../content/knowledge/software-engineering/principles.md).
+are not general software-engineering advice. Each is self-contained: the standard a
+skill applies lives in the skill.
+
+## What is not an agent's to read
+
+`content/knowledge/` is written **for humans** — material a person consults while
+deciding how to write or judge a design. It is deliberately not wired into any skill,
+and not into `AGENTS.md`: guidance a human weighs is not a procedure an agent executes,
+and an agent reciting a checklist over every proposal produces the appearance of review
+rather than review.
+
+The one exception is `content/knowledge/glossary.md`, which agents both read and write —
+it is a registry of terms in use, not guidance. Anything else added under
+`content/knowledge/` is human-facing by default; making it available to a skill is a
+case-by-case decision, not the rule.
 
 ## Location
 
@@ -80,5 +93,5 @@ five already answers, a description that names its non-goals, and an eval set wh
 negatives are the existing skills' positives.
 
 What is mechanical does not belong here: index currency, frontmatter validity, and
-keyword/`tags` drift want a checker in CI, not a skill. A human — or an agent —
-repeating what a script should do is a red flag by this repository's own principles.
+keyword/`tags` drift want a checker in CI, not a skill. A skill that has an agent
+repeat what a script could do reliably is a skill in the wrong place.

@@ -21,7 +21,7 @@ symlink to it). If your agent does not discover them automatically, read the rel
 |---|---|
 | `drafting-a-proposal` | writing up a new idea, or restructuring/superseding an existing one |
 | `cross-checking-proposals` | asking how a proposal relates to what already exists |
-| `reviewing-a-proposal` | judging a proposal against `knowledge/software-engineering/principles.md` |
+| `reviewing-a-proposal` | judging whether a proposal's design is sound and what it trades away |
 | `keeping-one-vocabulary` | introducing, renaming, or disputing a domain term |
 | `graduating-a-proposal` | moving a proposal to `shared/`, changing its status, or retiring it |
 

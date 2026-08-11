@@ -47,9 +47,8 @@ yourself.
 - **Appendices are appendices.** The main note carries the decisions; research and
   evidence sit in `<slug>_research.md`.
 
-If the document has never been reviewed against the principles, run
-`reviewing-a-proposal` first and attach its verdict. A promotion without a review is a
-promotion on vibes.
+If the design has never been reviewed, run `reviewing-a-proposal` first and attach its
+verdict. A promotion without a review is a promotion on vibes.
 
 ### 2. Perform the move
 
@@ -70,7 +69,10 @@ promotion on vibes.
   repository is neither. Prepare the content; the icon4py maintainers own the merge.
 - Carry the *decision and its rationale*, not the exploration. The ADR wants context,
   decision, alternatives, consequences.
-- Link back to the proposal so the argument stays findable after retirement.
+- Link back to the proposal with a **commit-pinned permalink**
+  (`.../blob/<full-sha>/content/personal/...`), not a branch link. Retirement deletes
+  that path, and a branch link dies with it; the exploration stays findable only if the
+  link names the commit that still contains it.
 
 **Retiring:**
 

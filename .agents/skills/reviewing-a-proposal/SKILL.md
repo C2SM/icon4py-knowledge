@@ -1,31 +1,28 @@
 ---
 name: reviewing-a-proposal
-description: Use when asked to review, critique, or sanity-check a design proposal in the icon4py knowledge base — "review this proposal", "is this design sound?", "run the red flags over content/personal/...", "what is wrong with this spec?" — or when reviewing a pull request that adds or edits a document under content/. Runs content/knowledge/software-engineering/principles.md and its red-flag checklist over the document (shallow abstraction, information leakage, temporal decomposition, special-general mixture, vocabulary drift, unstated requirements), names every principle the proposal knowingly trades away, and recommends a status of draft, reviewed, or final. Do not use to write or restructure a proposal, to compare proposals for overlap, or to review icon4py source code.
+description: Use when asked to review, critique, or sanity-check a design proposal in the icon4py knowledge base — "review this proposal", "is this design sound?", "what is wrong with this spec?", "critique my draft before the team reads it" — or when reviewing a pull request that adds or edits a proposal under content/personal/ or content/shared/. Checks that the document is answerable (need, users, ranked goals, non-goals, constraints), walks the design defects that recur in this repository, separates trade-offs the author made knowingly from defects the author appears unaware of, and recommends a status of draft, reviewed, or final. Do not use to write or restructure a proposal, to compare proposals for overlap, to review the index or reference material, or to review icon4py source code.
 ---
 
 # Reviewing a proposal
-
-`AGENTS.md` promises contributors that the red-flag checklist in
-`content/knowledge/software-engineering/principles.md` "is what a reviewer will run
-over your proposal". This skill is that reviewer.
 
 The subject is a **design**, not code and not prose. The question is never "is this
 well written" but "does this design hide the right decisions, and does it say what it
 is trading away".
 
-## Read the checklist from the file, every time
+## Scope
 
-Open `content/knowledge/software-engineering/principles.md` and work from **its**
-current text. Do not review from memory and do not copy the checklist into this skill —
-one rule set, one source. If that file is absent from the branch you are on, say so and
-stop; the review has no standard without it.
+Review **proposals**: documents under `content/personal/<handle>/` and
+`content/shared/`. The rest of `content/` is not a proposal and this workflow does not
+apply to it — `content/index.md` is a map, `content/templates/` is a skeleton, and
+`content/knowledge/` is reference material written for humans, not a design to be
+critiqued or a rule set for an agent to execute. If asked to review one of those, say
+which it is and review it as ordinary documentation instead.
 
-The sections you will use most:
+## The standard is in this skill
 
-- **§2 Modules and interfaces** — depth, information hiding, leakage, decomposition
-- **§3 Domain modelling** — ubiquitous language, explicit concepts, anemic models
-- **§4 Architecture and strategy** — goals, constraints, bounded contexts, trajectory
-- **§6 Red-flag checklist** — the pass a reviewer runs last
+Work from the passes below. They are this repository's review gate, and they are
+deliberately self-contained: a review must not depend on any document that a
+contributor is free to rewrite between one review and the next.
 
 ## Workflow
 
@@ -52,7 +49,7 @@ requirements you invented.
 
 ### 3. The design pass
 
-Walk §2–§4, translated for a design document rather than a diff:
+Each of these is asked of a design document, not of a diff:
 
 - **Depth** — is the proposed interface simpler than what it hides, or is it a
   relabelling of the implementation? Watch for interfaces whose every parameter is a
@@ -74,10 +71,35 @@ Walk §2–§4, translated for a design document rather than a diff:
 - **Trajectory** — does the document record *why*, or only *what*? Rationale is what
   survives contact with the next contributor.
 
-### 4. The red-flag pass
+### 4. The recurring-defect pass
 
-Run §6 item by item over the design. For each flag that fires, cite the section of the
-proposal and state the consequence in terms of icon4py, not in the abstract.
+These are the failures this repository actually produces, as opposed to the ones design
+literature warns about in general. Run them last, when you know the design well enough
+to tell a real instance from a superficial match:
+
+- **The mechanism is the requirement.** The document opens with a registry, a
+  `StateView`, a protocol — and the need is reverse-engineered to fit it.
+- **Phase-ordered decomposition.** The structure follows the time loop's execution
+  order rather than what each part knows. Endemic here, because the model has a
+  natural phase order to be seduced by.
+- **The interface is the implementation, relabelled.** Every parameter is a detail of
+  today's code; nothing is hidden, so nothing can change.
+- **One decision, three homes.** A choice restated in three places in the proposal will
+  be restated in three places in the code, and will drift.
+- **A word doing two jobs.** *State*, *component*, *registry*, *field* used with a
+  meaning the rest of the repo does not share. Hand it to `keeping-one-vocabulary`.
+- **The conflict that is not recorded.** The proposal re-opens a question another
+  document settled, without saying so. Hand it to `cross-checking-proposals`.
+- **Rationale-free.** The document says what, never why. It cannot survive the next
+  contributor, who will not know which constraints are load-bearing.
+- **One idea, presented as a conclusion.** No alternative named, so a reader cannot
+  tell a considered design from a first draft.
+- **Unfalsifiable.** Nothing in the proposal could be shown to be wrong. There is no
+  point at which it says "if this is true, we chose badly".
+
+For each that fires, cite the section of the proposal and state the consequence in
+terms of icon4py, not in the abstract. A flag you cannot make concrete is a flag you
+should drop.
 
 ### 5. Name the trades
 
@@ -112,8 +134,8 @@ nobody will use.
 
 ## Quality bar
 
-- The checklist was read from `principles.md` on this branch, not from memory.
-- Findings cite a section of the proposal and a named principle.
+- The document reviewed is a proposal, not the index, a template, or reference material.
+- Findings cite a section of the proposal and a named defect.
 - Consequences are stated in icon4py terms, not as abstract violations.
 - Knowing trades are separated from silent violations.
 - The status was recommended, not changed.

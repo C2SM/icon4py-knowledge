@@ -63,7 +63,7 @@ Obsidian-style wikilinks, resolved by Quartz:
 
 ```markdown
 [[personal/jcanton/model-state/model-state|Model state]]
-[[knowledge/software-engineering/principles|Working Principles]]
+[[shared/some-accepted-proposal|Some accepted proposal]]
 ```
 
 Paths are relative to `content/`. Always give a label after `|` — bare paths read
