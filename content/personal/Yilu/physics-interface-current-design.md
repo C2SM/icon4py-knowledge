@@ -103,7 +103,7 @@ generated v08 reference is far below the other residuals (§6).
 ## 3 · The pieces and who implements what
 
 The whole design in one picture — thin edges are reads, the thick chain at the
-bottom is the only write path; the teal boxes are the PhysicsState layer, the
+bottom is the only write path; the green boxes are the PhysicsState layer, the
 process boxes the ComponentState layer:
 
 ```mermaid
@@ -134,13 +134,13 @@ flowchart TD
     ACC ==>|"Σ · dt"| APP
     APP ==>|"PHY→DYN, once"| OUT
 
-    style E fill:#0E7C8622,stroke:#0E7C86
-    style ACC fill:#0E7C8622,stroke:#0E7C86
-    style DIA fill:#0E7C8622,stroke:#0E7C86
-    style APP fill:#0E7C8622,stroke:#0E7C86,stroke-width:2px
+    style E fill:#2F9E4422,stroke:#2F9E44
+    style ACC fill:#2F9E4422,stroke:#2F9E44
+    style DIA fill:#2F9E4422,stroke:#2F9E44
+    style APP fill:#2F9E4422,stroke:#2F9E44,stroke-width:2px
     style MU fill:#3D6DA611,stroke:#3D6DA6
     style TX fill:#B06A2811,stroke:#B06A28
-    style OUT fill:#0E7C8611,stroke:#0E7C86
+    style OUT fill:#2F9E4411,stroke:#2F9E44
 ```
 
 **PhysicsState layer** — `physics_driver/physics_state.py`, driver-owned, the
