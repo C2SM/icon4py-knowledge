@@ -134,6 +134,7 @@ flowchart TD
     ACC ==>|"Σ · dt"| APP
     APP ==>|"PHY→DYN, once"| OUT
 
+    style L fill:#2F9E440A,stroke:#2F9E44
     style E fill:#2F9E4422,stroke:#2F9E44
     style ACC fill:#2F9E4422,stroke:#2F9E44
     style DIA fill:#2F9E4422,stroke:#2F9E44
