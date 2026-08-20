@@ -57,6 +57,11 @@ Work-in-progress proposals, organized by contributor.
 - [[personal/OngChia/physics-driver-and-components|Physics driver and component design]] — keywords: components, physics-driver, protocol, design
 - [[personal/OngChia/scientific-validation|Scientific test cases for icon4py]] — keywords: testing, test-cases, scientific-validation, dycore, physics, benchmarking
 
+### Yilu
+
+- [[personal/Yilu/physics-interface-current-design|Physics interface — current design (as built on physics_driver_tmx)]] — keywords: components, physics-driver, protocol, muphys, tmx, surface-fluxes, design, as-built
+- [[personal/Yilu/physics-interface-discussion-points|Physics interface — discussion points]] — keywords: components, physics-driver, protocol, forcing-mode, coupling, metadata, io, design
+
 
 <!-- Add new contributor subsections here as needed.
 
