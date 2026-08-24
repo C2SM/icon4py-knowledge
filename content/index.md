@@ -49,6 +49,7 @@ Work-in-progress proposals, organized by contributor.
 ### msimberg
 
 - [[personal/msimberg/revive-components/revive-components|Revive components]] — keywords: components, model-state, protocol, interface, design
+- [[personal/msimberg/revive-components/revive-components-synthesis|Components and model state]] — keywords: components, model-state, protocol, interface, design, wiring, metadata, fields, registry, conditional-allocation, restart, halo, derived-quantities, composition, icon-sc
 - [[personal/msimberg/cleanup-distributed-computation|Cleanup the "decomposition" directory]] — keywords: decomposition, distributed-computation, mpi, halo-exchange, reductions, naming, refactoring
 - [[personal/msimberg/checkpoint-restart/checkpoint-restart|Checkpoint/restart]] — keywords: checkpoint, restart, io, state, serialization, netcdf, dycore, distributed
 
