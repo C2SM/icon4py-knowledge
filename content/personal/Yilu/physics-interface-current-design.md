@@ -210,10 +210,6 @@ time control) that is enabled and in-window:
   store) — the "declarative only" gap is closed. Still open: validating the
   state↔component *input* key agreement (`as_component_input` vs
   `inputs_properties`) in the driver.
-- **Field passing is pointers throughout.** The ```EntryState``` binds model-state
-  pointers; `as_component_input()` returns references. No copies — and the
-  frozen-entry invariant (tested) is what makes that safe under parallel
-  coupling. No immutability *enforcement* beyond tests and convention.
 - **Next components.** The ocean bulk-flux scheme (`isrfc_type = 0`: Louis
   exchange coefficients over a prescribed SST) behind the same surface-flux
   seam — see [[personal/jcanton/jsbach-port/jsbach-port|JSBACH port]] for the
