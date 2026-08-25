@@ -210,6 +210,12 @@ time control) that is enabled and in-window:
   store) — the "declarative only" gap is closed. Still open: validating the
   state↔component *input* key agreement (`as_component_input` vs
   `inputs_properties`) in the driver.
+- **EntryState — make the prognostic/diagnostic split structural.** The physics
+  `EntryState` (two-layer coupling, #1436) mixes two categories as flat
+  attributes: six *pointers* for prognostic fields (`exner, theta_v, rho, vn,
+  w` and tracers) and six *owned* diagnostic buffers (`ta, tv, pressure,
+  pressure_ifc, u, v` — diagnosed once per step, frozen). The distinction
+  exists only in comments.
 - **Next components.** The ocean bulk-flux scheme (`isrfc_type = 0`: Louis
   exchange coefficients over a prescribed SST) behind the same surface-flux
   seam — see [[personal/jcanton/jsbach-port/jsbach-port|JSBACH port]] for the
