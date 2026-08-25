@@ -1,0 +1,19 @@
+[
+  { "query": "has anyone already proposed something about checkpoint/restart in this repo?", "should_trigger": true },
+  { "query": "before I open the PR — what does my field-lifetime idea overlap with?", "should_trigger": true },
+  { "query": "I think my design contradicts msimberg's revive-components. check?", "should_trigger": true },
+  { "query": "what conflicts with model-state?", "should_trigger": true },
+  { "query": "there are like four proposals touching components now. which ones actually disagree with each other and on what", "should_trigger": true },
+  { "query": "im about to spend a week on a design for how the driver orders physics calls. is that ground already covered here", "should_trigger": true },
+  { "query": "we're moving specialize-domain-bounds to shared/ — anything it clashes with first?", "should_trigger": true },
+  { "query": "OngChia's StateProvider and jcanton's container sound like the same thing to me. are they?", "should_trigger": true },
+
+  { "query": "is jcanton's model-state proposal any good? run the red flags over it", "should_trigger": false },
+  { "query": "write up my idea about lazy field allocation as a new proposal", "should_trigger": false },
+  { "query": "we use 'tendency' in three different senses. pick one and put it in the glossary", "should_trigger": false },
+  { "query": "promote revive-components to shared and update the index", "should_trigger": false },
+  { "query": "find duplicated stencil code in the icon4py dycore package", "should_trigger": false },
+  { "query": "search the literature for prior art on lazy field allocation in weather models", "should_trigger": false },
+  { "query": "what papers exist on semi-implicit time stepping for icosahedral grids?", "should_trigger": false },
+  { "query": "check whether tach reports any layer violations in icon4py right now", "should_trigger": false }
+]

@@ -11,11 +11,30 @@ It is **not** the icon4py source tree and **not** the formal ADR record. It is a
 push to `main` (the workflow clones Quartz at build time — nothing is vendored
 here). No local build is needed to author; just edit Markdown.
 
+## Skills
+
+Repository-specific agent skills live in `.agents/skills/` (`.claude/skills` is a
+symlink to it). If your agent does not discover them automatically, read the relevant
+`SKILL.md` directly — they carry the procedures this file only summarizes:
+
+| Skill | Use it when |
+|---|---|
+| `drafting-a-proposal` | writing up a new idea, or restructuring/superseding an existing one |
+| `cross-checking-proposals` | asking how a proposal relates to what already exists |
+| `reviewing-a-proposal` | judging whether a proposal's design is sound and what it trades away |
+| `keeping-one-vocabulary` | introducing, renaming, or disputing a domain term |
+| `graduating-a-proposal` | moving a proposal to `shared/`, changing its status, or retiring it |
+
+See [`.agents/skills/README.md`](.agents/skills/README.md) for how they compose and how
+their triggers are evaluated.
+
 ## Layout
 
 ```
 content/
   index.md              # landing page = the keyworded, hierarchical index (see below)
+  glossary.md           # shared vocabulary: one term, one meaning
+  knowledge/            # written for humans — agents do not read it
   personal/
     <person>/                   # one subdirectory per contributor
       <proposal>.md             # a single-file proposal/idea
@@ -24,14 +43,23 @@ content/
         <proposal>_research.md  # optional appendix: background, research, prior art
         <proposal>_<topic>.md   # optional further appendices
   shared/               # proposals accepted and implementation-ready (only touch with PR review)
-  templates/            # idea template (NOT published — see ignorePatterns)
+  templates/            # idea skeleton (NOT published — see ignorePatterns)
 ```
 
+- **`index.md`** — the map of everything here; every add, rename, move or removal
+  updates it in the same change (see *Keep the index useful*).
+- **`glossary.md`** — the shared vocabulary: one term, one meaning. Both humans
+  and agents read **and** write it; it is a registry of the terms actually in
+  use, not advice. Changes only through reviewed pull requests.
+- **`knowledge/`** — reference material written for humans. **Agents must not
+  read, cite, or apply it**, and no skill may depend on it. Shared human/agent
+  artifacts live outside it — hence `glossary.md` at the root.
 - **`personal/<person>/`** — your working area. Use your GitHub handle as the
   directory name. Filenames are free-form kebab-case slugs; no numbering.
 - **`shared/`** — flat directory of proposals the group broadly agrees, which
   should be concrete enough to implement in icon4py; a proposal can be moved here
   only with PR review.
+- **`templates/`** — the `idea.md` skeleton to copy when authoring. Not published.
 - An accepted idea that becomes concrete graduates to real work in icon4py (a PR,
   or a formal ADR in the icon4py repo); it can then be retired from here.
 
@@ -99,6 +127,9 @@ and agents consult. It must stay current and keyword-rich:
   move its index entry from **Personal** to **Shared**, keeping the keywords.
   After a proposal is implemented and merged to icon4py, delete the file and its
   index entry.
+- Documents under `content/knowledge/` go under **Knowledge**, and `glossary.md`
+  under **Glossary**. Neither is a proposal: they never move to **Shared** and are
+  not retired when a proposal graduates.
 - Prefer one consistent keyword vocabulary across entries (e.g. reuse `dace`,
   `unstructured`, `type-system`) so related ideas cluster and conflicts surface.
 
