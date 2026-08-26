@@ -1,0 +1,18 @@
+{
+  "providers": {
+    "cscs-inference": {
+      "name": "CSCS Inference",
+      "api": "openai-completions",
+      "baseUrl": "https://api.inference.cscs.ch/v1",
+      "apiKey": "$CSCS_INFERENCE_API_KEY",
+      "models": [
+        {
+          "id": "zai-org/GLM-5.2",
+          "name": "GLM 5.2",
+          "contextWindow": 1048576,
+          "maxTokens": 131072
+        }
+      ]
+    }
+  }
+}
