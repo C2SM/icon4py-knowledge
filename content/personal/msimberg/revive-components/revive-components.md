@@ -1,14 +1,14 @@
 ---
 title: Revive components
 author: msimberg
-tags: [components, model-state, protocol, interface, design]
+tags: [components, model-state, protocol, interface, design, field-registry, states, inputs-outputs]
 created: 2026-07-13
 status: draft
 ---
 
 > **TL;DR** Revive and flesh out the `Component` Protocol from `model/common/src/icon4py/model/common/components/components.py` into a usable, well-documented interface for model building blocks.
 
-> **Current direction (2026-07-29):** the design has moved to a **directed-graph composition layer above the `Component`** (chaining, looping, branching, I/O as a sink, conversions as components). The primitives are defined once and are stable across a D0 (today) -> D1 (no-IR eDSL) -> D2 (introspectable steps, opt-in export) -> D3 (serializable IR plus a second interpreter) layering; D3 is a non-breaking addition, not a fork. See the v3 spec in the appendices. NOT FROZEN.
+> **Current direction (2026-09):** two active specs. The **v4 spec** re-specifies proposal parts 1 and 2 (the component, its inputs and outputs: quantity registry, declaration aliases, `Component` with `Input`/`Output` slots, states, gather/apply) and supersedes v3's Component contract and field metadata. The **v3 spec** (directed-graph composition layer above the `Component`: chaining, looping, branching, I/O as a sink, D0 -> D1 -> D2 -> D3 layering; D3 is a non-breaking addition, not a fork) remains the reference for composition and is unchanged by v4. NOT FROZEN.
 
 ## Problem / motivation
 
@@ -36,5 +36,11 @@ Not yet evaluated. This is a placeholder to start the discussion.
 
 ## Appendices
 
-- [[personal/msimberg/revive-components/revive-components_spec_v3|SPEC v3 (composition layer)]] - current proposal: a directed-graph composition layer above the `Component`, with a D0->D1->D2->D3 layering and concrete worked examples for the standalone driver, physics driver, dycore sub-stepping, and tracer advection. **NOT FROZEN.**
+- [[personal/msimberg/revive-components/revive-components_spec_v4|SPEC v4 (the component, its inputs, and its outputs)]] - current proposal for parts 1 and 2: quantity registry, declaration aliases, `Component` with `Input`/`Output` slots, states (owner vs view), gather/apply defaults, explicit allocation, composite components, coupling-mode requirements. Supersedes v3's Component contract and field metadata. **NOT FROZEN.**
+- [[personal/msimberg/revive-components/revive-components_spec_v3|SPEC v3 (composition layer)]] - the reference for the composition layer: a directed-graph composition layer above the `Component`, with a D0->D1->D2->D3 layering and concrete worked examples for the standalone driver, physics driver, dycore sub-stepping, and tracer advection. **NOT FROZEN.**
 - [[personal/msimberg/revive-components/revive-components_spec|SPEC v2 (superseded)]] - earlier per-component frozen input/output dataclasses proposal. Superseded by v3; kept as history.
+
+## Related documents
+
+- [[personal/Yilu/physics-interface-current-design|Physics interface - current design (as built on physics_driver_tmx)]] - the as-built two-layer physics state on the PR #1436 stack; the precedent v4 builds on (expressibility envelope), with a supersession table in v4.
+- [[personal/OngChia/physics-driver-and-components|Physics driver and component design]] - related component protocol design; v4's superseded-from-precedents table covers the overlap.
