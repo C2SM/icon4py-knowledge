@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import enum
-import functools
 import types
 import typing
 from collections.abc import Callable, Iterator
@@ -97,9 +96,14 @@ def _decl(name: str, hint: Any) -> Decl:
     return Decl(name, q, intent, tag, level, base)
 
 
-@functools.cache
+_DECLARATIONS: dict[type, tuple[Decl, ...]] = {}
+
+
 def declarations(cls: type) -> tuple[Decl, ...]:
-    return tuple(_decl(name, hint) for name, hint in typing.get_type_hints(cls, include_extras=True).items())
+    if cls not in _DECLARATIONS:
+        hints = typing.get_type_hints(cls, include_extras=True)
+        _DECLARATIONS[cls] = tuple(_decl(name, hint) for name, hint in hints.items())
+    return _DECLARATIONS[cls]
 
 
 @dataclass_transform(frozen_default=True)
