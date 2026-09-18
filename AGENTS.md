@@ -27,6 +27,9 @@ content/
   templates/            # idea template (NOT published — see ignorePatterns)
 ```
 
+Outside `content/`, `mwe/` holds runnable minimal examples that back a proposal
+(not published; see the `README.md` in each example).
+
 - **`personal/<person>/`** — your working area. Use your GitHub handle as the
   directory name. Filenames are free-form kebab-case slugs; no numbering.
 - **`shared/`** — flat directory of proposals the group broadly agrees, which

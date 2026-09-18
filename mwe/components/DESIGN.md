@@ -104,7 +104,7 @@ model_current/
   common/states.py    PrognosticState, TracerState (dataclasses of fields)
                       TimeStepPair(current, next).swap()
                       INPUTS/OUTPUTS_PROPERTIES dicts with kind="tendency"|"diagnostic"
-                      PhysicsState protocol: as_component_input() -> dict[str, Field]
+                      ComponentState protocol: as_component_input(entry) -> dict[str, Field]
   dycore.py           SolveNonhydro.time_step(prognostic_states, prep_adv, dtime, at_first_substep, at_last_substep)
   diffusion.py        Diffusion.run(prognostic_state, dtime)
   advection.py        Advection.run(prep_adv, p_tracer_now, p_tracer_new, dtime)
@@ -140,8 +140,8 @@ type Next[F]      = Annotated[F, Level.NEXT]
 
 @dataclass_transform(frozen_default=True)
 class State:                                   # __init_subclass__ applies dataclass(frozen=True, eq=False)
-    @classmethod def declarations(cls) -> tuple[Decl, ...]    # cached: name, quantity, intent, level, nested
-    def leaves(self) -> Iterator[tuple[Decl, Any]]            # recursive over nested states
+    @classmethod def declarations(cls) -> tuple[Decl, ...]    # cached: name, quantity, intent, tag, level
+    def leaves(self) -> Iterator[tuple[Decl, Any]]            # (declaration, value) pairs
 class Pair[S]: now: S; next: S; swap()                        # leaves tagged NOW / NEXT when gathered
 def allocate(cls: type[S], sizes: dict[Dimension, int]) -> S  # gtx.zeros per alias dims, scalars zero
 
@@ -151,7 +151,7 @@ class Component[InputT, OutputT]:
     def run(self, input: InputT) -> OutputT                   # abstract
     def gather(self, *states) -> InputT                       # default; overridable
     def accumulate(self, into: State, dt: float) -> None      # Tendency leaf of self.output -> Increment leaf: += dt * t
-    def apply(self, increments: State, target: State) -> None # Increment leaf -> parent leaf in target: +=
+    def apply(self, increments: State, *targets: State) -> None  # Increment leaf -> parent leaf in targets: +=
 def dataflow(*components) -> str                              # declared reads / writes / produces
 ```
 
@@ -171,7 +171,7 @@ Rules the framework enforces:
 - `accumulate` walks `self.output`'s `Tendency` leaves and adds `dt * value`
   into the `Increment` leaf of the same parent quantity in `into`.
 - `apply` walks `increments`' `Increment` leaves and adds each into the leaf of
-  the parent quantity in `target`. `dt` never appears in `apply`.
+  the parent quantity found in the given targets. `dt` never appears in `apply`.
 - Output buffers are allocated by the composition and passed to the component's
   constructor; `run` writes into `self.output` and returns it. A component that
   did not run this step still has its last output, which is what the cadence
@@ -234,5 +234,5 @@ only `ddt_temperature` buffer in scope is muphys's).
 - `README.md` in the folder: purpose, the two commands, line counts.
 - One line added to the layout block of `AGENTS.md` naming `mwe/`.
 - Code is comment-free by request; names carry the meaning.
-- Budget: `model_current` ~350 lines, `model_proposed` ~380 (framework ~110),
-  `ops.py` ~60, `run.py` + test ~50.
+- Size as built (non-blank lines): `model_current` 302, `model_proposed` 495
+  (of which `framework.py` 157), `ops.py` 71, `run.py` + tests 94.
