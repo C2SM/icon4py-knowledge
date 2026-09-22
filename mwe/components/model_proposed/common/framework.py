@@ -126,11 +126,31 @@ class Empty(State):
 
 
 class Pair[S: State]:
-    def __init__(self, now: S, next: S) -> None:
-        self.now, self.next = now, next
+    def __init__(self, first: S, second: S) -> None:
+        self.first, self.second = first, second
 
     def swap(self) -> None:
-        self.now, self.next = self.next, self.now
+        self.first, self.second = self.second, self.first
+
+
+class TimeStepPair[S: State](Pair[S]):
+    @property
+    def now(self) -> S:
+        return self.first
+
+    @property
+    def next(self) -> S:
+        return self.second
+
+
+class PredictorCorrectorPair[S: State](Pair[S]):
+    @property
+    def predictor(self) -> S:
+        return self.first
+
+    @property
+    def corrector(self) -> S:
+        return self.second
 
 
 def allocate[S: State](
@@ -169,10 +189,14 @@ class Component[InputT: State, OutputT: State]:
     def run(self, input: InputT) -> OutputT:
         raise NotImplementedError
 
-    def gather(self, *states: State | Pair[Any]) -> InputT:
+    def gather(self, *states: State | TimeStepPair[Any]) -> InputT:
         available: dict[tuple[Quantity, Level | None], Any] = {}
         for state in states:
-            sides = ((state.now, Level.NOW), (state.next, Level.NEXT)) if isinstance(state, Pair) else ((state, None),)
+            sides = (
+                ((state.now, Level.NOW), (state.next, Level.NEXT))
+                if isinstance(state, TimeStepPair)
+                else ((state, None),)
+            )
             for side, level in sides:
                 for d, value in side.leaves():
                     if available.setdefault((d.quantity, level), value) is not value:

@@ -5,6 +5,7 @@ import icon4py.model.common.utils as common_utils
 from model_current.atmosphere.dycore import dycore_states
 from model_current.common.io import io as common_io
 from model_current.common.states import (
+    nonhydro_states,
     prognostic_state as prognostics,
     tracer_prep_adv_states as prep_adv_states,
     tracer_states,
@@ -42,6 +43,7 @@ class Icon4pyDriver:
         self.io_monitor.store(state_to_store, simulation_current_datetime)
 
     def time_integration(self, ds: driver_states.DriverStates) -> None:
+        solve_nonhydro_diagnostic_state = ds.solve_nonhydro_diagnostic
         prognostic_states = ds.prognostics
         tracers = ds.tracers
         prep_adv = ds.prep_advection_prognostic
@@ -49,6 +51,7 @@ class Icon4pyDriver:
         for time_step in range(self.model_time_variables.n_time_steps):
             self.model_time_variables.advance_simulation_datetime()
             self._integrate_one_time_step(
+                solve_nonhydro_diagnostic_state=solve_nonhydro_diagnostic_state,
                 prognostic_states=prognostic_states,
                 tracers=tracers,
                 prep_adv=prep_adv,
@@ -59,12 +62,13 @@ class Icon4pyDriver:
     def _integrate_one_time_step(
         self,
         *,
+        solve_nonhydro_diagnostic_state: nonhydro_states.DiagnosticStateNonHydro,
         prognostic_states: common_utils.TimeStepPair[prognostics.PrognosticState],
         tracers: common_utils.TimeStepPair[tracer_states.TracerState],
         prep_adv: dycore_states.PrepAdvection,
         tracer_prep_adv: prep_adv_states.TracerPrepAdvState,
     ) -> None:
-        self._do_dyn_substepping(prognostic_states, prep_adv)
+        self._do_dyn_substepping(solve_nonhydro_diagnostic_state, prognostic_states, prep_adv)
         self.granules.diffusion.run(prognostic_states.next, self.model_time_variables.dtime_in_seconds)
         for tracer_current in tracers.current.active_fields():
             tracer_next_field = getattr(tracers.next, tracer_current.name)
@@ -83,13 +87,27 @@ class Icon4pyDriver:
         prognostic_states.swap()
         tracers.swap()
 
+    def _update_time_levels_for_velocity_tendencies(
+        self,
+        diagnostic_state_nh: nonhydro_states.DiagnosticStateNonHydro,
+        at_first_substep: bool,
+    ) -> None:
+        if not at_first_substep:
+            diagnostic_state_nh.normal_wind_advective_tendency.swap()
+
     def _do_dyn_substepping(
         self,
+        solve_nonhydro_diagnostic_state: nonhydro_states.DiagnosticStateNonHydro,
         prognostic_states: common_utils.TimeStepPair[prognostics.PrognosticState],
         prep_adv: dycore_states.PrepAdvection,
     ) -> None:
         for dyn_substep in range(self.model_time_variables.ndyn_substeps_var):
+            self._update_time_levels_for_velocity_tendencies(
+                solve_nonhydro_diagnostic_state,
+                at_first_substep=self._is_first_substep(dyn_substep),
+            )
             self.granules.solve_nonhydro.time_step(
+                diagnostic_state_nh=solve_nonhydro_diagnostic_state,
                 prognostic_states=prognostic_states,
                 prep_adv=prep_adv,
                 dtime=self.model_time_variables.substep_timestep,
@@ -113,6 +131,7 @@ def run_driver() -> tuple[driver_states.DriverStates, Icon4pyDriver]:
     ds = driver_states.assemble_driver_states(
         prognostic_state_now=prognostics.initialize_prognostic_state(),
         tracer_state_now=tracer_states.initialize_tracer_state(),
+        solve_nonhydro_diagnostic_state=nonhydro_states.initialize_solve_nonhydro_diagnostic_state(),
         tracer_prep_adv_state=prep_adv_states.initialize_tracer_prep_adv_state(),
     )
     icon4py_driver.time_integration(ds)

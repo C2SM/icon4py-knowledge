@@ -21,7 +21,7 @@ sequential coupling, py2fgen.
 
 ## Scope
 
-### Quantities (10)
+### Quantities (11)
 
 | quantity      | dims    | role                                                              |
 |---------------|---------|-------------------------------------------------------------------|
@@ -35,10 +35,12 @@ sequential coupling, py2fgen.
 | `temperature` | Cell, K | diagnosed at physics entry, and again from the new state for IO   |
 | `u`           | Cell, K | diagnosed cell-centre wind; read by tmx; its tendency goes to vn  |
 | `pflx`        | Cell    | muphys precipitation diagnostic                                   |
+| `ddt_vn_apc`  | Edge, K | vn advective tendency, predictor/corrector pair inside the dycore |
 
 Tendencies and increments are derived quantities (`tendency_of`, `increment_of`),
 never declared by hand: `tend_temperature` (muphys, tmx), `tend_qv` (muphys),
-`tend_u` (tmx), and one increment per accumulated parent (`temperature`, `qv`, `u`).
+`tend_u` (tmx), `ddt_vn_apc` (dycore, `Tendency[VnField]`, so no new registry
+entry), and one increment per accumulated parent (`temperature`, `qv`, `u`).
 
 ### Scalars (8)
 
@@ -61,7 +63,8 @@ named after the icon4py program it stands in for where one exists:
 
 | function                                                   | stands in for                            |
 |------------------------------------------------------------|------------------------------------------|
-| `dycore_step(*_now, *_new, mass_flx_me, dtime, ...)`       | predictor + corrector, one substep       |
+| `dycore_step(*_now, *_new, mass_flx_me, predictor_..., corrector_..., dtime, ...)` | predictor + corrector, one substep; reads the predictor tendency, writes the corrector |
+| `compute_advection_in_horizontal_momentum(vn, ddt_vn_apc)` | the velocity-advection program of the same name |
 | `diffuse(vn, theta_v, dtime)`                              | diffusion, in place                      |
 | `advect(p_tracer_now, p_tracer_new, mass_flx_me, dtime)`   | tracer advection                         |
 | `compute_temperature(theta_v, exner, temperature)`         | `compute_virtual_temperature_and_temperature` |
@@ -71,14 +74,17 @@ named after the icon4py program it stands in for where one exists:
 | `update_exner_and_theta_v(temperature, exner, theta_v)`    | the program of the same name             |
 | `compute_vn_from_uv(u, vn)`                                | the stencil of the same name             |
 
-`dycore_step` reads the `now` fields, writes the `new` fields and `mass_flx_me`.
+`dycore_step` reads the `now` fields, writes the `new` fields and `mass_flx_me`;
+it applies `0.5 * (predictor + corrector)` of the vn advective tendency.
 
 ### Time loop (identical in both models)
 
 Per time step:
 
-1. `ndyn_substeps` times: `dycore_step(now, next, ...)`; swap the prognostic pair
-   unless last substep.
+1. `ndyn_substeps` times: on the first substep compute the predictor vn advective
+   tendency from `vn@now`, otherwise swap the predictor/corrector pair so the last
+   corrector becomes this predictor (ICON `itime_scheme=4`); `dycore_step(now,
+   next, ...)`; swap the prognostic pair unless last substep.
 2. `diffuse` in place on `prognostic_states.next`.
 3. `advect` each active tracer from `tracers.current` into `tracers.next`.
 4. Physics on `prognostic_states.next` / `tracers.next`: diagnose `temperature`
@@ -91,7 +97,8 @@ Per time step:
    `temperature` and `u` recomputed from that state (7 records per step).
 
 Run 4 steps with 2 substeps. Equality: `np.array_equal` on the 5 prognostics,
-`qv`, `mass_flx_me`, `pflx`, and on every `(time, name, array)` output record.
+`qv`, `mass_flx_me`, `pflx`, both sides of `ddt_vn_apc`, and on every
+`(time, name, array)` output record.
 
 ## `model_current`
 
@@ -110,8 +117,13 @@ Trimming rules:
 3. Keep every remaining module path (minus `src/icon4py/model/`), class, method,
    attribute, argument and dict key verbatim. All 112 names in the tree were
    checked with `git grep -w` against the three sources.
-4. `w` on full levels; xarray `DataArray`s are plain fields; the netCDF dataset
-   is a list of `(time, name, array)`.
+4. `w` on full levels; every field is `wpfloat` (`ta.vpfloat` is a runtime
+   variable that mypy rejects as a type); xarray `DataArray`s are plain fields;
+   the netCDF dataset is a list of `(time, name, array)`.
+5. The only `type: ignore` pragmas in the tree (three in `solve_nonhydro.py`, two
+   in `run.py`) cover icon4py's `PredictorCorrectorPair`: its descriptor-based
+   accessors type `.predictor`/`.corrector` as `Callable[..., Any]` under mypy
+   strict. The proposed 15-line `Pair` family keeps `predictor -> S`.
 
 ```
 model_current/
@@ -122,12 +134,13 @@ model_current/
     states/tracer_states.py        TracerField, TracerState.active_fields/.copy
     states/tracer_prep_adv_states.py  TracerPrepAdvState (mass_flx_me)
     states/diagnostic_state.py     DiagnosticState (temperature, u)
+    states/nonhydro_states.py      DiagnosticStateNonHydro (normal_wind_advective_tendency: PredictorCorrectorPair)
     components/components.py       Component protocol (inputs/outputs_properties, __call__)
     components/component_state.py  ComponentState protocol (as_component_input)
     io/io.py                       IOMonitor.store(state, model_time)
   atmosphere/
     dycore/dycore_states.py        PrepAdvection (mass_flx_me)
-    dycore/solve_nonhydro.py       SolveNonhydro.time_step(*, prognostic_states, prep_adv, dtime, ...)
+    dycore/solve_nonhydro.py       SolveNonhydro.time_step(*, diagnostic_state_nh, prognostic_states, prep_adv, dtime, ...)
     diffusion/diffusion.py         Diffusion.run(prognostic_state, dtime)
     tracer_advection/tracer_advection.py  Advection.run(*, prep_adv, p_tracer_now, p_tracer_new, dtime)
     subgrid_scale_physics/physics_driver/
@@ -138,24 +151,27 @@ model_current/
     subgrid_scale_physics/tmx/     component.py TmxComponent, state.py, data.py, tmx_states.py
   driver/
     driver.py                      Icon4pyDriver.time_integration/_integrate_one_time_step/_do_dyn_substepping/_store_output
-                                   initialize_driver, run_driver
+                                   _update_time_levels_for_velocity_tendencies, initialize_driver, run_driver
     driver_states.py               DriverStates, ModelTimeVariables, link_tracer_prep_adv_to_dycore, assemble_driver_states
     driver_utils.py                Granules, initialize_granules
     driver_io.py                   *_VARIABLES, prognostic_state_to_dataarrays, DiagnosticsComputer
 ```
 
-`TimeStepPair` is imported from `icon4py.model.common.utils`, as the real driver
-does. What the copy keeps on purpose, because it is what the proposed design
-removes: dict keys agreed by convention (`"te"`, `"tend_temperature"`, `"pflx"`),
+`TimeStepPair` and `PredictorCorrectorPair` are imported from
+`icon4py.model.common.utils`, as the real code does. What the copy keeps on
+purpose, because it is what the proposed design removes: dict keys agreed by
+convention (`"te"`, `"tend_temperature"`, `"pflx"`),
 one `State` adapter class per process, `FieldKind` routing, `EntryState` mixing
 pointers with allocation, `ddt_*` granule ports mapped to `tend_*` component keys,
-an output cache keyed by process name, IO picking fields by name from a dict, and
+an output cache keyed by process name, IO picking fields by name from a dict,
 `temperature`/`u` diagnosed twice per step (`EntryState.diagnose_from` and
-`DiagnosticsComputer.compute`).
+`DiagnosticsComputer.compute`), and the driver swapping the dycore's
+predictor/corrector pair (`_update_time_levels_for_velocity_tendencies`) while
+the dycore decides, from the same flags, whether to recompute the predictor.
 
 ## `model_proposed`
 
-### `common/framework.py` (the reusable part, 157 lines)
+### `common/framework.py` (the reusable part, 175 lines)
 
 ```python
 @dataclass(frozen=True) class Quantity: name, units, cf_key=None, of: Quantity | None = None
@@ -174,7 +190,11 @@ type Next[F]      = Annotated[F, Level.NEXT]
 class State:                                   # __init_subclass__ applies dataclass(frozen=True, eq=False)
     @classmethod def declarations(cls) -> tuple[Decl, ...]    # cached: name, quantity, intent, tag, level
     def leaves(self) -> Iterator[tuple[Decl, Any]]            # (declaration, value) pairs
-class Pair[S]: now: S; next: S; swap()                        # leaves tagged NOW / NEXT when gathered
+class Pair[S]: first: S; second: S; swap()                    # 15 lines for the three classes
+class TimeStepPair[S](Pair[S]): now; next                     # leaves tagged NOW / NEXT when gathered
+class PredictorCorrectorPair[S](Pair[S]): predictor; corrector  # component-internal, never gathered
+# One Pair would do; the two subclasses only add icon4py's names (6 lines each) and let
+# gather tag time levels for TimeStepPair alone.
 def allocate(cls: type[S], sizes: dict[Dimension, int]) -> S  # gtx.zeros per alias dims, scalars zero
 
 class Component[InputT, OutputT]:
@@ -195,8 +215,8 @@ Rules the framework enforces:
   gt4py. Reading the declaration means unwrapping `TypeAliasType`, generic
   aliases of `TypeAliasType`, and nested `Annotated`.
 - `gather` flattens the given states into `{(quantity, level): value}`. A state
-  given as a `Pair` contributes its `now` leaves with level `NOW` and its `next`
-  leaves with `NEXT`; any other state contributes level `None`. A declaration
+  given as a `TimeStepPair` contributes its `now` leaves with level `NOW` and its
+  `next` leaves with `NEXT`; any other state contributes level `None`. A declaration
   resolves only against its own level. Two different buffers for one key raise
   `AmbiguousSource`; an unresolved declaration raises `MissingInput`. The same
   buffer twice is fine. Scalars resolve exactly like fields.
@@ -226,8 +246,9 @@ uses the step `dt` for both to match `model_current` numerically.
 
 ### Why `Pair` wraps a `State`, not a field or a `Quantity`
 
-`Pair[S]` holds two whole states (`now`, `next`) and one `swap()`. The driver
-owns `Pair(PrognosticState, PrognosticState)` and `Pair(TracerState, TracerState)`.
+`TimeStepPair[S]` holds two whole states (`now`, `next`) and one `swap()`. The
+driver owns `TimeStepPair(PrognosticState, PrognosticState)` and
+`TimeStepPair(TracerState, TracerState)`.
 A component that cares about levels says so in its Input (`rho_now:
 Read[Now[RhoField]]`, `rho_new: ReadWrite[Next[RhoField]]`); only `SolveNonhydro`
 and `Advection` do. `gather` keys on `(quantity, level)`: a `Pair` argument
@@ -265,10 +286,14 @@ tendencies in `DiagnosticStateNonHydro`, swapped by the driver in
 `_update_time_levels_for_velocity_tendencies`. That is a component-internal
 buffer trick of the `MOST_EFFICIENT` time stepping scheme (reuse last substep's
 corrector as this substep's predictor), not a driver-owned time level. Nobody
-outside the dycore reads those pairs. In the proposed design they stay inside
-the dycore as its own `Pair` of a one-field state, swapped inside
-`SolveNonhydro.run` from `at_first_substep`/`at_initial_timestep`, which it
-already receives. Either way the `Quantity` stays level-free.
+outside the dycore reads those pairs, yet the swap condition is written three
+times: in the driver, in `SolveNonhydro.run_predictor_step` (as the decision to
+skip the recomputation) and in the dycore integration test. The MWE shows both:
+`model_current` keeps the driver-side swap verbatim; `model_proposed` owns the
+pair inside `SolveNonhydro` (`PredictorCorrectorPair` of the one-field state
+`AdvectiveTendencies`) and swaps it in `run` from `at_first_substep`, which it
+already receives, so the condition exists once. Either way the `Quantity` stays
+level-free: the tendency is `Tendency[VnField]`.
 
 ### Usage
 
@@ -278,6 +303,7 @@ Module and class names follow `model_current` so the two trees read side by side
 common/quantities.py  10 field aliases + 7 scalar aliases, one line each; names are the CF standard names of data.py
 common/states.py      PrognosticState, TracerState, PrepAdvection, DiagnosticState, Increments, StepInfo
 solve_nonhydro.py     SolveNonhydro: Input Now[...] x5 READ, Next[...] x5 READWRITE, substep scalars; Output PrepAdvection
+                      owns PredictorCorrectorPair(AdvectiveTendencies) and swaps it in run
 diffusion.py          Diffusion: Input ReadWrite[VnField], ReadWrite[ThetaVField], Read[TimeStep]; Output Empty
 tracer_advection.py   Advection: Input Now[QvField] READ, Next[QvField] READWRITE, Read[MassFluxField], Read[TimeStep]
 diagnostics.py        DiagnosticsComputer: Input theta_v, exner, vn READ; Output DiagnosticState (temperature, u)
@@ -292,7 +318,8 @@ driver.py             Icon4pyDriver: same method names as model_current; owner-s
 ```
 
 Where each tricky case lands: now/next in `solve_nonhydro.py` and
-`tracer_advection.py`; in-place in `diffusion.py`, `eos.py`, `projection.py`;
+`tracer_advection.py`; a component-internal predictor/corrector pair in
+`solve_nonhydro.py`; in-place in `diffusion.py`, `eos.py`, `projection.py`;
 hand-off in dycore -> advection (`mass_flx_me` is an `Output` with no tendency
 tag, so it is never accumulated); cadence with cached output in
 `physics_driver.py` (`ProcessTimeControl(2)` for tmx); the accumulate/apply split
@@ -304,15 +331,16 @@ and a second `DiagnosticsComputer` output), as the current driver does.
 ## Checking
 
 - `run.py`: runs both models for 4 steps, prints `dataflow()` of the proposed
-  model, compares the 8 quantities and the output records, prints `OK` or the
-  mismatches, exit code accordingly.
+  model, compares the 8 quantities, both sides of the dycore pair and the output
+  records, prints `OK` or the mismatches, exit code accordingly.
 - `test_equivalence.py`: pytest wrapper around `run.py`, one assert.
 - `test_framework.py`: five unit tests of the framework verbs.
 - `mypy.ini`: `strict = True`; `implicit_reexport = True` for `model_current.*`
   only, as icon4py's own `pyproject.toml` sets it. Command:
   `<icon4py>/.venv/bin/python -m mypy model_current model_proposed run.py test_framework.py test_equivalence.py`.
 - Python 3.12, the icon4py virtualenv; imports from icon4py limited to
-  `dimension`, `field_type_aliases`, `type_alias`, `utils.TimeStepPair`.
+  `dimension`, `field_type_aliases`, `type_alias`, `utils.TimeStepPair`,
+  `utils.PredictorCorrectorPair`.
 
 ## Housekeeping
 
@@ -321,6 +349,6 @@ and a second `DiagnosticsComputer` output), as the current driver does.
 - `README.md` in the folder: purpose, the three commands.
 - One line added to the layout block of `AGENTS.md` naming `mwe/`.
 - Code is comment-free by request; names carry the meaning.
-- Size as built (non-blank lines): `model_current` 624 across 27 modules,
-  `model_proposed` 524 (of which `framework.py` 157), `ops.py` 77,
-  `run.py` + tests 131.
+- Size as built (non-blank lines): `model_current` 668 across 28 modules,
+  `model_proposed` 566 (of which `framework.py` 175), `ops.py` 85,
+  `run.py` + tests 135.

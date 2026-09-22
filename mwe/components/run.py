@@ -20,6 +20,8 @@ def run_current() -> dict[str, Any]:
         "qv": ops.arr(ds.tracers.current.qv),
         "mass_flx_me": ops.arr(ds.prep_tracer_advection_prognostic.mass_flx_me),
         "pflx": ops.arr(icon4py_driver.granules.physics.diagnostics["muphys"]["pflx"]),
+        "ddt_vn_apc.predictor": ops.arr(ds.solve_nonhydro_diagnostic.normal_wind_advective_tendency.predictor),  # type: ignore[arg-type]
+        "ddt_vn_apc.corrector": ops.arr(ds.solve_nonhydro_diagnostic.normal_wind_advective_tendency.corrector),  # type: ignore[arg-type]
         "dataset": icon4py_driver.io_monitor.dataset,
     }
 
@@ -37,6 +39,8 @@ def run_proposed() -> dict[str, Any]:
         "qv": ops.arr(icon4py_driver.tracers.now.qv),
         "mass_flx_me": ops.arr(icon4py_driver.solve_nonhydro.output.mass_flx_me),
         "pflx": ops.arr(icon4py_driver.physics.muphys.output.pflx),
+        "ddt_vn_apc.predictor": ops.arr(icon4py_driver.solve_nonhydro.normal_wind_advective_tendency.predictor.normal_wind),
+        "ddt_vn_apc.corrector": ops.arr(icon4py_driver.solve_nonhydro.normal_wind_advective_tendency.corrector.normal_wind),
         "dataset": icon4py_driver.io_monitor.dataset,
     }
 

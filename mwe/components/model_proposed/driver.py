@@ -1,7 +1,7 @@
 import dataclasses
 from datetime import timedelta
 
-from model_proposed.common.framework import Empty, Pair, allocate
+from model_proposed.common.framework import Empty, TimeStepPair, allocate
 from model_proposed.common.states import DiagnosticState, PrepAdvection, PrognosticState, StepInfo, TracerState
 from model_proposed.diagnostics import DiagnosticsComputer
 from model_proposed.diffusion import Diffusion
@@ -14,10 +14,10 @@ import ops
 
 class Icon4pyDriver:
     def __init__(self) -> None:
-        self.prognostic_states = Pair(
+        self.prognostic_states = TimeStepPair(
             allocate(PrognosticState, ops.SIZES, ops.initial), allocate(PrognosticState, ops.SIZES)
         )
-        self.tracers = Pair(allocate(TracerState, ops.SIZES, ops.initial), allocate(TracerState, ops.SIZES))
+        self.tracers = TimeStepPair(allocate(TracerState, ops.SIZES, ops.initial), allocate(TracerState, ops.SIZES))
         self.solve_nonhydro = SolveNonhydro(allocate(PrepAdvection, ops.SIZES))
         self.diffusion = Diffusion(Empty())
         self.tracer_advection = Advection(Empty())

@@ -6,6 +6,7 @@ from icon4py.model.common import type_alias as ta
 
 from model_current.atmosphere.dycore import dycore_states
 from model_current.common.states import (
+    nonhydro_states,
     prognostic_state as prognostics,
     tracer_prep_adv_states as prep_adv_states,
     tracer_states,
@@ -15,6 +16,7 @@ import ops
 
 class DriverStates(NamedTuple):
     prep_advection_prognostic: dycore_states.PrepAdvection
+    solve_nonhydro_diagnostic: nonhydro_states.DiagnosticStateNonHydro
     prep_tracer_advection_prognostic: prep_adv_states.TracerPrepAdvState
     prognostics: common_utils.TimeStepPair[prognostics.PrognosticState]
     tracers: common_utils.TimeStepPair[tracer_states.TracerState]
@@ -50,6 +52,7 @@ def assemble_driver_states(
     *,
     prognostic_state_now: prognostics.PrognosticState,
     tracer_state_now: tracer_states.TracerState,
+    solve_nonhydro_diagnostic_state: nonhydro_states.DiagnosticStateNonHydro,
     tracer_prep_adv_state: prep_adv_states.TracerPrepAdvState,
 ) -> DriverStates:
     prognostic_state_next = prognostics.PrognosticState(
@@ -64,6 +67,7 @@ def assemble_driver_states(
     prep_adv = link_tracer_prep_adv_to_dycore(tracer_prep_adv_state)
     return DriverStates(
         prep_advection_prognostic=prep_adv,
+        solve_nonhydro_diagnostic=solve_nonhydro_diagnostic_state,
         prep_tracer_advection_prognostic=tracer_prep_adv_state,
         prognostics=prognostic_states,
         tracers=tracers,

@@ -7,7 +7,7 @@ class, method, attribute, argument and dict-key name are the real ones, only
 grid/config/backend plumbing and stencil bodies are gone. `model_proposed` is the
 `State`/`Component` design in `DESIGN.md`, with the same module and class names
 so the two trees read side by side. Same `ops.py`, same numbers, different
-declarations. Ten quantities, eight scalars, no real stencils.
+declarations. Eleven quantities, eight scalars, no real stencils.
 
     cd mwe/components
     /path/to/icon4py/.venv/bin/python run.py

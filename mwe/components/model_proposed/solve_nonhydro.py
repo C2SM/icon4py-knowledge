@@ -1,4 +1,14 @@
-from model_proposed.common.framework import Component, Next, Now, Read, ReadWrite, State
+from model_proposed.common.framework import (
+    Component,
+    Next,
+    Now,
+    PredictorCorrectorPair,
+    Read,
+    ReadWrite,
+    State,
+    Tendency,
+    allocate,
+)
 from model_proposed.common.quantities import (
     AtFirstSubstep,
     AtLastSubstep,
@@ -12,6 +22,10 @@ from model_proposed.common.quantities import (
 )
 from model_proposed.common.states import PrepAdvection
 import ops
+
+
+class AdvectiveTendencies(State):
+    normal_wind: Tendency[VnField]
 
 
 class SolveNonhydro(Component["SolveNonhydro.Input", PrepAdvection]):
@@ -33,7 +47,18 @@ class SolveNonhydro(Component["SolveNonhydro.Input", PrepAdvection]):
 
     Output = PrepAdvection
 
+    def __init__(self, output: PrepAdvection) -> None:
+        super().__init__(output)
+        self.normal_wind_advective_tendency = PredictorCorrectorPair(
+            allocate(AdvectiveTendencies, ops.SIZES), allocate(AdvectiveTendencies, ops.SIZES)
+        )
+
     def run(self, input: Input) -> PrepAdvection:
+        ddt_vn_apc = self.normal_wind_advective_tendency
+        if input.at_first_substep:
+            ops.compute_advection_in_horizontal_momentum(input.vn_now, ddt_vn_apc.predictor.normal_wind)
+        else:
+            ddt_vn_apc.swap()
         ops.dycore_step(
             vn_now=input.vn_now,
             w_now=input.w_now,
@@ -46,6 +71,8 @@ class SolveNonhydro(Component["SolveNonhydro.Input", PrepAdvection]):
             exner_new=input.exner_new,
             theta_v_new=input.theta_v_new,
             mass_flx_me=self.output.mass_flx_me,
+            predictor_normal_wind_advective_tendency=ddt_vn_apc.predictor.normal_wind,
+            corrector_normal_wind_advective_tendency=ddt_vn_apc.corrector.normal_wind,
             dtime=input.substep_dtime,
             ndyn_substeps=input.ndyn_substeps,
             at_first_substep=input.at_first_substep,

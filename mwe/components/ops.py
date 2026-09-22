@@ -58,6 +58,8 @@ def dycore_step(
     exner_new: Field,
     theta_v_new: Field,
     mass_flx_me: Field,
+    predictor_normal_wind_advective_tendency: Field,
+    corrector_normal_wind_advective_tendency: Field,
     dtime: float,
     ndyn_substeps: int,
     at_first_substep: bool,
@@ -66,10 +68,18 @@ def dycore_step(
         arr(mass_flx_me)[...] = 0.0
     arr(mass_flx_me)[...] += arr(vn_now) * to_edges(arr(rho_now)) / ndyn_substeps
     arr(rho_new)[...] = arr(rho_now) - dtime * 0.1 * to_cells(arr(vn_now) * to_edges(arr(rho_now)))
-    arr(vn_new)[...] = arr(vn_now) + dtime * (0.1 * to_edges(arr(theta_v_now)) - 0.01 * arr(vn_now))
+    pressure_gradient = 0.1 * to_edges(arr(theta_v_now)) - 0.01 * arr(vn_now)
+    arr(vn_new)[...] = arr(vn_now) + dtime * (pressure_gradient + arr(predictor_normal_wind_advective_tendency))
+    compute_advection_in_horizontal_momentum(vn_new, corrector_normal_wind_advective_tendency)
+    advection = 0.5 * (arr(predictor_normal_wind_advective_tendency) + arr(corrector_normal_wind_advective_tendency))
+    arr(vn_new)[...] = arr(vn_now) + dtime * (pressure_gradient + advection)
     arr(w_new)[...] = arr(w_now) + dtime * (arr(rho_new) - arr(rho_now))
     arr(exner_new)[...] = arr(exner_now) * (1.0 + dtime * 0.01 * (arr(rho_new) - arr(rho_now)))
     arr(theta_v_new)[...] = arr(theta_v_now) + dtime * 0.1 * arr(w_new)
+
+
+def compute_advection_in_horizontal_momentum(vn: Field, normal_wind_advective_tendency: Field) -> None:
+    arr(normal_wind_advective_tendency)[...] = -0.05 * arr(vn) * np.abs(arr(vn))
 
 
 def diffuse(vn: Field, theta_v: Field, dtime: float) -> None:
