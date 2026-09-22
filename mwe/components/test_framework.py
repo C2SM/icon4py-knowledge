@@ -73,6 +73,7 @@ def test_accumulate_then_apply_adds_dt_times_tendency_to_parent() -> None:
     p.run(p.gather(fw.Pair(owner, fw.allocate(Owner, ops.SIZES)), fw.allocate(Owner, ops.SIZES)))
     p.accumulate(inc, dt=0.5)
     p.apply(inc, owner)
+    p.apply(inc, fw.Empty())
     assert np.array_equal(ops.arr(owner.temperature), np.full((4, 3), 1.0))
     fw.zero(inc)
     assert not ops.arr(inc.temperature).any()

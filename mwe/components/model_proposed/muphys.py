@@ -3,16 +3,16 @@ from model_proposed.common.quantities import PrecipField, QvField, TemperatureFi
 import ops
 
 
-class Muphys(Component["Muphys.Input", "Muphys.Output"]):
+class MuphysComponent(Component["MuphysComponent.Input", "MuphysComponent.Output"]):
     class Input(State):
-        temperature: Read[TemperatureField]
+        te: Read[TemperatureField]
         qv: Read[QvField]
 
     class Output(State):
-        ddt_temperature: Tendency[TemperatureField]
-        ddt_qv: Tendency[QvField]
-        precip: PrecipField
+        tend_temperature: Tendency[TemperatureField]
+        tend_qv: Tendency[QvField]
+        pflx: PrecipField
 
     def run(self, input: Input) -> Output:
-        ops.muphys(input.temperature, input.qv, self.output.ddt_temperature, self.output.ddt_qv, self.output.precip)
+        ops.muphys(input.te, input.qv, self.output.tend_temperature, self.output.tend_qv, self.output.pflx)
         return self.output

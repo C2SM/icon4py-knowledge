@@ -12,24 +12,24 @@ from model_proposed.common.quantities import (
     VnField,
     WField,
 )
-from model_proposed.common.states import Derived, Increments
-from model_proposed.derived import DerivedQuantities
+from model_proposed.common.states import DiagnosticState, Increments
+from model_proposed.diagnostics import DiagnosticsComputer
 from model_proposed.eos import ExnerThetaUpdate
-from model_proposed.muphys import Muphys
+from model_proposed.muphys import MuphysComponent
 from model_proposed.projection import WindProjection
-from model_proposed.tmx import Tmx
+from model_proposed.tmx import TmxComponent
 import ops
 
 
 @dataclasses.dataclass(frozen=True)
-class Every:
-    steps: int
+class ProcessTimeControl:
+    interval: int
 
-    def due(self, step: int) -> bool:
-        return step % self.steps == 0
+    def is_active(self, step_index: int) -> bool:
+        return step_index % self.interval == 0
 
 
-class Physics(Component["Physics.Input", Empty]):
+class PhysicsDriver(Component["PhysicsDriver.Input", Empty]):
     class Input(State):
         vn: ReadWrite[VnField]
         w: Read[WField]
@@ -44,25 +44,25 @@ class Physics(Component["Physics.Input", Empty]):
 
     def __init__(self) -> None:
         super().__init__(Empty())
-        self.derived = DerivedQuantities(allocate(Derived, ops.SIZES))
-        self.muphys = Muphys(allocate(Muphys.Output, ops.SIZES))
-        self.tmx = Tmx(allocate(Tmx.Output, ops.SIZES))
-        self.processes: list[tuple[Component[Any, Any], Every]] = [
-            (self.muphys, Every(1)),
-            (self.tmx, Every(ops.TMX_INTERVAL)),
+        self.entry = DiagnosticsComputer(allocate(DiagnosticState, ops.SIZES))
+        self.muphys = MuphysComponent(allocate(MuphysComponent.Output, ops.SIZES))
+        self.tmx = TmxComponent(allocate(TmxComponent.Output, ops.SIZES))
+        self.processes: list[tuple[Component[Any, Any], ProcessTimeControl]] = [
+            (self.muphys, ProcessTimeControl(1)),
+            (self.tmx, ProcessTimeControl(ops.TMX_INTERVAL)),
         ]
         self.increments = allocate(Increments, ops.SIZES)
         self.eos = ExnerThetaUpdate(Empty())
         self.projection = WindProjection(Empty())
 
     def run(self, input: Input) -> Empty:
-        derived = self.derived.run(self.derived.gather(input))
+        entry = self.entry.run(self.entry.gather(input))
         zero(self.increments)
-        for process, cadence in self.processes:
-            if cadence.due(input.step_index):
-                process.run(process.gather(input, derived))
+        for process, time_control in self.processes:
+            if time_control.is_active(input.step_index):
+                process.run(process.gather(input, entry))
             process.accumulate(self.increments, input.dtime)
-        self.apply(self.increments, input, derived)
-        self.eos.run(self.eos.gather(input, derived))
-        self.projection.run(self.projection.gather(input, derived))
+        self.apply(self.increments, input)
+        self.eos.run(self.eos.gather(entry, self.increments, input))
+        self.projection.run(self.projection.gather(self.increments, input))
         return self.output

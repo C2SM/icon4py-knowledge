@@ -7,6 +7,7 @@ from icon4py.model.common import dimension as dims, type_alias as ta
 
 NCELLS, NEDGES, NLEV = 4, 6, 3
 SIZES: dict[gtx.Dimension, int] = {dims.CellDim: NCELLS, dims.EdgeDim: NEDGES, dims.KDim: NLEV}
+CELL, CELL_K, EDGE_K = (dims.CellDim,), (dims.CellDim, dims.KDim), (dims.EdgeDim, dims.KDim)
 DTIME, NDYN_SUBSTEPS, N_STEPS, TMX_INTERVAL = 1.0, 2, 4, 2
 START = datetime(2026, 1, 1)
 
@@ -30,6 +31,12 @@ def field(dimensions: tuple[gtx.Dimension, ...], name: str | None = None) -> Fie
     return f
 
 
+def copy(f: Field) -> Field:
+    g = gtx.zeros(f.domain, dtype=ta.wpfloat)
+    arr(g)[...] = arr(f)
+    return g
+
+
 def to_edges(c: Array) -> Array:
     return np.concatenate([c, c[: NEDGES - NCELLS]])
 
@@ -40,50 +47,53 @@ def to_cells(e: Array) -> Array:
 
 def dycore_step(
     *,
-    vn: Field,
-    w: Field,
-    rho: Field,
-    exner: Field,
-    theta_v: Field,
+    vn_now: Field,
+    w_now: Field,
+    rho_now: Field,
+    exner_now: Field,
+    theta_v_now: Field,
     vn_new: Field,
     w_new: Field,
     rho_new: Field,
     exner_new: Field,
     theta_v_new: Field,
-    mass_flux_e: Field,
-    dt: float,
+    mass_flx_me: Field,
+    dtime: float,
     ndyn_substeps: int,
     at_first_substep: bool,
 ) -> None:
     if at_first_substep:
-        arr(mass_flux_e)[...] = 0.0
-    arr(mass_flux_e)[...] += arr(vn) * to_edges(arr(rho)) / ndyn_substeps
-    arr(rho_new)[...] = arr(rho) - dt * 0.1 * to_cells(arr(vn) * to_edges(arr(rho)))
-    arr(vn_new)[...] = arr(vn) + dt * (0.1 * to_edges(arr(theta_v)) - 0.01 * arr(vn))
-    arr(w_new)[...] = arr(w) + dt * (arr(rho_new) - arr(rho))
-    arr(exner_new)[...] = arr(exner) * (1.0 + dt * 0.01 * (arr(rho_new) - arr(rho)))
-    arr(theta_v_new)[...] = arr(theta_v) + dt * 0.1 * arr(w_new)
+        arr(mass_flx_me)[...] = 0.0
+    arr(mass_flx_me)[...] += arr(vn_now) * to_edges(arr(rho_now)) / ndyn_substeps
+    arr(rho_new)[...] = arr(rho_now) - dtime * 0.1 * to_cells(arr(vn_now) * to_edges(arr(rho_now)))
+    arr(vn_new)[...] = arr(vn_now) + dtime * (0.1 * to_edges(arr(theta_v_now)) - 0.01 * arr(vn_now))
+    arr(w_new)[...] = arr(w_now) + dtime * (arr(rho_new) - arr(rho_now))
+    arr(exner_new)[...] = arr(exner_now) * (1.0 + dtime * 0.01 * (arr(rho_new) - arr(rho_now)))
+    arr(theta_v_new)[...] = arr(theta_v_now) + dtime * 0.1 * arr(w_new)
 
 
-def diffuse(vn: Field, theta_v: Field, dt: float) -> None:
-    arr(vn)[...] -= dt * 0.05 * arr(vn)
-    arr(theta_v)[...] -= dt * 0.05 * arr(theta_v)
+def diffuse(vn: Field, theta_v: Field, dtime: float) -> None:
+    arr(vn)[...] -= dtime * 0.05 * arr(vn)
+    arr(theta_v)[...] -= dtime * 0.05 * arr(theta_v)
 
 
-def advect(qv_now: Field, qv_new: Field, mass_flux_e: Field, dt: float) -> None:
-    arr(qv_new)[...] = arr(qv_now) - dt * 0.1 * to_cells(arr(mass_flux_e)) * arr(qv_now)
+def advect(p_tracer_now: Field, p_tracer_new: Field, mass_flx_me: Field, dtime: float) -> None:
+    arr(p_tracer_new)[...] = arr(p_tracer_now) - dtime * 0.1 * to_cells(arr(mass_flx_me)) * arr(p_tracer_now)
 
 
-def diagnose(exner: Field, theta_v: Field, vn: Field, temperature: Field, u: Field) -> None:
+def compute_temperature(theta_v: Field, exner: Field, temperature: Field) -> None:
     arr(temperature)[...] = arr(theta_v) * arr(exner)
+
+
+def edge_2_cell_vector_rbf_interpolation(vn: Field, u: Field) -> None:
     arr(u)[...] = to_cells(arr(vn))
 
 
-def muphys(temperature: Field, qv: Field, ddt_temperature: Field, ddt_qv: Field, precip: Field) -> None:
-    excess = arr(qv) - 0.01 * arr(temperature)
-    arr(ddt_qv)[...] = -0.5 * excess
-    arr(ddt_temperature)[...] = 2.5 * excess
-    arr(precip)[...] = excess.sum(axis=1)
+def muphys(te: Field, qv: Field, tend_temperature: Field, tend_qv: Field, pflx: Field) -> None:
+    excess = arr(qv) - 0.01 * arr(te)
+    arr(tend_qv)[...] = -0.5 * excess
+    arr(tend_temperature)[...] = 2.5 * excess
+    arr(pflx)[...] = excess.sum(axis=1)
 
 
 def tmx(temperature: Field, u: Field, ddt_temperature: Field, ddt_u: Field) -> None:
@@ -91,10 +101,10 @@ def tmx(temperature: Field, u: Field, ddt_temperature: Field, ddt_u: Field) -> N
     arr(ddt_u)[...] = -0.02 * arr(u)
 
 
-def eos(temperature: Field, exner: Field, theta_v: Field) -> None:
+def update_exner_and_theta_v(temperature: Field, exner: Field, theta_v: Field) -> None:
     arr(exner)[...] *= 1.0 + 0.001 * (arr(temperature) - arr(theta_v) * arr(exner))
     arr(theta_v)[...] = arr(temperature) / arr(exner)
 
 
-def project(u: Field, vn: Field) -> None:
-    arr(vn)[...] += 0.5 * (to_edges(arr(u)) - to_edges(to_cells(arr(vn))))
+def compute_vn_from_uv(u: Field, vn: Field) -> None:
+    arr(vn)[...] = to_edges(arr(u))

@@ -193,7 +193,7 @@ class Component[InputT: State, OutputT: State]:
     def apply(self, increments: State, *targets: State) -> None:
         leaves = {d.quantity: value for target in targets for d, value in target.leaves()}
         for d, value in increments.leaves():
-            if d.tag is Tag.INCREMENT and d.quantity.of is not None:
+            if d.tag is Tag.INCREMENT and d.quantity.of in leaves:
                 np.asarray(leaves[d.quantity.of].ndarray)[...] += np.asarray(value.ndarray)
 
 

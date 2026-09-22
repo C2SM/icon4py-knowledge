@@ -1,15 +1,22 @@
 # Components MWE
 
-Two runnable mini-models of the icon4py time loop on fake data: `model_current`
-(today's shape: dict-based physics state, `TimeStepPair`, granule signatures)
-and `model_proposed` (the `State`/`Component` design in `DESIGN.md`). Same
-`ops.py`, same numbers, different declarations. Ten quantities, eight scalars,
-no real stencils.
+Two runnable mini-models of the icon4py time loop on fake data. `model_current`
+is a trimmed copy of icon4py (`main`, PR C2SM/icon4py#1436, branch
+`physics_driver_tmx`): the module paths under `src/icon4py/model/` and every
+class, method, attribute, argument and dict-key name are the real ones, only
+grid/config/backend plumbing and stencil bodies are gone. `model_proposed` is the
+`State`/`Component` design in `DESIGN.md`, with the same module and class names
+so the two trees read side by side. Same `ops.py`, same numbers, different
+declarations. Ten quantities, eight scalars, no real stencils.
 
     cd mwe/components
     /path/to/icon4py/.venv/bin/python run.py
     /path/to/icon4py/.venv/bin/python -m pytest -q
-    /path/to/icon4py/.venv/bin/python -m mypy model_proposed run.py
+    /path/to/icon4py/.venv/bin/python -m mypy model_current model_proposed run.py test_framework.py test_equivalence.py
 
 `run.py` prints the proposed model's declared dataflow and `OK` when both
 models agree on every quantity and every output record after four steps.
+
+Suggested reading order: `run.py` output, then `model_current/atmosphere/subgrid_scale_physics/muphys/`
+next to `model_proposed/muphys.py`, then `physics_driver.py` on both sides, then
+`driver.py` on both sides, then `model_proposed/common/framework.py`.

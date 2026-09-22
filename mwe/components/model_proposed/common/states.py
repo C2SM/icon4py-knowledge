@@ -19,23 +19,23 @@ from model_proposed.common.quantities import (
 )
 
 
-class Prognostics(State):
-    vn: VnField
-    w: WField
+class PrognosticState(State):
     rho: RhoField
+    w: WField
+    vn: VnField
     exner: ExnerField
     theta_v: ThetaVField
 
 
-class Tracers(State):
+class TracerState(State):
     qv: QvField
 
 
 class PrepAdvection(State):
-    mass_flux_e: MassFluxField
+    mass_flx_me: MassFluxField
 
 
-class Derived(State):
+class DiagnosticState(State):
     temperature: TemperatureField
     u: UField
 

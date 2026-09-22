@@ -2,9 +2,6 @@
 
 Minimal working example comparing today's component and state shape in icon4py
 (`model_current`) with the proposed `State`/`Component` design (`model_proposed`).
-Both run the same fake time loop on the same fake data and must produce identical
-numbers. No real stencils, no real grid, no connectivity. Readable by the group in
-5-10 minutes.
 
 ## Goal
 
@@ -12,8 +9,11 @@ Show the proposed design in action next to the current one, without distraction:
 
 - same quantities, same scalars, same arithmetic, same loop, same output;
 - the only thing that differs is how components declare, receive and return data;
+- `model_current` is a faithful trimmed copy of icon4py: real module paths, real
+  class, method, attribute, argument and dict-key names, so the group can map every
+  line to code they work on daily;
 - `run.py` asserts equality and prints the proposed model's declared dataflow;
-- `model_proposed` passes `mypy --strict`.
+- both models pass `mypy --strict`.
 
 Explicitly out of scope: real physics, real grids, halo exchange, restart, IO
 cadence beyond "every step", introspection beyond one `dataflow()` print,
@@ -23,22 +23,22 @@ sequential coupling, py2fgen.
 
 ### Quantities (10)
 
-| quantity        | dims    | role                                                        |
-|-----------------|---------|-------------------------------------------------------------|
-| `vn`            | Edge, K | prognostic, now/next pair, swapped per dynamics substep     |
-| `w`             | Cell, K | prognostic, same pair                                       |
-| `rho`           | Cell, K | prognostic, same pair                                       |
-| `exner`         | Cell, K | prognostic, same pair                                       |
-| `theta_v`       | Cell, K | prognostic, same pair                                       |
-| `qv`            | Cell, K | tracer, now/next pair, swapped once per time step           |
-| `mass_flux_e`   | Edge, K | dycore output handed to advection, never accumulated        |
-| `temperature`   | Cell, K | derived once per step; read by physics and IO               |
-| `u`             | Cell, K | derived cell-centre wind; read by tmx, projected back to vn |
-| `precip`        | Cell    | muphys diagnostic, read by IO                               |
+| quantity      | dims    | role                                                              |
+|---------------|---------|-------------------------------------------------------------------|
+| `vn`          | Edge, K | prognostic, now/next pair, swapped per dynamics substep           |
+| `w`           | Cell, K | prognostic, same pair (full levels here, half levels in icon4py)  |
+| `rho`         | Cell, K | prognostic, same pair                                             |
+| `exner`       | Cell, K | prognostic, same pair                                             |
+| `theta_v`     | Cell, K | prognostic, same pair                                             |
+| `qv`          | Cell, K | tracer, now/next pair, swapped once per time step                 |
+| `mass_flx_me` | Edge, K | dycore output handed to tracer advection, never accumulated       |
+| `temperature` | Cell, K | diagnosed at physics entry, and again from the new state for IO   |
+| `u`           | Cell, K | diagnosed cell-centre wind; read by tmx; its tendency goes to vn  |
+| `pflx`        | Cell    | muphys precipitation diagnostic                                   |
 
 Tendencies and increments are derived quantities (`tendency_of`, `increment_of`),
-never declared by hand: `ddt_temperature` (muphys, tmx), `ddt_qv` (muphys),
-`ddt_u` (tmx), and one increment per accumulated parent (`temperature`, `qv`, `u`).
+never declared by hand: `tend_temperature` (muphys, tmx), `tend_qv` (muphys),
+`tend_u` (tmx), and one increment per accumulated parent (`temperature`, `qv`, `u`).
 
 ### Scalars (8)
 
@@ -50,80 +50,112 @@ never declared by hand: `ddt_temperature` (muphys, tmx), `ddt_qv` (muphys),
 4 cells, 6 edges, 3 levels. Fields are gt4py fields (`gtx.zeros`) so the type
 aliases, mypy and gt4py's type translation are the real thing. All arithmetic is
 in place on `.ndarray`. Edge/cell transfers are slices:
-`cells_from_edges(vn) = 0.5 * (vn[:4] + vn[2:])`, `edges_from_cells(u)` writes
-`vn[:4]` and `vn[2:]` back. Initial data is deterministic (`np.arange`-based,
-distinct per quantity) so ordering mistakes change the numbers.
+`to_cells(e) = 0.5 * (e[:4] + e[2:])`, `to_edges(c) = concatenate(c, c[:2])`.
+Initial data is deterministic (`np.arange`-based, distinct per quantity) so
+ordering mistakes change the numbers.
 
 ### Fake operations (`ops.py`, shared by both models)
 
-One function per "stencil", one to three lines each, in place on numpy arrays:
+One function per "stencil", one to three lines each, in place on numpy arrays,
+named after the icon4py program it stands in for where one exists:
 
-| function                                          | stands in for                     |
-|---------------------------------------------------|-----------------------------------|
-| `dycore_step(now, next, mass_flux_e, dt)`         | predictor + corrector, one substep|
-| `diffuse(vn, theta_v, dt)`                        | diffusion, in place               |
-| `advect(qv_now, qv_next, mass_flux_e, dt)`        | tracer advection                  |
-| `diagnose(exner, theta_v, vn, temperature, u)`    | dyn2phy derived quantities        |
-| `muphys(temperature, qv, ddt_t, ddt_qv, precip)`  | graupel microphysics              |
-| `tmx(temperature, u, ddt_t, ddt_u)`               | turbulent mixing                  |
-| `eos(temperature, exner, theta_v)`                | exact EOS update after physics    |
-| `project(u, vn)`                                  | cells-to-edges wind projection    |
+| function                                                   | stands in for                            |
+|------------------------------------------------------------|------------------------------------------|
+| `dycore_step(*_now, *_new, mass_flx_me, dtime, ...)`       | predictor + corrector, one substep       |
+| `diffuse(vn, theta_v, dtime)`                              | diffusion, in place                      |
+| `advect(p_tracer_now, p_tracer_new, mass_flx_me, dtime)`   | tracer advection                         |
+| `compute_temperature(theta_v, exner, temperature)`         | `compute_virtual_temperature_and_temperature` |
+| `edge_2_cell_vector_rbf_interpolation(vn, u)`              | the RBF program of the same name         |
+| `muphys(te, qv, tend_temperature, tend_qv, pflx)`          | the muphys granule + tendency diff       |
+| `tmx(temperature, u, ddt_temperature, ddt_u)`              | the tmx granule (`ddt_*` ports)          |
+| `update_exner_and_theta_v(temperature, exner, theta_v)`    | the program of the same name             |
+| `compute_vn_from_uv(u, vn)`                                | the stencil of the same name             |
 
-`dycore_step` reads `now`, reads and writes `next`, writes `mass_flux_e`.
+`dycore_step` reads the `now` fields, writes the `new` fields and `mass_flx_me`.
 
 ### Time loop (identical in both models)
 
 Per time step:
 
-1. `ndyn_substeps` times: `dycore_step(pair.now, pair.next, ...)`; `pair.swap()`
+1. `ndyn_substeps` times: `dycore_step(now, next, ...)`; swap the prognostic pair
    unless last substep.
-2. `diffuse` in place on `pair.next`.
-3. `advect` `qv` from `tracers.now` into `tracers.next`.
-4. Physics on `pair.next` / `tracers.next`: `diagnose`; muphys every step; tmx
-   every `tmx_interval` steps, its last output reused on the other steps;
-   accumulate tendencies into increments with `dt`; apply increments once;
-   `eos`; `project`.
-5. IO records `temperature`, `precip`, and muphys's `ddt_temperature`.
-6. `pair.swap()`; `tracers.swap()`.
+2. `diffuse` in place on `prognostic_states.next`.
+3. `advect` each active tracer from `tracers.current` into `tracers.next`.
+4. Physics on `prognostic_states.next` / `tracers.next`: diagnose `temperature`
+   and `u`; muphys every step; tmx every `tmx_interval` steps, its last output
+   reused on the other steps; sum tendencies; apply once:
+   `qv += dt * tend_qv`; `new_te = temperature + dt * tend_temperature` then
+   `update_exner_and_theta_v`; `vn += dt * compute_vn_from_uv(tend_u)`.
+5. Swap the prognostic pair and the tracer pair.
+6. Output from `prognostic_states.current`: the five prognostics plus
+   `temperature` and `u` recomputed from that state (7 records per step).
 
-Run 4 steps with 2 substeps. Equality: `np.array_equal` on all 10 quantities and
-on the IO records.
+Run 4 steps with 2 substeps. Equality: `np.array_equal` on the 5 prognostics,
+`qv`, `mass_flx_me`, `pflx`, and on every `(time, name, array)` output record.
 
 ## `model_current`
 
-Mirrors `main` (driver, dycore, diffusion, advection), PR #1436 (physics driver,
-muphys) and branch `physics_driver_tmx` (tmx), each trimmed to its state and
-component surface. Kept on purpose, because they are what the proposed design
-removes: dict keys agreed by convention, one state adapter class per process,
-`kind` string routing, `EntryState` mixing pointers with allocation, positional
-granule signatures, an output cache keyed by process name, IO picking fields by
-name in the driver.
+A trimmed copy of icon4py, not a paraphrase. Sources: `main` (driver, states,
+dycore, diffusion, tracer advection, IO), PR C2SM/icon4py#1436
+`two_layer_physics_state_refactor` (physics driver, physics state, muphys
+component, `FieldMetaData`, `ComponentState`) and branch `physics_driver_tmx`
+(PR #1360; tmx component, adapted to #1436's `as_component_input(state)`).
+
+Trimming rules:
+
+1. Drop grid, config, backend, allocator, exchange, timers, logging, the
+   diagnostic/metric/interpolation states, and every argument that only carries
+   them. Keep every argument that carries prognostic data or step control.
+2. Each stencil or granule call becomes one `ops.*` call.
+3. Keep every remaining module path (minus `src/icon4py/model/`), class, method,
+   attribute, argument and dict key verbatim. All 112 names in the tree were
+   checked with `git grep -w` against the three sources.
+4. `w` on full levels; xarray `DataArray`s are plain fields; the netCDF dataset
+   is a list of `(time, name, array)`.
 
 ```
 model_current/
-  common/states.py    PrognosticState, TracerState (dataclasses of fields)
-                      TimeStepPair(current, next).swap()
-                      INPUTS/OUTPUTS_PROPERTIES dicts with kind="tendency"|"diagnostic"
-                      ComponentState protocol: as_component_input(entry) -> dict[str, Field]
-  dycore.py           SolveNonhydro.time_step(prognostic_states, prep_adv, dtime, at_first_substep, at_last_substep)
-  diffusion.py        Diffusion.run(prognostic_state, dtime)
-  advection.py        Advection.run(prep_adv, p_tracer_now, p_tracer_new, dtime)
-  physics_driver.py   EntryState.diagnose_from(prognostic, tracers)
-                      TendencyAccumulators.zero() / .accumulate(outputs, outputs_properties)
-                      ApplyToPrognostic(entry, accumulators, dt)
-                      DiagnosticsStore.allocate(process_name, outputs_properties)
-                      ProcessTimeControl(interval).is_active(step)
-                      PhysicsProcess(name, component, state, time_control)
-                      PhysicsDriver.run(prognostic, tracers, dtime, step) with recycle cache
-  muphys.py           MuphysState adapter; MuphysComponent.__call__(state: dict, step) -> dict; bind_output_buffers
-  tmx.py              TmxState adapter; TmxComponent.__call__(state: dict, step) -> dict
-  io.py               OutputWriter.write(step, fields: dict[str, Field])
-  driver.py           TimeLoop.run(n_steps)
+  common/
+    states/model.py                FieldKind, FieldMetaData (#1436 dataclass form)
+    states/data.py                 *_CF_ATTRIBUTES registries, tendency_of
+    states/prognostic_state.py     PrognosticState, initialize_prognostic_state
+    states/tracer_states.py        TracerField, TracerState.active_fields/.copy
+    states/tracer_prep_adv_states.py  TracerPrepAdvState (mass_flx_me)
+    states/diagnostic_state.py     DiagnosticState (temperature, u)
+    components/components.py       Component protocol (inputs/outputs_properties, __call__)
+    components/component_state.py  ComponentState protocol (as_component_input)
+    io/io.py                       IOMonitor.store(state, model_time)
+  atmosphere/
+    dycore/dycore_states.py        PrepAdvection (mass_flx_me)
+    dycore/solve_nonhydro.py       SolveNonhydro.time_step(*, prognostic_states, prep_adv, dtime, ...)
+    diffusion/diffusion.py         Diffusion.run(prognostic_state, dtime)
+    tracer_advection/tracer_advection.py  Advection.run(*, prep_adv, p_tracer_now, p_tracer_new, dtime)
+    subgrid_scale_physics/physics_driver/
+      physics_driver.py            PhysicsComponent, PhysicsProcess, PhysicsDriver.run with _recycle_cache
+      physics_state.py             EntryState, TendencyAccumulators, ApplyToPrognostic, DiagnosticsStore
+      process_time_control.py      ProcessTimeControl(interval, start_date).is_active
+    subgrid_scale_physics/muphys/  component.py MuphysComponent, state.py State, data.py *_PROPERTIES
+    subgrid_scale_physics/tmx/     component.py TmxComponent, state.py, data.py, tmx_states.py
+  driver/
+    driver.py                      Icon4pyDriver.time_integration/_integrate_one_time_step/_do_dyn_substepping/_store_output
+                                   initialize_driver, run_driver
+    driver_states.py               DriverStates, ModelTimeVariables, link_tracer_prep_adv_to_dycore, assemble_driver_states
+    driver_utils.py                Granules, initialize_granules
+    driver_io.py                   *_VARIABLES, prognostic_state_to_dataarrays, DiagnosticsComputer
 ```
+
+`TimeStepPair` is imported from `icon4py.model.common.utils`, as the real driver
+does. What the copy keeps on purpose, because it is what the proposed design
+removes: dict keys agreed by convention (`"te"`, `"tend_temperature"`, `"pflx"`),
+one `State` adapter class per process, `FieldKind` routing, `EntryState` mixing
+pointers with allocation, `ddt_*` granule ports mapped to `tend_*` component keys,
+an output cache keyed by process name, IO picking fields by name from a dict, and
+`temperature`/`u` diagnosed twice per step (`EntryState.diagnose_from` and
+`DiagnosticsComputer.compute`).
 
 ## `model_proposed`
 
-### `common/framework.py` (the reusable part, ~110 lines)
+### `common/framework.py` (the reusable part, 157 lines)
 
 ```python
 @dataclass(frozen=True) class Quantity: name, units, cf_key=None, of: Quantity | None = None
@@ -169,9 +201,13 @@ Rules the framework enforces:
   `AmbiguousSource`; an unresolved declaration raises `MissingInput`. The same
   buffer twice is fine. Scalars resolve exactly like fields.
 - `accumulate` walks `self.output`'s `Tendency` leaves and adds `dt * value`
-  into the `Increment` leaf of the same parent quantity in `into`.
+  into the `Increment` leaf of the same parent quantity in `into`; a missing
+  increment leaf is an error.
 - `apply` walks `increments`' `Increment` leaves and adds each into the leaf of
-  the parent quantity found in the given targets. `dt` never appears in `apply`.
+  the parent quantity found in the given targets. An increment whose parent is
+  not among the targets is left for another consumer (here `ExnerThetaUpdate`
+  and `WindProjection`), mirroring `ApplyToPrognostic`, which applies only the
+  tendencies that exist. `dt` never appears in `apply`.
 - Output buffers are allocated by the composition and passed to the component's
   constructor; `run` writes into `self.output` and returns it. A component that
   did not run this step still has its last output, which is what the cadence
@@ -190,49 +226,55 @@ uses the step `dt` for both to match `model_current` numerically.
 
 ### Usage
 
+Module and class names follow `model_current` so the two trees read side by side.
+
 ```
-common/quantities.py  10 field aliases + 8 scalar aliases, one line each
-common/states.py      Prognostics, Tracers, PrepAdvection, Derived, StepInfo, Increments (owner-states)
-dycore.py             Input: Now[...] x5 READ, Next[...] x5 READWRITE, substep scalars; Output: mass_flux_e
-diffusion.py          Input: ReadWrite[VnField], ReadWrite[ThetaVField], Read[TimeStep]; Output: Empty
-advection.py          Input: Now[QvField] READ, Next[QvField] READWRITE, Read[MassFluxField], Read[TimeStep]
-derived.py            Input: exner, theta_v, vn READ; Output: temperature, u
-muphys.py             Input: temperature, qv READ; Output: Tendency[T], Tendency[Qv], precip
-tmx.py                Input: temperature, u READ; Output: Tendency[T], Tendency[U]
-eos.py                Input: Read[TemperatureField], ReadWrite[ExnerField], ReadWrite[ThetaVField]; Output: Empty
-projection.py         Input: Read[UField], ReadWrite[VnField]; Output: Empty
-io.py                 Input: temperature, precip, Read[Tendency[TemperatureField]]; Output: Empty
-physics_driver.py     Physics(Component): processes with Every(n) cadence, increments owner-state
-                      run: derived -> each process (run if due) -> accumulate -> apply -> eos -> projection
-driver.py             allocate owner-states; Pair(prognostics), Pair(tracers); loop identical to model_current
+common/quantities.py  10 field aliases + 7 scalar aliases, one line each; names are the CF standard names of data.py
+common/states.py      PrognosticState, TracerState, PrepAdvection, DiagnosticState, Increments, StepInfo
+solve_nonhydro.py     SolveNonhydro: Input Now[...] x5 READ, Next[...] x5 READWRITE, substep scalars; Output PrepAdvection
+diffusion.py          Diffusion: Input ReadWrite[VnField], ReadWrite[ThetaVField], Read[TimeStep]; Output Empty
+tracer_advection.py   Advection: Input Now[QvField] READ, Next[QvField] READWRITE, Read[MassFluxField], Read[TimeStep]
+diagnostics.py        DiagnosticsComputer: Input theta_v, exner, vn READ; Output DiagnosticState (temperature, u)
+muphys.py             MuphysComponent: Input te, qv READ; Output Tendency[T], Tendency[Qv], pflx
+tmx.py                TmxComponent: Input temperature, u READ; Output Tendency[T], Tendency[U]
+eos.py                ExnerThetaUpdate: Input Read[T], Read[Increment[T]], ReadWrite[exner], ReadWrite[theta_v]
+projection.py         WindProjection: Input Read[Increment[U]], ReadWrite[VnField]
+io.py                 IOMonitor: Input the 7 output variables + Read[SimulationTime]; appends (time, name, array)
+physics_driver.py     PhysicsDriver(Component): processes with ProcessTimeControl(interval) cadence, Increments owner-state
+                      run: entry diagnostics -> each process (run if active) -> accumulate -> apply -> eos -> projection
+driver.py             Icon4pyDriver: same method names as model_current; owner-states allocated in __init__
 ```
 
-Where each tricky case lands: now/next in dycore and advection; in-place in
-diffusion, eos, projection; hand-off in dycore -> advection (`mass_flux_e` is an
-`Output` with no tendency tag, so it is never accumulated); cadence with cached
-output in `physics_driver.py` (`Every(2)` for tmx); the accumulate/apply split
-in `physics_driver.py`; scalars as quantities in `StepInfo`; IO attribution by
-source selection (the composition passes `muphys.output` to `io.gather`, so the
-only `ddt_temperature` buffer in scope is muphys's).
+Where each tricky case lands: now/next in `solve_nonhydro.py` and
+`tracer_advection.py`; in-place in `diffusion.py`, `eos.py`, `projection.py`;
+hand-off in dycore -> advection (`mass_flx_me` is an `Output` with no tendency
+tag, so it is never accumulated); cadence with cached output in
+`physics_driver.py` (`ProcessTimeControl(2)` for tmx); the accumulate/apply split
+in `physics_driver.py`, with one consumer per increment (`apply` for `qv`,
+`ExnerThetaUpdate` for `temperature`, `WindProjection` for `u`); scalars as
+quantities in `StepInfo`; IO gathering from two states (`prognostic_states.now`
+and a second `DiagnosticsComputer` output), as the current driver does.
 
 ## Checking
 
-- `run.py`: seeds identical initial arrays into both models, runs 4 steps,
-  prints `dataflow()` of the proposed model, compares all 10 quantities and the
-  IO records, prints `OK` or the first mismatch, exit code accordingly.
+- `run.py`: runs both models for 4 steps, prints `dataflow()` of the proposed
+  model, compares the 8 quantities and the output records, prints `OK` or the
+  mismatches, exit code accordingly.
 - `test_equivalence.py`: pytest wrapper around `run.py`, one assert.
-- `mypy.ini`: `strict = True`; command
-  `<icon4py>/.venv/bin/python -m mypy mwe/components/model_proposed`.
-  `model_current` is not type-checked.
+- `test_framework.py`: five unit tests of the framework verbs.
+- `mypy.ini`: `strict = True`; `implicit_reexport = True` for `model_current.*`
+  only, as icon4py's own `pyproject.toml` sets it. Command:
+  `<icon4py>/.venv/bin/python -m mypy model_current model_proposed run.py test_framework.py test_equivalence.py`.
 - Python 3.12, the icon4py virtualenv; imports from icon4py limited to
-  `dimension`, `field_type_aliases`, `type_alias`.
+  `dimension`, `field_type_aliases`, `type_alias`, `utils.TimeStepPair`.
 
 ## Housekeeping
 
 - Location `mwe/components/` in this repository, outside `content/` so Quartz
   ignores it. Branch `components-mwe`, one PR.
-- `README.md` in the folder: purpose, the two commands, line counts.
+- `README.md` in the folder: purpose, the three commands.
 - One line added to the layout block of `AGENTS.md` naming `mwe/`.
 - Code is comment-free by request; names carry the meaning.
-- Size as built (non-blank lines): `model_current` 302, `model_proposed` 495
-  (of which `framework.py` 157), `ops.py` 71, `run.py` + tests 94.
+- Size as built (non-blank lines): `model_current` 624 across 27 modules,
+  `model_proposed` 524 (of which `framework.py` 157), `ops.py` 77,
+  `run.py` + tests 131.
