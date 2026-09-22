@@ -189,7 +189,7 @@ class Component[InputT: State, OutputT: State]:
     def run(self, input: InputT) -> OutputT:
         raise NotImplementedError
 
-    def gather(self, *states: State | TimeStepPair[Any]) -> InputT:
+    def collect_inputs(self, *states: State | TimeStepPair[Any]) -> InputT:
         available: dict[tuple[Quantity, Level | None], Any] = {}
         for state in states:
             sides = (

@@ -47,20 +47,20 @@ def test_declarations_carry_quantity_intent_level_and_derived_tendency() -> None
     )
 
 
-def test_gather_resolves_pair_levels_and_plain_states() -> None:
+def test_collect_inputs_resolves_pair_levels_and_plain_states() -> None:
     pair = fw.TimeStepPair(fw.allocate(Owner, ops.SIZES, ops.initial), fw.allocate(Owner, ops.SIZES))
     plain = fw.allocate(Owner, ops.SIZES)
     p = Producer(fw.allocate(Producer.Output, ops.SIZES))
-    got = p.gather(pair, plain)
+    got = p.collect_inputs(pair, plain)
     assert got.temperature is pair.now.temperature and got.salt is plain.salt
 
 
-def test_gather_errors() -> None:
+def test_collect_inputs_errors() -> None:
     p = Producer(fw.allocate(Producer.Output, ops.SIZES))
     with pytest.raises(fw.MissingInput):
-        p.gather(fw.allocate(Owner, ops.SIZES))
+        p.collect_inputs(fw.allocate(Owner, ops.SIZES))
     with pytest.raises(fw.AmbiguousSource):
-        p.gather(
+        p.collect_inputs(
             fw.TimeStepPair(fw.allocate(Owner, ops.SIZES), fw.allocate(Owner, ops.SIZES)),
             fw.allocate(Owner, ops.SIZES),
             fw.allocate(Owner, ops.SIZES),
@@ -70,7 +70,7 @@ def test_gather_errors() -> None:
 def test_accumulate_then_apply_adds_dt_times_tendency_to_parent() -> None:
     owner, inc = fw.allocate(Owner, ops.SIZES), fw.allocate(Inc, ops.SIZES)
     p = Producer(fw.allocate(Producer.Output, ops.SIZES))
-    p.run(p.gather(fw.TimeStepPair(owner, fw.allocate(Owner, ops.SIZES)), fw.allocate(Owner, ops.SIZES)))
+    p.run(p.collect_inputs(fw.TimeStepPair(owner, fw.allocate(Owner, ops.SIZES)), fw.allocate(Owner, ops.SIZES)))
     p.accumulate(inc, dt=0.5)
     p.apply(inc, owner)
     p.apply(inc, fw.Empty())

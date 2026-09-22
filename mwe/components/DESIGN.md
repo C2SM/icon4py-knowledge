@@ -191,17 +191,17 @@ class State:                                   # __init_subclass__ applies datac
     @classmethod def declarations(cls) -> tuple[Decl, ...]    # cached: name, quantity, intent, tag, level
     def leaves(self) -> Iterator[tuple[Decl, Any]]            # (declaration, value) pairs
 class Pair[S]: first: S; second: S; swap()                    # 15 lines for the three classes
-class TimeStepPair[S](Pair[S]): now; next                     # leaves tagged NOW / NEXT when gathered
-class PredictorCorrectorPair[S](Pair[S]): predictor; corrector  # component-internal, never gathered
+class TimeStepPair[S](Pair[S]): now; next                     # leaves tagged NOW / NEXT when collected
+class PredictorCorrectorPair[S](Pair[S]): predictor; corrector  # component-internal, never collected
 # One Pair would do; the two subclasses only add icon4py's names (6 lines each) and let
-# gather tag time levels for TimeStepPair alone.
+# collect_inputs tag time levels for TimeStepPair alone.
 def allocate(cls: type[S], sizes: dict[Dimension, int]) -> S  # gtx.zeros per alias dims, scalars zero
 
 class Component[InputT, OutputT]:
     Input: type[InputT]; Output: type[OutputT]
     def __init__(self, output: OutputT)                       # composition allocates, binds here
     def run(self, input: InputT) -> OutputT                   # abstract
-    def gather(self, *states) -> InputT                       # default; overridable
+    def collect_inputs(self, *states) -> InputT               # default; overridable
     def accumulate(self, into: State, dt: float) -> None      # Tendency leaf of self.output -> Increment leaf: += dt * t
     def apply(self, increments: State, *targets: State) -> None  # Increment leaf -> parent leaf in targets: +=
 def dataflow(*components) -> str                              # declared reads / writes / produces
@@ -214,7 +214,7 @@ Rules the framework enforces:
   `Now`/`Next` are generic aliases that erase to the field type for mypy and
   gt4py. Reading the declaration means unwrapping `TypeAliasType`, generic
   aliases of `TypeAliasType`, and nested `Annotated`.
-- `gather` flattens the given states into `{(quantity, level): value}`. A state
+- `collect_inputs` flattens the given states into `{(quantity, level): value}`. A state
   given as a `TimeStepPair` contributes its `now` leaves with level `NOW` and its
   `next` leaves with `NEXT`; any other state contributes level `None`. A declaration
   resolves only against its own level. Two different buffers for one key raise
@@ -251,7 +251,7 @@ driver owns `TimeStepPair(PrognosticState, PrognosticState)` and
 `TimeStepPair(TracerState, TracerState)`.
 A component that cares about levels says so in its Input (`rho_now:
 Read[Now[RhoField]]`, `rho_new: ReadWrite[Next[RhoField]]`); only `SolveNonhydro`
-and `Advection` do. `gather` keys on `(quantity, level)`: a `Pair` argument
+and `Advection` do. `collect_inputs` keys on `(quantity, level)`: a `Pair` argument
 contributes its `now` leaves at `NOW` and its `next` leaves at `NEXT`, a plain
 state contributes level `None`. `Quantity` knows nothing about time.
 
@@ -278,7 +278,7 @@ state contributes level `None`. `Quantity` knows nothing about time.
    and every in-place component would pick `.next` per field.
 5. Current/next are not mere helpers: within one substep the dycore reads
    `current` and reads and writes `next`, and the driver decides when to swap.
-   That is driver-owned addressing, which the `(quantity, level)` key at gather
+   That is driver-owned addressing, which the `(quantity, level)` key at collect
    time expresses.
 
 icon4py also has field-level pairs: `PredictorCorrectorPair` for the advective
@@ -325,7 +325,7 @@ tag, so it is never accumulated); cadence with cached output in
 `physics_driver.py` (`ProcessTimeControl(2)` for tmx); the accumulate/apply split
 in `physics_driver.py`, with one consumer per increment (`apply` for `qv`,
 `ExnerThetaUpdate` for `temperature`, `WindProjection` for `u`); scalars as
-quantities in `StepInfo`; IO gathering from two states (`prognostic_states.now`
+quantities in `StepInfo`; IO collecting from two states (`prognostic_states.now`
 and a second `DiagnosticsComputer` output), as the current driver does.
 
 ## Checking

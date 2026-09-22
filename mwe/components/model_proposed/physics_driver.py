@@ -56,13 +56,13 @@ class PhysicsDriver(Component["PhysicsDriver.Input", Empty]):
         self.projection = WindProjection(Empty())
 
     def run(self, input: Input) -> Empty:
-        entry = self.entry.run(self.entry.gather(input))
+        entry = self.entry.run(self.entry.collect_inputs(input))
         zero(self.increments)
         for process, time_control in self.processes:
             if time_control.is_active(input.step_index):
-                process.run(process.gather(input, entry))
+                process.run(process.collect_inputs(input, entry))
             process.accumulate(self.increments, input.dtime)
         self.apply(self.increments, input)
-        self.eos.run(self.eos.gather(entry, self.increments, input))
-        self.projection.run(self.projection.gather(self.increments, input))
+        self.eos.run(self.eos.collect_inputs(entry, self.increments, input))
+        self.projection.run(self.projection.collect_inputs(self.increments, input))
         return self.output

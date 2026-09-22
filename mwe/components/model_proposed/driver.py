@@ -26,8 +26,8 @@ class Icon4pyDriver:
         self.io_monitor = IOMonitor()
 
     def _store_output(self, info: StepInfo) -> None:
-        self.diagnostics_computer.run(self.diagnostics_computer.gather(self.prognostic_states.now))
-        self.io_monitor.run(self.io_monitor.gather(self.prognostic_states.now, self.diagnostics_computer.output, info))
+        self.diagnostics_computer.run(self.diagnostics_computer.collect_inputs(self.prognostic_states.now))
+        self.io_monitor.run(self.io_monitor.collect_inputs(self.prognostic_states.now, self.diagnostics_computer.output, info))
 
     def time_integration(self, n_time_steps: int) -> None:
         for time_step in range(n_time_steps):
@@ -45,9 +45,9 @@ class Icon4pyDriver:
 
     def _integrate_one_time_step(self, info: StepInfo) -> None:
         self._do_dyn_substepping(info)
-        self.diffusion.run(self.diffusion.gather(self.prognostic_states.next, info))
-        self.tracer_advection.run(self.tracer_advection.gather(self.tracers, self.solve_nonhydro.output, info))
-        self.physics.run(self.physics.gather(self.prognostic_states.next, self.tracers.next, info))
+        self.diffusion.run(self.diffusion.collect_inputs(self.prognostic_states.next, info))
+        self.tracer_advection.run(self.tracer_advection.collect_inputs(self.tracers, self.solve_nonhydro.output, info))
+        self.physics.run(self.physics.collect_inputs(self.prognostic_states.next, self.tracers.next, info))
         self.prognostic_states.swap()
         self.tracers.swap()
 
@@ -58,6 +58,6 @@ class Icon4pyDriver:
                 at_first_substep=dyn_substep == 0,
                 at_last_substep=dyn_substep == info.ndyn_substeps - 1,
             )
-            self.solve_nonhydro.run(self.solve_nonhydro.gather(self.prognostic_states, substep))
+            self.solve_nonhydro.run(self.solve_nonhydro.collect_inputs(self.prognostic_states, substep))
             if not substep.at_last_substep:
                 self.prognostic_states.swap()
