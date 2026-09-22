@@ -224,6 +224,52 @@ increments are derived quantities. `dt` enters in `accumulate` so that
 components with different cadences can accumulate with their own `dt`; the MWE
 uses the step `dt` for both to match `model_current` numerically.
 
+### Why `Pair` wraps a `State`, not a field or a `Quantity`
+
+`Pair[S]` holds two whole states (`now`, `next`) and one `swap()`. The driver
+owns `Pair(PrognosticState, PrognosticState)` and `Pair(TracerState, TracerState)`.
+A component that cares about levels says so in its Input (`rho_now:
+Read[Now[RhoField]]`, `rho_new: ReadWrite[Next[RhoField]]`); only `SolveNonhydro`
+and `Advection` do. `gather` keys on `(quantity, level)`: a `Pair` argument
+contributes its `now` leaves at `NOW` and its `next` leaves at `NEXT`, a plain
+state contributes level `None`. `Quantity` knows nothing about time.
+
+1. Double buffering is a driver decision, not a property of the quantity.
+   `air_density` is one quantity; whether two buffers of it exist depends on the
+   owner and the scheme. The same quantity is single-level in the physics Input,
+   in `DiagnosticsComputer`, in IO, in a checkpoint. A level on the global
+   `Quantity` would be false for most of its uses and would leak the driver's
+   buffering into every consumer.
+2. Cadence differs per state group and swap is atomic within the group.
+   Prognostics swap after every dynamics substep except the last, then once per
+   step; tracers swap once per step (ICON `nnow/nnew` vs `nnow_rcf/nnew_rcf`).
+   One `swap()` on the state moves all five prognostic fields together, so the
+   invariant is structural. Field-level pairs would be five swaps kept in
+   lockstep by convention. icon4py already does it this way with
+   `TimeStepPair[PrognosticState]`.
+3. No registry duplication. Quantity-level `rho_now`/`rho_new` would double the
+   registry, break the `tendency_of`/`increment_of` link (tendency of which
+   level?) and muddy `AmbiguousSource`/`MissingInput`, which today catch two
+   different buffers for one `(quantity, level)`. `Now[F]`/`Next[F]` erase to the
+   same field type, so mypy and gt4py see a plain `fa.CellKField[wpfloat]`.
+4. Allocation stays trivial: a pair is two `allocate(PrognosticState, sizes)`
+   calls. A field-level pair would need a special field type inside the state,
+   and every in-place component would pick `.next` per field.
+5. Current/next are not mere helpers: within one substep the dycore reads
+   `current` and reads and writes `next`, and the driver decides when to swap.
+   That is driver-owned addressing, which the `(quantity, level)` key at gather
+   time expresses.
+
+icon4py also has field-level pairs: `PredictorCorrectorPair` for the advective
+tendencies in `DiagnosticStateNonHydro`, swapped by the driver in
+`_update_time_levels_for_velocity_tendencies`. That is a component-internal
+buffer trick of the `MOST_EFFICIENT` time stepping scheme (reuse last substep's
+corrector as this substep's predictor), not a driver-owned time level. Nobody
+outside the dycore reads those pairs. In the proposed design they stay inside
+the dycore as its own `Pair` of a one-field state, swapped inside
+`SolveNonhydro.run` from `at_first_substep`/`at_initial_timestep`, which it
+already receives. Either way the `Quantity` stays level-free.
+
 ### Usage
 
 Module and class names follow `model_current` so the two trees read side by side.
