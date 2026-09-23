@@ -17,17 +17,6 @@ class PrepAdvection(fw.State):
     mass_flx_me: qty.MassFluxField
 
 
-class DiagnosticState(fw.State):
-    temperature: qty.TemperatureField
-    u: qty.UField
-
-
-class Increments(fw.State):
-    temperature: fw.Increment[qty.TemperatureField]
-    qv: fw.Increment[qty.QvField]
-    u: fw.Increment[qty.UField]
-
-
 class StepInfo(fw.State):
     dtime: qty.TimeStep
     substep_dtime: qty.SubstepTimeStep

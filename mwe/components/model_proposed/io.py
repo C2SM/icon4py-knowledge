@@ -1,37 +1,36 @@
+from collections.abc import Sequence
 from datetime import datetime
+from typing import Any
 
+from model_proposed import quantity_recipes
 from model_proposed.common import framework as fw, quantities as qty
 import ops
 
-OUTPUT_VARIABLES = (
-    "air_density",
-    "exner_function",
-    "virtual_potential_temperature",
-    "upward_air_velocity",
-    "normal_velocity",
-    "eastward_wind",
-    "temperature",
-)
+VARIABLES: dict[str, tuple[Any, fw.Derived | None]] = {
+    "air_density": (fw.Read[qty.RhoField], None),
+    "exner_function": (fw.Read[qty.ExnerField], None),
+    "virtual_potential_temperature": (fw.Read[qty.ThetaVField], None),
+    "upward_air_velocity": (fw.Read[qty.WField], None),
+    "normal_velocity": (fw.Read[qty.VnField], None),
+    "eastward_wind": (fw.Read[qty.UField], fw.derived_by(quantity_recipes.UFromVn)),
+    "temperature": (fw.Read[qty.TemperatureField], fw.derived_by(quantity_recipes.TemperatureFromThetaExner)),
+}
 
 
-class IOMonitor(fw.Component["IOMonitor.Input", fw.Empty]):
-    class Input(fw.State):
-        air_density: fw.Read[qty.RhoField]
-        exner_function: fw.Read[qty.ExnerField]
-        virtual_potential_temperature: fw.Read[qty.ThetaVField]
-        upward_air_velocity: fw.Read[qty.WField]
-        normal_velocity: fw.Read[qty.VnField]
-        eastward_wind: fw.Read[qty.UField]
-        temperature: fw.Read[qty.TemperatureField]
-        simulation_time: fw.Read[qty.SimulationTime]
-
+class IOMonitor(fw.Component[fw.State, fw.Empty]):
     Output = fw.Empty
 
-    def __init__(self) -> None:
+    def __init__(self, variables: Sequence[str]) -> None:
         super().__init__(fw.Empty())
+        self.variables = tuple(variables)
+        self.Input = fw.state_type(
+            "Input",
+            {name: VARIABLES[name] for name in self.variables} | {"simulation_time": (fw.Read[qty.SimulationTime], None)},
+        )
         self.dataset: list[tuple[datetime, str, ops.Array]] = []
 
-    def run(self, input: Input) -> fw.Empty:
-        for name in OUTPUT_VARIABLES:
-            self.dataset.append((input.simulation_time, name, ops.arr(getattr(input, name)).copy()))
+    def run(self, input: fw.State) -> fw.Empty:
+        time = getattr(input, "simulation_time")
+        for name in self.variables:
+            self.dataset.append((time, name, ops.arr(getattr(input, name)).copy()))
         return self.output

@@ -1,3 +1,6 @@
+import collections
+import functools
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
@@ -8,11 +11,21 @@ from icon4py.model.common import dimension as dims, type_alias as ta
 NCELLS, NEDGES, NLEV = 4, 6, 3
 SIZES: dict[gtx.Dimension, int] = {dims.CellDim: NCELLS, dims.EdgeDim: NEDGES, dims.KDim: NLEV}
 CELL, CELL_K, EDGE_K = (dims.CellDim,), (dims.CellDim, dims.KDim), (dims.EdgeDim, dims.KDim)
-DTIME, NDYN_SUBSTEPS, N_STEPS, TMX_INTERVAL = 1.0, 2, 4, 2
+DTIME, NDYN_SUBSTEPS, N_STEPS = 1.0, 2, 4
 START = datetime(2026, 1, 1)
 
 Array = np.ndarray[Any, Any]
 Field = gtx.Field[Any, Any]
+CALLS: collections.Counter[str] = collections.Counter()
+
+
+def counted[**P](f: Callable[P, None]) -> Callable[P, None]:
+    @functools.wraps(f)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> None:
+        CALLS[f.__name__] += 1
+        f(*args, **kwargs)
+
+    return wrapper
 
 
 def arr(f: Field) -> Array:
@@ -45,6 +58,7 @@ def to_cells(e: Array) -> Array:
     return 0.5 * (e[:NCELLS] + e[NEDGES - NCELLS :])
 
 
+@counted
 def dycore_step(
     *,
     vn_now: Field,
@@ -78,27 +92,33 @@ def dycore_step(
     arr(theta_v_new)[...] = arr(theta_v_now) + dtime * 0.1 * arr(w_new)
 
 
+@counted
 def compute_advection_in_horizontal_momentum(vn: Field, normal_wind_advective_tendency: Field) -> None:
     arr(normal_wind_advective_tendency)[...] = -0.05 * arr(vn) * np.abs(arr(vn))
 
 
+@counted
 def diffuse(vn: Field, theta_v: Field, dtime: float) -> None:
     arr(vn)[...] -= dtime * 0.05 * arr(vn)
     arr(theta_v)[...] -= dtime * 0.05 * arr(theta_v)
 
 
+@counted
 def advect(p_tracer_now: Field, p_tracer_new: Field, mass_flx_me: Field, dtime: float) -> None:
     arr(p_tracer_new)[...] = arr(p_tracer_now) - dtime * 0.1 * to_cells(arr(mass_flx_me)) * arr(p_tracer_now)
 
 
+@counted
 def compute_temperature(theta_v: Field, exner: Field, temperature: Field) -> None:
     arr(temperature)[...] = arr(theta_v) * arr(exner)
 
 
+@counted
 def edge_2_cell_vector_rbf_interpolation(vn: Field, u: Field) -> None:
     arr(u)[...] = to_cells(arr(vn))
 
 
+@counted
 def muphys(te: Field, qv: Field, tend_temperature: Field, tend_qv: Field, pflx: Field) -> None:
     excess = arr(qv) - 0.01 * arr(te)
     arr(tend_qv)[...] = -0.5 * excess
@@ -106,15 +126,18 @@ def muphys(te: Field, qv: Field, tend_temperature: Field, tend_qv: Field, pflx: 
     arr(pflx)[...] = excess.sum(axis=1)
 
 
+@counted
 def tmx(temperature: Field, u: Field, ddt_temperature: Field, ddt_u: Field) -> None:
     arr(ddt_temperature)[...] = 0.1 * (arr(temperature).mean(axis=1, keepdims=True) - arr(temperature))
     arr(ddt_u)[...] = -0.02 * arr(u)
 
 
+@counted
 def update_exner_and_theta_v(temperature: Field, exner: Field, theta_v: Field) -> None:
     arr(exner)[...] *= 1.0 + 0.001 * (arr(temperature) - arr(theta_v) * arr(exner))
     arr(theta_v)[...] = arr(temperature) / arr(exner)
 
 
+@counted
 def compute_vn_from_uv(u: Field, vn: Field) -> None:
     arr(vn)[...] = to_edges(arr(u))

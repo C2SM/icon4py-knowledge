@@ -11,6 +11,7 @@ from model_current.common.states import (
     tracer_states,
 )
 from model_current.driver import driver_io, driver_states, driver_utils
+import config
 
 
 class Icon4pyDriver:
@@ -119,15 +120,15 @@ class Icon4pyDriver:
                 prognostic_states.swap()
 
 
-def initialize_driver() -> Icon4pyDriver:
+def initialize_driver(run_config: config.Config) -> Icon4pyDriver:
     model_time_variables = driver_states.ModelTimeVariables()
-    granules = driver_utils.initialize_granules(model_time_variables)
-    io_monitor = common_io.IOMonitor(variables=driver_io.DEFAULT_OUTPUT_VARIABLES)
+    granules = driver_utils.initialize_granules(model_time_variables, run_config.physics)
+    io_monitor = common_io.IOMonitor(variables=list(run_config.output_variables))
     return Icon4pyDriver(granules=granules, model_time_variables=model_time_variables, io_monitor=io_monitor)
 
 
-def run_driver() -> tuple[driver_states.DriverStates, Icon4pyDriver]:
-    icon4py_driver = initialize_driver()
+def run_driver(run_config: config.Config) -> tuple[driver_states.DriverStates, Icon4pyDriver]:
+    icon4py_driver = initialize_driver(run_config)
     ds = driver_states.assemble_driver_states(
         prognostic_state_now=prognostics.initialize_prognostic_state(),
         tracer_state_now=tracer_states.initialize_tracer_state(),

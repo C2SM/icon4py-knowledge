@@ -1,0 +1,2 @@
+output_variables: [temperature, eastward_wind]
+physics: {muphys: 1, tmx: 2}

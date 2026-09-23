@@ -11,7 +11,6 @@ PROGNOSTIC_VARIABLES: Final[list[str]] = [
     "normal_velocity",
 ]
 DIAGNOSTIC_VARIABLES: Final[list[str]] = ["eastward_wind", "temperature"]
-DEFAULT_OUTPUT_VARIABLES: Final[list[str]] = [*PROGNOSTIC_VARIABLES, *DIAGNOSTIC_VARIABLES]
 
 
 def prognostic_state_to_dataarrays(prognostic_state: prognostics.PrognosticState) -> dict[str, ops.Field]:

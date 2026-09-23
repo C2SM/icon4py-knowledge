@@ -1,13 +1,14 @@
 import dataclasses
 from datetime import timedelta
 
-from model_proposed import diagnostics, diffusion, io, physics_driver, solve_nonhydro, tracer_advection
+from model_proposed import diffusion, io, physics_driver, solve_nonhydro, tracer_advection
 from model_proposed.common import framework as fw, states
+import config
 import ops
 
 
 class Icon4pyDriver:
-    def __init__(self) -> None:
+    def __init__(self, run_config: config.Config) -> None:
         self.prognostic_states = fw.TimeStepPair(
             fw.allocate(states.PrognosticState, ops.SIZES, ops.initial), fw.allocate(states.PrognosticState, ops.SIZES)
         )
@@ -15,13 +16,14 @@ class Icon4pyDriver:
         self.solve_nonhydro = solve_nonhydro.SolveNonhydro(fw.allocate(states.PrepAdvection, ops.SIZES))
         self.diffusion = diffusion.Diffusion(fw.Empty())
         self.tracer_advection = tracer_advection.Advection(fw.Empty())
-        self.physics = physics_driver.PhysicsDriver()
-        self.diagnostics_computer = diagnostics.DiagnosticsComputer(fw.allocate(states.DiagnosticState, ops.SIZES))
-        self.io_monitor = io.IOMonitor()
+        self.physics = physics_driver.PhysicsDriver(run_config.physics)
+        self.io_monitor = io.IOMonitor(run_config.output_variables)
+        self.io_resolution = fw.resolve([self.io_monitor], ops.SIZES, targets=fw.Empty)
 
     def _store_output(self, info: states.StepInfo) -> None:
-        self.diagnostics_computer.run(self.diagnostics_computer.collect_inputs(self.prognostic_states.now))
-        self.io_monitor.run(self.io_monitor.collect_inputs(self.prognostic_states.now, self.diagnostics_computer.output, info))
+        supplied = (self.prognostic_states.now, *self.physics.reusable)
+        produced = self.io_resolution.run_providers(*supplied)
+        self.io_monitor.run(self.io_monitor.collect_inputs(*supplied, *produced, info))
 
     def time_integration(self, n_time_steps: int) -> None:
         for time_step in range(n_time_steps):

@@ -1,11 +1,12 @@
+from model_proposed import quantity_recipes
 from model_proposed.common import framework as fw, quantities as qty
 import ops
 
 
 class TmxComponent(fw.Component["TmxComponent.Input", "TmxComponent.Output"]):
     class Input(fw.State):
-        temperature: fw.Read[qty.TemperatureField]
-        u: fw.Read[qty.UField]
+        temperature: fw.Read[qty.TemperatureField] = fw.derived_by(quantity_recipes.TemperatureFromThetaExner)
+        u: fw.Read[qty.UField] = fw.derived_by(quantity_recipes.UFromVn)
 
     class Output(fw.State):
         tend_temperature: fw.Tendency[qty.TemperatureField]

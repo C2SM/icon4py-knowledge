@@ -1,9 +1,15 @@
 import dataclasses
+from collections.abc import Mapping
 from typing import Any
 
-from model_proposed import diagnostics, eos, muphys, projection, tmx
-from model_proposed.common import framework as fw, quantities as qty, states
+from model_proposed import muphys, tmx
+from model_proposed.common import framework as fw, quantities as qty
 import ops
+
+PROCESSES: dict[str, type[fw.Component[Any, Any]]] = {
+    "muphys": muphys.MuphysComponent,
+    "tmx": tmx.TmxComponent,
+}
 
 
 @dataclasses.dataclass(frozen=True)
@@ -27,27 +33,26 @@ class PhysicsDriver(fw.Component["PhysicsDriver.Input", fw.Empty]):
 
     Output = fw.Empty
 
-    def __init__(self) -> None:
+    def __init__(self, process_intervals: Mapping[str, int]) -> None:
         super().__init__(fw.Empty())
-        self.entry = diagnostics.DiagnosticsComputer(fw.allocate(states.DiagnosticState, ops.SIZES))
-        self.muphys = muphys.MuphysComponent(fw.allocate(muphys.MuphysComponent.Output, ops.SIZES))
-        self.tmx = tmx.TmxComponent(fw.allocate(tmx.TmxComponent.Output, ops.SIZES))
-        self.processes: list[tuple[fw.Component[Any, Any], ProcessTimeControl]] = [
-            (self.muphys, ProcessTimeControl(1)),
-            (self.tmx, ProcessTimeControl(ops.TMX_INTERVAL)),
-        ]
-        self.increments = fw.allocate(states.Increments, ops.SIZES)
-        self.eos = eos.ExnerThetaUpdate(fw.Empty())
-        self.projection = projection.WindProjection(fw.Empty())
+        self.processes: dict[str, tuple[fw.Component[Any, Any], ProcessTimeControl]] = {
+            name: (PROCESSES[name](fw.allocate(PROCESSES[name].Output, ops.SIZES)), ProcessTimeControl(interval))
+            for name, interval in process_intervals.items()
+        }
+        self.resolution = fw.resolve(
+            [process for process, _ in self.processes.values()], ops.SIZES, targets=PhysicsDriver.Input
+        )
+        self.reusable: tuple[fw.State, ...] = ()
 
     def run(self, input: Input) -> fw.Empty:
-        entry = self.entry.run(self.entry.collect_inputs(input))
-        fw.zero(self.increments)
-        for process, time_control in self.processes:
+        produced = self.resolution.run_providers(input)
+        fw.zero(self.resolution.increments)
+        for process, time_control in self.processes.values():
             if time_control.is_active(input.step_index):
-                process.run(process.collect_inputs(input, entry))
-            process.accumulate(self.increments, input.dtime)
-        self.apply(self.increments, input)
-        self.eos.run(self.eos.collect_inputs(entry, self.increments, input))
-        self.projection.run(self.projection.collect_inputs(self.increments, input))
+                process.run(process.collect_inputs(input, *produced))
+            process.accumulate(self.resolution.increments, input.dtime)
+        self.apply(self.resolution.increments, input, *produced)
+        for write_back in self.resolution.write_backs:
+            write_back.run(write_back.collect_inputs(input, self.resolution.increments, *produced))
+        self.reusable = self.resolution.reusable_outputs(produced)
         return self.output
