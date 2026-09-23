@@ -1,0 +1,19 @@
+[
+  { "query": "is revive-components ready for shared/?", "should_trigger": true },
+  { "query": "promote the declarative testing harness proposal and update the index", "should_trigger": true },
+  { "query": "can this become an ADR in the icon4py repo?", "should_trigger": true },
+  { "query": "we implemented the domain audit last sprint — time to retire that note?", "should_trigger": true },
+  { "query": "the team agreed on jcanton's spec v2 in yesterday's meeting. what needs to happen to move it out of personal/", "should_trigger": true },
+  { "query": "bump this from draft to reviewed, I read it end to end", "should_trigger": true },
+  { "query": "can we start implementing specialize-domain-bounds, or is it still too vague?", "should_trigger": true },
+  { "query": "whats blocking checkpoint-restart from being implementation-ready", "should_trigger": true },
+
+  { "query": "review checkpoint-restart against the principles first", "should_trigger": false },
+  { "query": "does checkpoint-restart conflict with the model-state proposal?", "should_trigger": false },
+  { "query": "write a new proposal about restart file formats", "should_trigger": false },
+  { "query": "shorten this proposal, it's unreviewable at this length", "should_trigger": false },
+  { "query": "open a pull request in C2SM/icon4py for the halo exchange cleanup", "should_trigger": false },
+  { "query": "merge PR #16 in this repo", "should_trigger": false },
+  { "query": "which proposals have been sitting in draft the longest?", "should_trigger": false },
+  { "query": "deploy the quartz site to github pages", "should_trigger": false }
+]

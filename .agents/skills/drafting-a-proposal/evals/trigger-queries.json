@@ -1,0 +1,19 @@
+[
+  { "query": "I've been thinking about how components should declare the fields they need instead of reaching into a global dict — can you write that up in the knowledge base?", "should_trigger": true },
+  { "query": "add a proposal under content/personal/egparedes about splitting the diffusion package", "should_trigger": true },
+  { "query": "we keep re-allocating the same static fields at startup and it costs us 4s on GPU. i want to propose lazy allocation. can you draft it", "should_trigger": true },
+  { "query": "write spec v3 for revive-components, v2 is superseded", "should_trigger": true },
+  { "query": "model-state.md is 70KB and nobody on the team has finished reading it. split the prior art out and cut the main note down", "should_trigger": true },
+  { "query": "my note says we should use a recipe registry but a reviewer said it doesn't explain why. can you fix the framing?", "should_trigger": true },
+  { "query": "I want to document an idea for the physics driver — where do I even put it and what does the frontmatter need?", "should_trigger": true },
+  { "query": "turn my scratch notes in ~/notes/halo-exchange-ideas.txt into a proper proposal here", "should_trigger": true },
+
+  { "query": "review jcanton's model-state proposal against our principles", "should_trigger": false },
+  { "query": "has anyone already proposed something about checkpoint/restart in this repo?", "should_trigger": false },
+  { "query": "msimberg and OngChia both use the word 'state' but they clearly mean different things — sort that out", "should_trigger": false },
+  { "query": "is layered-architecture-refactor ready to move to shared/?", "should_trigger": false },
+  { "query": "write a docstring for the mo_velocity_advection stencil in icon4py", "should_trigger": false },
+  { "query": "open a PR against C2SM/icon4py implementing the component protocol", "should_trigger": false },
+  { "query": "the index is out of date, a few entries point at files that moved", "should_trigger": false },
+  { "query": "summarize what changed in this repo last week for the slack channel", "should_trigger": false }
+]

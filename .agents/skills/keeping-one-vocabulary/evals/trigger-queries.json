@@ -1,0 +1,19 @@
+[
+  { "query": "msimberg and OngChia both say 'state' but they clearly mean different things. sort that out", "should_trigger": true },
+  { "query": "is 'tendency' already defined somewhere in this repo, or can I use it how I want?", "should_trigger": true },
+  { "query": "I need a name for the thing that owns field lifetimes across a timestep", "should_trigger": true },
+  { "query": "we've got StateView, StateProvider, ModelState and 'the container' floating around. are those four things or one?", "should_trigger": true },
+  { "query": "add 'granule' to the glossary — it keeps coming up and newcomers don't know what it means", "should_trigger": true },
+  { "query": "my proposal calls it a 'recipe registry', jcanton calls it a 'field factory'. whats the right word", "should_trigger": true },
+  { "query": "does 'component' mean the same thing here as it does in the ICON Fortran code?", "should_trigger": true },
+  { "query": "there's no glossary in this repo and half the arguments are about words. can we start one", "should_trigger": true },
+
+  { "query": "rename ModelState to State everywhere in the icon4py source", "should_trigger": false },
+  { "query": "what should I call this file — model-state-v3.md or model-state_specV3.md?", "should_trigger": false },
+  { "query": "does my proposal conflict with anything already here?", "should_trigger": false },
+  { "query": "review this design and tell me if the abstraction is deep enough", "should_trigger": false },
+  { "query": "proofread my proposal, the wording is clumsy in the intro", "should_trigger": false },
+  { "query": "write up a proposal for a new component protocol", "should_trigger": false },
+  { "query": "what are the CF standard names for the prognostic variables in the dycore?", "should_trigger": false },
+  { "query": "pick better variable names in this gt4py stencil", "should_trigger": false }
+]

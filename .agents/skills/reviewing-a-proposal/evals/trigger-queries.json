@@ -1,0 +1,19 @@
+[
+  { "query": "review jcanton's model-state proposal", "should_trigger": true },
+  { "query": "is the physics-driver design sound?", "should_trigger": true },
+  { "query": "run the red flags over content/personal/egparedes/layered-architecture-refactor.md", "should_trigger": true },
+  { "query": "PR #17 adds a spec under content/personal/. can you take a look before I approve it", "should_trigger": true },
+  { "query": "what's wrong with revive-components_spec_v3? something feels off about the Carry abstraction but i cant name it", "should_trigger": true },
+  { "query": "does this proposal actually hold up against our working principles, or is it just detailed?", "should_trigger": true },
+  { "query": "critique my draft before I ask the team to read it", "should_trigger": true },
+  { "query": "the standalone-driver-startup-opt note — is that ready for someone to review, or does it still have holes?", "should_trigger": true },
+
+  { "query": "does my proposal overlap with anything already in the repo?", "should_trigger": false },
+  { "query": "rewrite this proposal so it's shorter and move the benchmarks into an appendix", "should_trigger": false },
+  { "query": "is this ready to move to shared/?", "should_trigger": false },
+  { "query": "draft a new proposal about component composition", "should_trigger": false },
+  { "query": "review my icon4py pull request that ports the graupel scheme", "should_trigger": false },
+  { "query": "these two docs use 'registry' differently — which one is right?", "should_trigger": false },
+  { "query": "proofread this note, I think there are typos and the markdown tables are broken", "should_trigger": false },
+  { "query": "run ruff and mypy over the icon4py model package", "should_trigger": false }
+]
