@@ -1,23 +1,8 @@
 import dataclasses
 from typing import Any
 
-from model_proposed.common.framework import Component, Empty, Read, ReadWrite, State, allocate, zero
-from model_proposed.common.quantities import (
-    ExnerField,
-    QvField,
-    RhoField,
-    StepIndex,
-    ThetaVField,
-    TimeStep,
-    VnField,
-    WField,
-)
-from model_proposed.common.states import DiagnosticState, Increments
-from model_proposed.diagnostics import DiagnosticsComputer
-from model_proposed.eos import ExnerThetaUpdate
-from model_proposed.muphys import MuphysComponent
-from model_proposed.projection import WindProjection
-from model_proposed.tmx import TmxComponent
+from model_proposed import diagnostics, eos, muphys, projection, tmx
+from model_proposed.common import framework as fw, quantities as qty, states
 import ops
 
 
@@ -29,35 +14,35 @@ class ProcessTimeControl:
         return step_index % self.interval == 0
 
 
-class PhysicsDriver(Component["PhysicsDriver.Input", Empty]):
-    class Input(State):
-        vn: ReadWrite[VnField]
-        w: Read[WField]
-        rho: Read[RhoField]
-        exner: ReadWrite[ExnerField]
-        theta_v: ReadWrite[ThetaVField]
-        qv: ReadWrite[QvField]
-        dtime: Read[TimeStep]
-        step_index: Read[StepIndex]
+class PhysicsDriver(fw.Component["PhysicsDriver.Input", fw.Empty]):
+    class Input(fw.State):
+        vn: fw.ReadWrite[qty.VnField]
+        w: fw.Read[qty.WField]
+        rho: fw.Read[qty.RhoField]
+        exner: fw.ReadWrite[qty.ExnerField]
+        theta_v: fw.ReadWrite[qty.ThetaVField]
+        qv: fw.ReadWrite[qty.QvField]
+        dtime: fw.Read[qty.TimeStep]
+        step_index: fw.Read[qty.StepIndex]
 
-    Output = Empty
+    Output = fw.Empty
 
     def __init__(self) -> None:
-        super().__init__(Empty())
-        self.entry = DiagnosticsComputer(allocate(DiagnosticState, ops.SIZES))
-        self.muphys = MuphysComponent(allocate(MuphysComponent.Output, ops.SIZES))
-        self.tmx = TmxComponent(allocate(TmxComponent.Output, ops.SIZES))
-        self.processes: list[tuple[Component[Any, Any], ProcessTimeControl]] = [
+        super().__init__(fw.Empty())
+        self.entry = diagnostics.DiagnosticsComputer(fw.allocate(states.DiagnosticState, ops.SIZES))
+        self.muphys = muphys.MuphysComponent(fw.allocate(muphys.MuphysComponent.Output, ops.SIZES))
+        self.tmx = tmx.TmxComponent(fw.allocate(tmx.TmxComponent.Output, ops.SIZES))
+        self.processes: list[tuple[fw.Component[Any, Any], ProcessTimeControl]] = [
             (self.muphys, ProcessTimeControl(1)),
             (self.tmx, ProcessTimeControl(ops.TMX_INTERVAL)),
         ]
-        self.increments = allocate(Increments, ops.SIZES)
-        self.eos = ExnerThetaUpdate(Empty())
-        self.projection = WindProjection(Empty())
+        self.increments = fw.allocate(states.Increments, ops.SIZES)
+        self.eos = eos.ExnerThetaUpdate(fw.Empty())
+        self.projection = projection.WindProjection(fw.Empty())
 
-    def run(self, input: Input) -> Empty:
+    def run(self, input: Input) -> fw.Empty:
         entry = self.entry.run(self.entry.collect_inputs(input))
-        zero(self.increments)
+        fw.zero(self.increments)
         for process, time_control in self.processes:
             if time_control.is_active(input.step_index):
                 process.run(process.collect_inputs(input, entry))

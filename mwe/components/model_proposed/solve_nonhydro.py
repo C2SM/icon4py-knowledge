@@ -1,59 +1,37 @@
-from model_proposed.common.framework import (
-    Component,
-    Next,
-    Now,
-    PredictorCorrectorPair,
-    Read,
-    ReadWrite,
-    State,
-    Tendency,
-    allocate,
-)
-from model_proposed.common.quantities import (
-    AtFirstSubstep,
-    AtLastSubstep,
-    ExnerField,
-    RhoField,
-    SubstepCount,
-    SubstepTimeStep,
-    ThetaVField,
-    VnField,
-    WField,
-)
-from model_proposed.common.states import PrepAdvection
+from model_proposed.common import framework as fw, quantities as qty, states
 import ops
 
 
-class AdvectiveTendencies(State):
-    normal_wind: Tendency[VnField]
+class AdvectiveTendencies(fw.State):
+    normal_wind: fw.Tendency[qty.VnField]
 
 
-class SolveNonhydro(Component["SolveNonhydro.Input", PrepAdvection]):
-    class Input(State):
-        vn_now: Read[Now[VnField]]
-        w_now: Read[Now[WField]]
-        rho_now: Read[Now[RhoField]]
-        exner_now: Read[Now[ExnerField]]
-        theta_v_now: Read[Now[ThetaVField]]
-        vn_new: ReadWrite[Next[VnField]]
-        w_new: ReadWrite[Next[WField]]
-        rho_new: ReadWrite[Next[RhoField]]
-        exner_new: ReadWrite[Next[ExnerField]]
-        theta_v_new: ReadWrite[Next[ThetaVField]]
-        substep_dtime: Read[SubstepTimeStep]
-        ndyn_substeps: Read[SubstepCount]
-        at_first_substep: Read[AtFirstSubstep]
-        at_last_substep: Read[AtLastSubstep]
+class SolveNonhydro(fw.Component["SolveNonhydro.Input", states.PrepAdvection]):
+    class Input(fw.State):
+        vn_now: fw.Read[fw.Now[qty.VnField]]
+        w_now: fw.Read[fw.Now[qty.WField]]
+        rho_now: fw.Read[fw.Now[qty.RhoField]]
+        exner_now: fw.Read[fw.Now[qty.ExnerField]]
+        theta_v_now: fw.Read[fw.Now[qty.ThetaVField]]
+        vn_new: fw.ReadWrite[fw.Next[qty.VnField]]
+        w_new: fw.ReadWrite[fw.Next[qty.WField]]
+        rho_new: fw.ReadWrite[fw.Next[qty.RhoField]]
+        exner_new: fw.ReadWrite[fw.Next[qty.ExnerField]]
+        theta_v_new: fw.ReadWrite[fw.Next[qty.ThetaVField]]
+        substep_dtime: fw.Read[qty.SubstepTimeStep]
+        ndyn_substeps: fw.Read[qty.SubstepCount]
+        at_first_substep: fw.Read[qty.AtFirstSubstep]
+        at_last_substep: fw.Read[qty.AtLastSubstep]
 
-    Output = PrepAdvection
+    Output = states.PrepAdvection
 
-    def __init__(self, output: PrepAdvection) -> None:
+    def __init__(self, output: states.PrepAdvection) -> None:
         super().__init__(output)
-        self.normal_wind_advective_tendency = PredictorCorrectorPair(
-            allocate(AdvectiveTendencies, ops.SIZES), allocate(AdvectiveTendencies, ops.SIZES)
+        self.normal_wind_advective_tendency = fw.PredictorCorrectorPair(
+            fw.allocate(AdvectiveTendencies, ops.SIZES), fw.allocate(AdvectiveTendencies, ops.SIZES)
         )
 
-    def run(self, input: Input) -> PrepAdvection:
+    def run(self, input: Input) -> states.PrepAdvection:
         ddt_vn_apc = self.normal_wind_advective_tendency
         if input.at_first_substep:
             ops.compute_advection_in_horizontal_momentum(input.vn_now, ddt_vn_apc.predictor.normal_wind)

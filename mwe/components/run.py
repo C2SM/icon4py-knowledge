@@ -4,7 +4,7 @@ import numpy as np
 
 from model_current.driver import driver as current
 from model_proposed import driver as proposed
-from model_proposed.common.framework import dataflow
+from model_proposed.common import framework as fw
 import ops
 
 
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     d = proposed.Icon4pyDriver()
     p = d.physics
     print(
-        dataflow(
+        fw.dataflow(
             d.solve_nonhydro,
             d.diffusion,
             d.tracer_advection,

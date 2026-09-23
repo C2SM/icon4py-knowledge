@@ -1,16 +1,6 @@
 from datetime import datetime
 
-from model_proposed.common.framework import Component, Empty, Read, State
-from model_proposed.common.quantities import (
-    ExnerField,
-    RhoField,
-    SimulationTime,
-    TemperatureField,
-    ThetaVField,
-    UField,
-    VnField,
-    WField,
-)
+from model_proposed.common import framework as fw, quantities as qty
 import ops
 
 OUTPUT_VARIABLES = (
@@ -24,24 +14,24 @@ OUTPUT_VARIABLES = (
 )
 
 
-class IOMonitor(Component["IOMonitor.Input", Empty]):
-    class Input(State):
-        air_density: Read[RhoField]
-        exner_function: Read[ExnerField]
-        virtual_potential_temperature: Read[ThetaVField]
-        upward_air_velocity: Read[WField]
-        normal_velocity: Read[VnField]
-        eastward_wind: Read[UField]
-        temperature: Read[TemperatureField]
-        simulation_time: Read[SimulationTime]
+class IOMonitor(fw.Component["IOMonitor.Input", fw.Empty]):
+    class Input(fw.State):
+        air_density: fw.Read[qty.RhoField]
+        exner_function: fw.Read[qty.ExnerField]
+        virtual_potential_temperature: fw.Read[qty.ThetaVField]
+        upward_air_velocity: fw.Read[qty.WField]
+        normal_velocity: fw.Read[qty.VnField]
+        eastward_wind: fw.Read[qty.UField]
+        temperature: fw.Read[qty.TemperatureField]
+        simulation_time: fw.Read[qty.SimulationTime]
 
-    Output = Empty
+    Output = fw.Empty
 
     def __init__(self) -> None:
-        super().__init__(Empty())
+        super().__init__(fw.Empty())
         self.dataset: list[tuple[datetime, str, ops.Array]] = []
 
-    def run(self, input: Input) -> Empty:
+    def run(self, input: Input) -> fw.Empty:
         for name in OUTPUT_VARIABLES:
             self.dataset.append((input.simulation_time, name, ops.arr(getattr(input, name)).copy()))
         return self.output

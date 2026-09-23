@@ -1,16 +1,15 @@
-from model_proposed.common.framework import Component, Read, State, Tendency
-from model_proposed.common.quantities import TemperatureField, UField
+from model_proposed.common import framework as fw, quantities as qty
 import ops
 
 
-class TmxComponent(Component["TmxComponent.Input", "TmxComponent.Output"]):
-    class Input(State):
-        temperature: Read[TemperatureField]
-        u: Read[UField]
+class TmxComponent(fw.Component["TmxComponent.Input", "TmxComponent.Output"]):
+    class Input(fw.State):
+        temperature: fw.Read[qty.TemperatureField]
+        u: fw.Read[qty.UField]
 
-    class Output(State):
-        tend_temperature: Tendency[TemperatureField]
-        tend_u: Tendency[UField]
+    class Output(fw.State):
+        tend_temperature: fw.Tendency[qty.TemperatureField]
+        tend_u: fw.Tendency[qty.UField]
 
     def run(self, input: Input) -> Output:
         ops.tmx(input.temperature, input.u, self.output.tend_temperature, self.output.tend_u)

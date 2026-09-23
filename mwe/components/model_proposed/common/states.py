@@ -1,56 +1,38 @@
-from model_proposed.common.framework import Increment, State
-from model_proposed.common.quantities import (
-    AtFirstSubstep,
-    AtLastSubstep,
-    ExnerField,
-    MassFluxField,
-    QvField,
-    RhoField,
-    SimulationTime,
-    StepIndex,
-    SubstepCount,
-    SubstepTimeStep,
-    TemperatureField,
-    ThetaVField,
-    TimeStep,
-    UField,
-    VnField,
-    WField,
-)
+from model_proposed.common import framework as fw, quantities as qty
 
 
-class PrognosticState(State):
-    rho: RhoField
-    w: WField
-    vn: VnField
-    exner: ExnerField
-    theta_v: ThetaVField
+class PrognosticState(fw.State):
+    rho: qty.RhoField
+    w: qty.WField
+    vn: qty.VnField
+    exner: qty.ExnerField
+    theta_v: qty.ThetaVField
 
 
-class TracerState(State):
-    qv: QvField
+class TracerState(fw.State):
+    qv: qty.QvField
 
 
-class PrepAdvection(State):
-    mass_flx_me: MassFluxField
+class PrepAdvection(fw.State):
+    mass_flx_me: qty.MassFluxField
 
 
-class DiagnosticState(State):
-    temperature: TemperatureField
-    u: UField
+class DiagnosticState(fw.State):
+    temperature: qty.TemperatureField
+    u: qty.UField
 
 
-class Increments(State):
-    temperature: Increment[TemperatureField]
-    qv: Increment[QvField]
-    u: Increment[UField]
+class Increments(fw.State):
+    temperature: fw.Increment[qty.TemperatureField]
+    qv: fw.Increment[qty.QvField]
+    u: fw.Increment[qty.UField]
 
 
-class StepInfo(State):
-    dtime: TimeStep
-    substep_dtime: SubstepTimeStep
-    ndyn_substeps: SubstepCount
-    step_index: StepIndex
-    simulation_time: SimulationTime
-    at_first_substep: AtFirstSubstep
-    at_last_substep: AtLastSubstep
+class StepInfo(fw.State):
+    dtime: qty.TimeStep
+    substep_dtime: qty.SubstepTimeStep
+    ndyn_substeps: qty.SubstepCount
+    step_index: qty.StepIndex
+    simulation_time: qty.SimulationTime
+    at_first_substep: qty.AtFirstSubstep
+    at_last_substep: qty.AtLastSubstep
