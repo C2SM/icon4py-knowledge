@@ -1,11 +1,11 @@
 ---
-title: Physics interface — current design (as built on physics_driver_tmx)
+title: Physics interface — current design (as built in PR #1436)
 author: Yilu
 tags: [components, physics-driver, protocol, muphys, tmx, surface-fluxes, design, as-built, parallel-coupling]
 ---
 
-> **TL;DR** The physics interface **as currently implemented** on the
-> `physics_driver_tmx` stack (PRs #1359 ← #1436 ← #1360): two layers of state
+> **TL;DR** The physics interface **as currently implemented** in PR #1436
+> (now based on `main`; #1360 stacks tmx on top of it): two layers of state
 > under **parallel process coupling**. The driver-owned **PhysicsState layer**
 > (`physics_driver/physics_state.py`) is the only code that touches the model
 > state — its `EntryState` façade binds pointers and diagnoses the physics
@@ -68,24 +68,36 @@ are no provisional updates between processes and no copies anywhere.
 sequenceDiagram
     participant D as PhysicsDriver.run
     participant E as EntryState (façade)
-    participant P1 as muphys
-    participant P2 as tmx
-    participant A as TendencyAccumulators
+    participant P1 as PhysicsProcess<br/>muphys
+    participant P2 as PhysicsProcess<br/>tmx
+    participant T as Tendencies
     participant M as model state (.next)
 
-    D->>E: diagnose_from(prognostic, tracers)
-    Note over E: bind pointers (exner, θv, ρ, vn, w, tracers)<br/>diagnose ta, tv, p, p_ifc, u, v — ONCE
-    D->>A: zero()
-    D->>P1: collect_inputs(entry) · compute
+    D->>E: compute_diagnostics(prognostic, tracers)
+    Note over E: bind pointers (exner, θv, ρ, vn, w, tracers)<br/>diagnose into entry.diagnostics — ONCE:<br/>temperature, virtual_temperature, pressure, pressure_ifc, u, v
+    D->>T: zero()
+    D->>P1: run(entry, step_start, dtime)
+    Note over P1: the process decides: in window?<br/>firing step, or reuse its cached output?
     P1-->>D: outputs (tend_* + precip diagnostics)
-    D->>A: accumulate(kind == "tendency")
-    Note over D: non-tendency outputs →<br/>driver.diagnostics["muphys"]
-    D->>P2: collect_inputs(entry) · compute
+    D->>T: accumulate(outputs, outputs_properties)
+    Note over T: kind == FieldKind.TENDENCY → summed here;<br/>everything else was written in place into<br/>the DiagnosticsStore buffers bound at construction
+    D->>P2: run(entry, step_start, dtime)
     Note over P1,P2: no exchange — parallel:<br/>both read the same frozen entry state
     P2-->>D: outputs (tend_* + km, kh, …)
-    D->>A: accumulate
-    D->>M: apply ONCE, through the façade's pointers
-    Note over M: tracers += dt·Σtend_q ·<br/>T′ = ta + dt·Σtend_T → exact EOS → exner, θv ·<br/>(Σtend_u, Σtend_v) → vn projection · w += dt·Σtend_w
+    D->>T: accumulate(outputs, outputs_properties)
+    D->>M: apply(entry, dt) ONCE, through the façade's pointers
+    Note over M: tracers += dt·Σtend_q ·<br/>T′ = temperature + dt·Σtend_T → exact EOS → exner, θv ·<br/>(Σtend_u, Σtend_v) → vn projection · w += dt·Σtend_w
+```
+
+The driver loop is exactly this, and nothing else:
+
+```python
+self._entry.compute_diagnostics(prognostic, tracers)
+self._tendencies.zero()
+for process in self._processes:
+    outputs = process.run(self._entry, step_start_datetime, dtime)
+    self._tendencies.accumulate(outputs, process.component.outputs_properties)
+self._tendencies.apply(self._entry, dt_seconds)
 ```
 
 **Deliberate deviation from ICON:** AES couples mig/vdf *sequentially* — each
@@ -107,14 +119,16 @@ process boxes the ComponentState layer:
 flowchart TD
     H["dycore & advection hand over<br/>PrognosticState + TracerState (.next)"]
     subgraph L["PhysicsState layer — physics_state.py, driver-owned"]
-      E["EntryState — the façade<br/>pointers (no copy): exner · θv · ρ · vn · w · tracers q×6<br/>diagnosed (owned): ta · tv · p · p_ifc · u · v<br/>bound + diagnosed at entry → frozen, read-only"]
-      ACC["TendencyAccumulators<br/>Σ of every output with kind = 'tendency'"]
-      DIA["diagnostics store (by process)<br/>every non-tendency output → IO/plotting later"]
-      APP["apply once — the single write, through the façade's pointers<br/>tracers += dt·Σtend_q · T′ = ta + dt·Σtend_T → exact EOS → exner, θv<br/>(Σtend_u, Σtend_v) → vn projection · w += dt·Σtend_w"]
+      E["EntryState — the façade<br/>pointers (no copy): exner · θv · ρ · vn · w · tracers q×6<br/>diagnosed (owned, in entry.diagnostics):<br/>temperature · virtual_temperature · pressure · pressure_ifc · u · v<br/>bound + diagnosed at entry → frozen, read-only"]
+      subgraph TND["Tendencies — one class, one lifecycle per step"]
+        ACC["zero → accumulate<br/>Σ of every output with kind = FieldKind.TENDENCY"]
+        APP["apply — the single write, through the façade's pointers<br/>tracers += dt·Σtend_q · T′ = temperature + dt·Σtend_T → exact EOS → exner, θv<br/>(Σtend_u, Σtend_v) → vn projection · w += dt·Σtend_w"]
+      end
+      DIA["DiagnosticsStore (by process)<br/>allocates one buffer per non-tendency output from its<br/>declared dims, bound into the component at construction<br/>→ the component writes in place, no copy"]
     end
     subgraph C["ComponentState layer — per-process adapters"]
-      MU["muphys<br/>in (all via EntryState): ta, p, ρ, q×6 — dz own<br/>out: tend_T, tend_q×6 + precip ×6"]
-      TX["tmx<br/>in (all via EntryState): ta, tv, p, p_ifc, u, v, w, ρ, q×6<br/>+ own air_mass · cv_air · surface fluxes<br/>out: tend_T, tend_qv/qc/qi, tend_u/v/w + km, kh, … ×8"]
+      MU["muphys<br/>in (all via EntryState): temperature, p, ρ, q×6 — dz own<br/>out: tend_T, tend_q×6 + precip ×6"]
+      TX["tmx<br/>in (all via EntryState): temperature, virtual_temperature, p, p_ifc, u, v, w, ρ, q×6<br/>+ own air_mass · cv_air · surface fluxes<br/>out: tend_T, tend_qv/qc/qi, tend_u/v/w + km, kh, … ×8"]
     end
     SF["SurfaceFluxProvider<br/>(prescribed isrfc_type = 1)"]
     OUT["PrognosticState & TracerState (.next)<br/>updated once per timestep"]
@@ -147,20 +161,22 @@ only writer of the model state:
 
 | Piece | Role |
 | --- | --- |
-| `EntryState` | binds *pointers* to `exner, theta_v, rho, vn, w, tracers` (same memory, physics names) and owns the six diagnosed fields `ta, tv, pressure, pressure_ifc, u, v`. `diagnose_from` runs once per step; frozen afterwards. | 
-| `TendencyAccumulators` | Lazily-allocated per-variable sums of every output with `kind == "tendency"`, across processes; zeroed each run. | 
-| diagnostics store | `driver.diagnostics[process_name][output]` — every non-tendency output, routed by the complement rule. Keyed per process (unlike ICON's flat `field%`) for order-independence and collision-safety. | 
-| `ApplyToPrognostic` | The single write: tracers, ONE exact-EOS exner/θv update from the summed T-tendency with final moisture, ONE cells→edges wind projection, w. All existing stencils, each once. | 
+| `EntryState` | binds *pointers* to `exner, theta_v, rho, vn, w, tracers` (same memory, physics names) and owns the six diagnosed fields, grouped in the common `DiagnosticState` as `entry.diagnostics.{temperature, virtual_temperature, pressure, pressure_ifc, u, v}`. `compute_diagnostics` runs once per step; frozen afterwards. |
+| `Tendencies` | One class for the whole tendency lifecycle: `zero` → `accumulate` once per process → `apply`. The sums are lazily allocated per variable, over every output with `kind == FieldKind.TENDENCY`. `apply` is the single write: tracers, ONE exact-EOS exner/θv update from the summed T-tendency with the final moisture, ONE cells→edges wind projection, w. All existing stencils, each once. |
+| `DiagnosticsStore` | `driver.diagnostics[process_name][output]` — every non-tendency output, by the complement rule. Allocates each buffer from the output's declared `dims` at driver construction and hands it to the component via `bind_output_buffers`, so granules write in place and still run standalone in their own datatests. Keyed per process (unlike ICON's flat `field%`) for order-independence and collision-safety. |
+| `PhysicsProcess` | component + state adapter + `ProcessTimeControl`. Its `run` owns the per-step decision: outside its window it returns nothing; on a firing step it computes; between firings it returns its cached output. |
 
 **ComponentState layer** — one adapter per process, protocol
 `common/components/component_state.py` (renamed from `physics_state.py` — the
-name deliberately moved to the driver package). **Two methods, no storage**:
+name deliberately moved to the driver package). **One method, no storage**:
 
 ```python
 class ComponentState(Protocol):
-    def collect_inputs(self, entry_state) -> None: ...
-    def as_component_input(self) -> dict[str, Any]: ...
+    def as_component_input(self, state: Any) -> dict[str, Any]: ...
 ```
+
+It is called only on a step where the component actually computes, so a
+derivation placed here never runs for a step whose result is discarded.
 
 `muphys.state.State` is a pure input mapping (its only owned field is `dz`).
 `tmx.state.State` adds the two tmx-specific derived inputs (`air_mass`,
@@ -177,26 +193,31 @@ process packages never import `physics_driver`.
 
 ## 4 · What happens per process, per time step
 
-For each registered `PhysicsProcess` (component + ComponentState adapter +
-time control) that is enabled and in-window:
+`PhysicsProcess.run` (component + ComponentState adapter + time control) decides,
+for each process, in this order:
 
-1. `state.collect_inputs(entry)` — bind the ```EntryState```; derive process-specific
-   inputs (tmx: air_mass, cv_air, run the flux provider).
-2. Compute (or recycle the cached forcing on non-firing steps — the
-   time-control machinery is unchanged).
-3. The **driver** routes the outputs by their metadata: `kind == "tendency"` →
-   accumulators; everything else → the diagnostics store. The metadata finally
-   *does* something (the old B2 thread) — and the adapters contain zero
-   application code.
+1. Outside its `[start, end)` window it returns nothing and contributes nothing.
+   A process that should not run at all is simply left out of the driver's
+   process list, so its component is never constructed and its stencils are
+   never compiled.
+2. On a firing step: `state.as_component_input(entry)` — derive process-specific
+   inputs (tmx: air_mass, cv_air, run the flux provider) — then compute. Between
+   firings it returns its cached output, and the input translation is skipped
+   with it.
+3. The **driver** hands the outputs to `Tendencies.accumulate`, which keeps those
+   with `kind == FieldKind.TENDENCY`. Everything else is a diagnostic and was
+   already written in place into the `DiagnosticsStore` buffer bound to that
+   component. The metadata finally *does* something (the old B2 thread) — and the
+   adapters contain zero application code.
 
 
 ## 5 · What each component collects, computes, and emits
 
 |  | muphys (graupel microphysics) | tmx (turbulent mixing) |
 | --- | --- | --- |
-| collect_inputs | binds the façade; nothing computed (`dz` static) | binds; computes air_mass (ρ·dz), cv_air (moisture-weighted); runs the **surface-flux provider** (prescribed `isrfc_type = 1` fluxes — ≈ −83 W/m² sensible, zero latent; ocean bulk fluxes later for `isrfc_type = 0`) |
+| as_component_input | pure mapping; nothing computed (`dz` static) | computes air_mass (ρ·dz), cv_air (moisture-weighted); runs the **surface-flux provider** (prescribed `isrfc_type = 1` fluxes — ≈ −83 W/m² sensible, zero latent; ocean bulk fluxes later for `isrfc_type = 0`) |
 | component inputs | 4 + 6 tracers (dz, te, p, rho, q_v..g) — all but dz via `entry_state` | 21 (thermo + wind + tracers + air_mass/cv_air + 5 surface-flux fields) — all but its own via `entry_state` |
-| component outputs | `tend_temperature`, `tend_q*` (6) → accumulators; precip fluxes (pflx, pr, ps, pi, pg, pre) → diagnostics store | `tend_temperature`, `tend_qv/qc/qi`, `tend_u/v/w` → accumulators; km, kh, heating, dissip_ke + 4 vertical integrals → diagnostics store (all now tagged `kind="diagnostic"`) |
+| component outputs | `tend_temperature`, `tend_q*` (6) → accumulators; precip fluxes (pflx, pr, ps, pi, pg, pre) → diagnostics store | `tend_temperature`, `tend_qv/qc/qi`, `tend_u/v/w` → accumulators; km, kh, heating, dissip_ke + 4 vertical integrals → diagnostics store (no `kind` at all — diagnostics are the complement of `TENDENCY`) |
 | applies | **nothing** — application is the layer's job, once, for everyone | **nothing** |
 | naming | `tend_*` on the wrapper contract; granules keep their port names (`TENDENCY_GRANULE_PORTS` maps) | same |
 
@@ -211,11 +232,11 @@ time control) that is enabled and in-window:
   state↔component *input* key agreement (`as_component_input` vs
   `inputs_properties`) in the driver.
 - **EntryState — make the prognostic/diagnostic split structural.** The physics
-  `EntryState` (two-layer coupling, #1436) mixes two categories as flat
-  attributes: six *pointers* for prognostic fields (`exner, theta_v, rho, vn,
-  w` and tracers) and six *owned* diagnostic buffers (`ta, tv, pressure,
-  pressure_ifc, u, v` — diagnosed once per step, frozen). The distinction
-  exists only in comments.
+  `EntryState` (#1436) still mixes two categories on one object: six *pointers*
+  for prognostic fields (`exner, theta_v, rho, vn, w` and tracers) and the owned
+  diagnostics, now at least grouped under `entry.diagnostics` (a common
+  `DiagnosticState`, diagnosed once per step, frozen). The pointers remain flat
+  attributes, so the distinction is still partly a matter of comments.
 - **Next components.** The ocean bulk-flux scheme (`isrfc_type = 0`: Louis
   exchange coefficients over a prescribed SST) behind the same surface-flux
   seam — see [[personal/jcanton/jsbach-port/jsbach-port|JSBACH port]] for the
