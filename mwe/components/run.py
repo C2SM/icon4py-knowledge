@@ -69,11 +69,7 @@ def run_proposed(run_config: config.Config) -> dict[str, Any]:
 
 
 def _records_agree(x: tuple[Any, ...], y: tuple[Any, ...]) -> bool:
-    if x[:2] != y[:2]:
-        return False
-    if x[1] == "temperature":
-        return bool(np.allclose(x[2], y[2], rtol=1e-12, atol=0.0))
-    return bool(np.array_equal(x[2], y[2]))
+    return x[:2] == y[:2] and bool(np.array_equal(x[2], y[2]))
 
 
 def compare(a: dict[str, Any], b: dict[str, Any]) -> list[str]:
@@ -98,7 +94,8 @@ def print_dataflow(run_config: config.Config) -> None:
             d.tracer_advection,
             *p.resolution.providers,
             *[process for process, _ in p.processes.values()],
-            *p.resolution.inverses,
+            *[recipe for recipes in p.resolution.updates.values() for recipe in recipes],
+            *p.resolution.after_apply,
             *d.io_resolution.providers,
             d.io_monitor,
         )

@@ -2,6 +2,19 @@ from model_proposed.common import framework as fw, quantities as qty
 import ops
 
 
+class TemperatureFromThetaExner(fw.Recipe["TemperatureFromThetaExner.Input", "TemperatureFromThetaExner.Output"]):
+    class Input(fw.State):
+        theta_v: fw.Read[qty.ThetaVField]
+        exner: fw.Read[qty.ExnerField]
+
+    class Output(fw.State):
+        temperature: qty.TemperatureField
+
+    def run(self, input: Input) -> Output:
+        ops.compute_temperature(input.theta_v, input.exner, self.output.temperature)
+        return self.output
+
+
 class ExnerThetaFromTemperature(fw.Component["ExnerThetaFromTemperature.Input", fw.Empty]):
     class Input(fw.State):
         temperature: fw.Read[qty.TemperatureField]
@@ -15,39 +28,6 @@ class ExnerThetaFromTemperature(fw.Component["ExnerThetaFromTemperature.Input", 
         return self.output
 
 
-class TemperatureFromThetaExner(fw.Recipe["TemperatureFromThetaExner.Input", "TemperatureFromThetaExner.Output"]):
-    class Input(fw.State):
-        theta_v: fw.Read[qty.ThetaVField]
-        exner: fw.Read[qty.ExnerField]
-
-    class Output(fw.State):
-        temperature: qty.TemperatureField
-
-    inverse = ExnerThetaFromTemperature
-    exact_inverse = True
-
-    def run(self, input: Input) -> Output:
-        ops.compute_temperature(input.theta_v, input.exner, self.output.temperature)
-        return self.output
-
-
-class VnFromUIncrement(fw.Component["VnFromUIncrement.Input", fw.Empty]):
-    class Input(fw.State):
-        u_increment: fw.Read[fw.Increment[qty.UField]]
-        vn: fw.ReadWrite[qty.VnField]
-
-    Output = fw.Empty
-
-    def __init__(self, output: fw.Empty) -> None:
-        super().__init__(output)
-        self._ddt_vn = ops.field(ops.EDGE_K)
-
-    def run(self, input: Input) -> fw.Empty:
-        ops.compute_vn_from_uv(input.u_increment, self._ddt_vn)
-        ops.arr(input.vn)[...] += ops.arr(self._ddt_vn)
-        return self.output
-
-
 class UFromVn(fw.Recipe["UFromVn.Input", "UFromVn.Output"]):
     class Input(fw.State):
         vn: fw.Read[qty.VnField]
@@ -55,8 +35,24 @@ class UFromVn(fw.Recipe["UFromVn.Input", "UFromVn.Output"]):
     class Output(fw.State):
         u: qty.UField
 
-    inverse = VnFromUIncrement
-
     def run(self, input: Input) -> Output:
         ops.edge_2_cell_vector_rbf_interpolation(input.vn, self.output.u)
+        return self.output
+
+
+class VnIncrementFromUTendency(fw.Recipe["VnIncrementFromUTendency.Input", "VnIncrementFromUTendency.Output"]):
+    class Input(fw.State):
+        tend_u: fw.Read[fw.Tendency[qty.UField]]
+        dtime: fw.Read[qty.TimeStep]
+
+    class Output(fw.State):
+        vn: fw.Increment[qty.VnField]
+
+    def __init__(self, output: Output) -> None:
+        super().__init__(output)
+        self._ddt_vn = ops.field(ops.EDGE_K)
+
+    def run(self, input: Input) -> Output:
+        ops.compute_vn_from_uv(input.tend_u, self._ddt_vn)
+        ops.arr(self.output.vn)[...] = input.dtime * ops.arr(self._ddt_vn)
         return self.output

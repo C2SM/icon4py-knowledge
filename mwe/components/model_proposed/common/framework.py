@@ -5,7 +5,7 @@ import enum
 import types
 import typing
 from collections.abc import Callable, Iterable, Iterator
-from typing import Annotated, Any, ClassVar, dataclass_transform
+from typing import Annotated, Any, dataclass_transform
 
 import gt4py.next as gtx
 import numpy as np
@@ -64,8 +64,29 @@ class Derived:
     recipe: type[Recipe[Any, Any]]
 
 
+@dataclasses.dataclass(frozen=True)
+class FromTendency:
+    pass
+
+
+@dataclasses.dataclass(frozen=True)
+class AfterApply:
+    recipe: type[Component[Any, Any]]
+
+
+_MARKERS = (Derived, FromTendency, AfterApply)
+
+
 def derived_by(recipe: type[Recipe[Any, Any]]) -> Any:
     return Derived(recipe)
+
+
+def from_tendency() -> Any:
+    return FromTendency()
+
+
+def after_apply(recipe: type[Component[Any, Any]]) -> Any:
+    return AfterApply(recipe)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -76,7 +97,11 @@ class Decl:
     tag: Tag | None
     level: Level | None
     field_type: Any
-    recipe: type[Recipe[Any, Any]] | None
+    marker: Derived | FromTendency | AfterApply | None
+
+    @property
+    def recipe(self) -> type[Recipe[Any, Any]] | None:
+        return self.marker.recipe if isinstance(self.marker, Derived) else None
 
 
 def unwrap(hint: Any) -> tuple[Any, tuple[Any, ...]]:
@@ -103,8 +128,8 @@ def _decl(name: str, hint: Any, default: Any) -> Decl:
         q = increment_of(q)
     intent = next((m for m in meta if isinstance(m, Intent)), None)
     level = next((m for m in meta if isinstance(m, Level)), None)
-    recipe = default.recipe if isinstance(default, Derived) else None
-    return Decl(name, q, intent, tag, level, base, recipe)
+    marker = default if isinstance(default, _MARKERS) else None
+    return Decl(name, q, intent, tag, level, base, marker)
 
 
 _DECLARATIONS: dict[type, tuple[Decl, ...]] = {}
@@ -132,7 +157,7 @@ class State:
 
     def __post_init__(self) -> None:
         for d, value in self.leaves():
-            if isinstance(value, Derived):
+            if isinstance(value, _MARKERS):
                 raise UnresolvedInput(f"{type(self).__name__}.{d.name}")
 
     @classmethod
@@ -148,7 +173,7 @@ class Empty(State):
     pass
 
 
-def state_type(name: str, leaves: dict[str, tuple[Any, Derived | None]]) -> type[State]:
+def state_type(name: str, leaves: dict[str, tuple[Any, Any]]) -> type[State]:
     def body(namespace: dict[str, Any]) -> None:
         namespace["__annotations__"] = {leaf: hint for leaf, (hint, _) in leaves.items()}
         namespace.update({leaf: default for leaf, (_, default) in leaves.items() if default is not None})
@@ -214,11 +239,15 @@ class UnappliedIncrement(KeyError):
     pass
 
 
+class UnappliedTendency(ValueError):
+    pass
+
+
 class InconsistentDerivation(ValueError):
     pass
 
 
-class MissingInverse(ValueError):
+class InconsistentUpdate(ValueError):
     pass
 
 
@@ -254,12 +283,6 @@ class Component[InputT: State, OutputT: State]:
             values[d.name] = available[(d.quantity, d.level)]
         return self.Input(**values)
 
-    def accumulate(self, into: State, dt: float) -> None:
-        targets = {d.quantity: value for d, value in into.leaves()}
-        for d, value in self.output.leaves():
-            if d.tag is Tag.TENDENCY and d.quantity.of is not None:
-                np.asarray(targets[increment_of(d.quantity.of)].ndarray)[...] += dt * np.asarray(value.ndarray)
-
     def apply(self, increments: State, *targets: State) -> None:
         leaves = {d.quantity: value for target in targets for d, value in target.leaves()}
         for d, value in increments.leaves():
@@ -271,16 +294,32 @@ class Component[InputT: State, OutputT: State]:
 
 
 class Recipe[InputT: State, OutputT: State](Component[InputT, OutputT]):
-    inverse: ClassVar[type[Component[Any, Any]] | None] = None
-    exact_inverse: ClassVar[bool] = False
+    pass
+
+
+class Process[InputT: State, OutputT: State](Component[InputT, OutputT]):
+    Update: type[State] = Empty
+
+    def accumulate(self, into: State, dt: float, *computed: State) -> None:
+        targets = {d.quantity: value for d, value in into.leaves()}
+        tendencies = {d.quantity: value for d, value in self.output.leaves()}
+        available = _available(computed)
+        for d in self.Update.declarations():
+            if d.tag is not Tag.INCREMENT or d.quantity.of is None:
+                continue
+            if isinstance(d.marker, FromTendency):
+                tendency = tendencies[tendency_of(d.quantity.of)]
+                np.asarray(targets[d.quantity].ndarray)[...] += dt * np.asarray(tendency.ndarray)
+            elif isinstance(d.marker, Derived):
+                np.asarray(targets[d.quantity].ndarray)[...] += np.asarray(available[(d.quantity, None)].ndarray)
 
 
 @dataclasses.dataclass(frozen=True)
 class Resolution:
     providers: tuple[Recipe[Any, Any], ...]
     increments: State
-    inverses: tuple[Component[Any, Any], ...]
-    reusable: frozenset[type[Recipe[Any, Any]]]
+    updates: dict[Process[Any, Any], tuple[Recipe[Any, Any], ...]]
+    after_apply: tuple[Component[Any, Any], ...]
 
     def run_providers(self, *supplied: State | TimeStepPair[Any]) -> tuple[State, ...]:
         available = _available(supplied)
@@ -292,15 +331,19 @@ class Resolution:
             produced.append(provider.output)
         return tuple(produced)
 
-    def reusable_outputs(self, produced: Iterable[State]) -> tuple[State, ...]:
-        recipe_of = {id(provider.output): type(provider) for provider in self.providers}
-        return tuple(state for state in produced if recipe_of[id(state)] in self.reusable)
+    def run_updates(self, process: Process[Any, Any], *supplied: State | TimeStepPair[Any]) -> tuple[State, ...]:
+        computed: list[State] = []
+        for recipe in self.updates[process]:
+            recipe.run(recipe.collect_inputs(process.output, *supplied))
+            computed.append(recipe.output)
+        return tuple(computed)
 
 
 def resolve(
     children: Iterable[Component[Any, Any]], sizes: dict[gtx.Dimension, int], *, targets: type[State]
 ) -> Resolution:
     children = tuple(children)
+    target_quantities = {d.quantity for d in targets.declarations()}
     recipes: dict[tuple[Quantity, Level | None], type[Recipe[Any, Any]]] = {}
     order: list[type[Recipe[Any, Any]]] = []
 
@@ -316,51 +359,84 @@ def resolve(
 
     for child in children:
         visit(child.Input)
+    known = target_quantities | {d.quantity for recipe in order for d in recipe.Output.declarations()}
 
-    tendencies: dict[str, tuple[Any, Derived | None]] = {}
+    increments: dict[str, tuple[Any, None]] = {}
+    updates: dict[Process[Any, Any], tuple[Recipe[Any, Any], ...]] = {}
+    hooks: dict[Quantity, type[Component[Any, Any]]] = {}
+    hook_order: list[type[Component[Any, Any]]] = []
     for child in children:
+        label = type(child).__name__
+        outputs = {d.quantity for d in child.Output.declarations()}
+        consumed: set[Quantity] = set()
+        computed: list[Recipe[Any, Any]] = []
+        for d in child.Update.declarations() if isinstance(child, Process) else ():
+            parent = d.quantity.of
+            if isinstance(d.marker, AfterApply) and d.intent is Intent.READWRITE:
+                hook = d.marker.recipe
+                if not any(h.quantity == d.quantity and h.intent is Intent.READWRITE for h in hook.Input.declarations()):
+                    raise InconsistentUpdate(f"{label}.{d.name}: {hook.__name__} does not write {d.quantity.name}")
+                if hooks.setdefault(d.quantity, hook) is not hook:
+                    raise InconsistentUpdate(d.quantity.name)
+                if hook not in hook_order:
+                    for i in hook.Input.declarations():
+                        if i.quantity not in known:
+                            raise MissingInput(f"{hook.__name__}.{i.name}: {i.quantity.name}")
+                    hook_order.append(hook)
+                continue
+            if d.tag is not Tag.INCREMENT or parent is None:
+                raise InconsistentUpdate(f"{label}.{d.name}")
+            if isinstance(d.marker, FromTendency):
+                if tendency_of(parent) not in outputs:
+                    raise InconsistentUpdate(f"{label}.{d.name}: no tendency of {parent.name} in Output")
+                consumed.add(tendency_of(parent))
+            elif isinstance(d.marker, Derived):
+                recipe = d.marker.recipe
+                if d.quantity not in {o.quantity for o in recipe.Output.declarations()}:
+                    raise InconsistentUpdate(f"{label}.{d.name}: {recipe.__name__} does not produce {d.quantity.name}")
+                for i in recipe.Input.declarations():
+                    if i.quantity not in outputs and i.quantity not in target_quantities:
+                        raise MissingInput(f"{recipe.__name__}.{i.name}: {i.quantity.name}")
+                    if i.tag is Tag.TENDENCY:
+                        consumed.add(i.quantity)
+                computed.append(recipe(allocate(recipe.Output, sizes)))
+            else:
+                raise InconsistentUpdate(f"{label}.{d.name}")
+            if parent not in known:
+                raise UnappliedIncrement(d.quantity.name)
+            increments[parent.name] = (Annotated[d.field_type, parent, Tag.INCREMENT], None)
         for d in child.Output.declarations():
-            if d.tag is Tag.TENDENCY and d.quantity.of is not None:
-                tendencies[d.quantity.of.name] = (Annotated[d.field_type, d.quantity.of, Tag.INCREMENT], None)
-    increments = allocate(state_type("Increments", tendencies), sizes)
-
-    provided = {d.quantity: recipe for recipe in order for d in recipe.Output.declarations()}
-    target_quantities = {d.quantity for d in targets.declarations()}
-    incremented: set[type[Recipe[Any, Any]]] = set()
-    inverses: list[type[Component[Any, Any]]] = []
-    for d in increments.declarations():
-        parent = d.quantity.of
-        if parent is None or parent in target_quantities:
-            continue
-        if parent not in provided:
-            raise UnappliedIncrement(d.quantity.name)
-        recipe = provided[parent]
-        if recipe.inverse is None:
-            raise MissingInverse(recipe.__name__)
-        incremented.add(recipe)
-        if recipe.inverse not in inverses:
-            inverses.append(recipe.inverse)
+            if d.tag is Tag.TENDENCY and d.quantity not in consumed:
+                raise UnappliedTendency(f"{label}.{d.name}")
+        if isinstance(child, Process):
+            updates[child] = tuple(computed)
 
     return Resolution(
         providers=tuple(recipe(allocate(recipe.Output, sizes)) for recipe in order),
-        increments=increments,
-        inverses=tuple(inverse(Empty()) for inverse in inverses),
-        reusable=frozenset(recipe for recipe in order if recipe not in incremented or recipe.exact_inverse),
+        increments=allocate(state_type("Increments", increments), sizes),
+        updates=updates,
+        after_apply=tuple(hook(Empty()) for hook in hook_order),
     )
 
 
 def dataflow(*components: Component[Any, Any]) -> str:
+    def text(d: Decl) -> str:
+        out = d.quantity.name + (f"@{d.level.value}" if d.level else "")
+        if isinstance(d.marker, Derived):
+            out += f" <- {d.marker.recipe.__name__}"
+        elif isinstance(d.marker, FromTendency):
+            out += " <- tendency"
+        elif isinstance(d.marker, AfterApply):
+            out += f" <- after apply {d.marker.recipe.__name__}"
+        return out
+
     def names(decls: tuple[Decl, ...], intent: Intent | None = None) -> str:
-        picked = [
-            d.quantity.name + (f"@{d.level.value}" if d.level else "") + (f" <- {d.recipe.__name__}" if d.recipe else "")
-            for d in decls
-            if intent is None or d.intent is intent
-        ]
-        return ", ".join(picked) or "-"
+        return ", ".join(text(d) for d in decls if intent is None or d.intent is intent) or "-"
 
     return "\n".join(
         f"{type(c).__name__:<26} reads: {names(c.Input.declarations(), Intent.READ)}"
         f" | writes: {names(c.Input.declarations(), Intent.READWRITE)}"
         f" | produces: {names(c.Output.declarations())}"
+        f" | updates: {names(c.Update.declarations()) if isinstance(c, Process) else '-'}"
         for c in components
     )

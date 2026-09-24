@@ -21,7 +21,7 @@ class Icon4pyDriver:
         self.io_resolution = fw.resolve([self.io_monitor], ops.SIZES, targets=fw.Empty)
 
     def _store_output(self, info: states.StepInfo) -> None:
-        supplied = (self.prognostic_states.now, *self.physics.reusable)
+        supplied = (self.prognostic_states.now,)
         produced = self.io_resolution.run_providers(*supplied)
         self.io_monitor.run(self.io_monitor.collect_inputs(*supplied, *produced, info))
 
