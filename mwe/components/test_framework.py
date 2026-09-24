@@ -46,21 +46,21 @@ class SaltBack(fw.Component["SaltBack.Input", fw.Empty]):
         return self.output
 
 
-class DensityFromSalt(fw.Component["DensityFromSalt.Input", "DensityFromSalt.Output"]):
+class DensityFromSalt(fw.Recipe["DensityFromSalt.Input", "DensityFromSalt.Output"]):
     class Input(fw.State):
         salt: fw.Read[SField]
 
     class Output(fw.State):
         density: DField
 
-    write_back = SaltBack
+    inverse = SaltBack
 
     def run(self, input: Input) -> Output:
         ops.arr(self.output.density)[...] = 2.0 * ops.arr(input.salt)
         return self.output
 
 
-class DensityFromNothing(fw.Component["DensityFromNothing.Input", "DensityFromNothing.Output"]):
+class DensityFromNothing(fw.Recipe["DensityFromNothing.Input", "DensityFromNothing.Output"]):
     class Input(fw.State):
         pass
 
@@ -141,12 +141,12 @@ def test_accumulate_then_apply_adds_dt_times_tendency_to_parent() -> None:
     assert not ops.arr(inc.temperature).any()
 
 
-def test_resolve_builds_providers_increments_and_write_backs() -> None:
+def test_resolve_builds_providers_increments_and_inverses() -> None:
     consumer = Consumer(fw.allocate(Consumer.Output, ops.SIZES))
     resolution = fw.resolve([consumer], ops.SIZES, targets=Owner)
     assert [type(p) for p in resolution.providers] == [DensityFromSalt]
     assert [d.quantity.name for d in resolution.increments.declarations()] == ["increment_of_test_density"]
-    assert [type(w) for w in resolution.write_backs] == [SaltBack]
+    assert [type(w) for w in resolution.inverses] == [SaltBack]
     assert resolution.reusable == frozenset()
 
     owner = fw.allocate(Owner, ops.SIZES)
@@ -158,8 +158,8 @@ def test_resolve_builds_providers_increments_and_write_backs() -> None:
     consumer.run(consumer.collect_inputs(owner, *produced))
     consumer.accumulate(resolution.increments, dt=1.0)
     consumer.apply(resolution.increments, owner, *produced)
-    for write_back in resolution.write_backs:
-        write_back.run(write_back.collect_inputs(owner, resolution.increments, *produced))
+    for inverse in resolution.inverses:
+        inverse.run(inverse.collect_inputs(owner, resolution.increments, *produced))
     assert np.array_equal(ops.arr(density), np.full((4, 3), 4.0))
     assert np.array_equal(ops.arr(owner.salt), np.full((4, 3), 21.0))
 
@@ -170,8 +170,8 @@ def test_resolve_errors(monkeypatch: pytest.MonkeyPatch) -> None:
         fw.resolve([consumer, OtherConsumer(fw.Empty())], ops.SIZES, targets=Owner)
     with pytest.raises(fw.UnappliedIncrement):
         fw.resolve([Producer(fw.allocate(Producer.Output, ops.SIZES))], ops.SIZES, targets=fw.Empty)
-    monkeypatch.setattr(DensityFromSalt, "write_back", None)
-    with pytest.raises(fw.MissingWriteBack):
+    monkeypatch.setattr(DensityFromSalt, "inverse", None)
+    with pytest.raises(fw.MissingInverse):
         fw.resolve([consumer], ops.SIZES, targets=Owner)
 
 

@@ -98,7 +98,7 @@ def print_dataflow(run_config: config.Config) -> None:
             d.tracer_advection,
             *p.resolution.providers,
             *[process for process, _ in p.processes.values()],
-            *p.resolution.write_backs,
+            *p.resolution.inverses,
             *d.io_resolution.providers,
             d.io_monitor,
         )

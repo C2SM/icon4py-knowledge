@@ -191,7 +191,7 @@ the dycore decides, from the same flags, whether to recompute the predictor.
 
 ## `model_proposed`
 
-### `common/framework.py` (the reusable part, 271 lines)
+### `common/framework.py` (the reusable part, 272 lines)
 
 ```python
 @dataclass(frozen=True) class Quantity: name, units, cf_key=None, of: Quantity | None = None
@@ -216,23 +216,24 @@ class PredictorCorrectorPair[S](Pair[S]): predictor; corrector  # component-inte
 # One Pair would do; the two subclasses only add icon4py's names (6 lines each) and let
 # collect_inputs tag time levels for TimeStepPair alone.
 def allocate(cls: type[S], sizes: dict[Dimension, int]) -> S  # gtx.zeros per alias dims, scalars zero
-def derived_by(recipe: type[Component]) -> Any                # leaf default: `te: Read[TField] = derived_by(Recipe)`
+def derived_by(recipe: type[Recipe]) -> Any                   # leaf default: `te: Read[TField] = derived_by(Recipe)`
 def state_type(name, leaves: {name: (hint, Derived | None)}) -> type[State]  # State class at runtime (config-driven Inputs)
 
 class Component[InputT, OutputT]:
     Input: type[InputT]; Output: type[OutputT]
-    write_back: type[Component] | None = None                 # recipe only: pushes an incremented output into its sources
-    invertible: bool = False                                  # recipe only: output still valid after write_back
     def __init__(self, output: OutputT)                       # composition allocates, binds here
     def run(self, input: InputT) -> OutputT                   # abstract
     def collect_inputs(self, *states) -> InputT               # pointer selection only, never computes
     def accumulate(self, into: State, dt: float) -> None      # Tendency leaf of self.output -> Increment leaf: += dt * t
     def apply(self, increments: State, *targets: State) -> None  # Increment leaf -> parent leaf in targets: +=; else raise
+class Recipe[InputT, OutputT](Component[InputT, OutputT]):   # a derivation; derived_by accepts nothing else
+    inverse: type[Component] | None = None                    # carries a change of the output back into the sources
+    exact_inverse: bool = False                               # re-deriving after the inverse returns the output (exact arithmetic)
 
 def resolve(children, sizes, *, targets: type[State]) -> Resolution   # composite init: read the children's declarations
-class Resolution: providers; increments; write_backs; reusable
+class Resolution: providers; increments; inverses; reusable
     def run_providers(self, *supplied) -> tuple[State, ...]   # skips a provider whose output is already supplied
-    def reusable_outputs(self, produced) -> tuple[State, ...] # provider outputs still valid after the write-backs
+    def reusable_outputs(self, produced) -> tuple[State, ...] # provider outputs still valid after the inverses
 def dataflow(*components) -> str                              # declared reads / writes / produces, `<- Recipe` on derived leaves
 ```
 
@@ -261,14 +262,14 @@ Rules the framework enforces:
   dependencies first, allocates one instance each; builds the `Increments` state
   from the union of the children's `Tendency` outputs; and for every increment
   whose parent is neither a target leaf nor a provider output raises
-  `UnappliedIncrement`, for one whose parent is a provider output without a
-  `write_back` raises `MissingWriteBack`, for two recipes on one
+  `UnappliedIncrement`, for one whose parent is a provider output without an
+  `inverse` raises `MissingInverse`, for two recipes on one
   `(quantity, level)` raises `InconsistentDerivation`. Every error is at init.
 - `Resolution.run_providers(*supplied)` runs the providers whose output is not
   already among the supplied states ("supplied wins"), in order, each seeing
   the outputs before it. `Resolution.reusable_outputs(produced)` returns the
-  provider outputs that are still valid after the write-backs: never
-  incremented, or from an `invertible` recipe.
+  provider outputs that are still valid after the inverses: never
+  incremented, or from a recipe with an `exact_inverse`.
 - A `State` built by hand with a `derived_by` marker still in place raises
   `UnresolvedInput`; `kw_only=True` on every `State` lets leaves with a
   `derived_by` default sit anywhere in the declaration order.
@@ -281,7 +282,14 @@ Rules the framework enforces:
   lazy) and `REGISTRY` fills as declarations are read.
 
 Decisions recorded: `Component` is a nominal base class, not a `Protocol`, so
-that the verbs are inherited defaults a component or composite may override.
+that the verbs are inherited defaults a component or composite may override:
+`accumulate` is the emitter's hook (a process that wants `2 * dt * tend` or a
+clipped tendency overrides it there, before the sum), `apply` the composite's
+(the summed increments carry no `dt` and no emitter, so a per-process `apply`
+cannot exist). Free functions for the two were considered and rejected for
+that reason. `Recipe` is the one subclass: a derivation is a `Component` plus
+`inverse` and `exact_inverse`, and `derived_by` is typed on it, so mypy rejects
+`derived_by(MuphysComponent)`.
 `State` is a base class because the dataclass conversion needs one. Time level
 lives on the declaration and on `Pair`, never on the `Quantity`. Tendencies and
 increments are derived quantities. `dt` enters in `accumulate` so that
@@ -345,7 +353,7 @@ level-free: the tendency is `Tendency[VnField]`.
 derived_by(recipes.TemperatureFromThetaExner)`. It does not compute
 `te`, and `collect_inputs` does not either: it stays pointer selection. The
 composite (`PhysicsDriver`, or the driver for IO) calls `resolve` once at init
-and gets the providers to run, the increments to zero and the write-backs to
+and gets the providers to run, the increments to zero and the inverses to
 run. Decisions and why:
 
 - **Not in `collect_inputs`.** An `if te in state: use it else: compute` inside
@@ -355,34 +363,37 @@ run. Decisions and why:
   ICON's prognostic vocabulary (`theta_v`, `exner`) into a granule wrapper that
   should know only `T`, and makes `dataflow()` a disjunction. The declaration
   gives the discoverability without any of that.
-- **Recipes are Components**, not functions plus a source list: they carry
+- **Recipes are Components** (`Recipe` adds only `inverse` and `exact_inverse`),
+  not functions plus a source list: they carry
   their own Input and Output declarations (so a multi-output recipe is one
   run), own their output buffer, appear as ordinary nodes in `dataflow()`, and
   live in one shared module (`recipes.py`) so wrappers pick a recipe
   rather than write one. Two wrappers picking different recipes for the same
   quantity is an init-time error, not two temperatures.
-- **The tendency rule is universal; the write-back belongs to the recipe.**
+- **The tendency rule is universal; the inverse belongs to the recipe.**
   `x += sum(dt_i * tend_i)` is `accumulate` + `apply`, the same for prognostic
   and derived `x`. What differs per quantity is how an updated derived value
   reaches the prognostics, and that is the inverse of the derivation:
-  `TemperatureFromThetaExner.write_back = ExnerThetaFromTemperature` (full
-  inverse, the EOS is a pointwise bijection), `UFromVn.write_back =
+  `TemperatureFromThetaExner.inverse = ExnerThetaFromTemperature` (full
+  inverse, the EOS is a pointwise bijection), `UFromVn.inverse =
   VnFromUIncrement` (incremental, `vn += P(du)`, because `rbf(P(u)) != u`). The
   processes declare nothing about application. This is `ApplyToPrognostic`
   split along its own seams.
 - **Reuse across composites is by passing an Output, and only while valid.** A
-  derived value is valid for one instant of its sources. `invertible = True`
+  derived value is valid for one instant of its sources. `exact_inverse = True`
   on the temperature recipe says the incremented output equals a recomputation
-  from the written-back `exner`/`theta_v` to round-off, so the driver hands
+  from the written-back `exner`/`theta_v` to round-off (not bit-exact:
+  `(T / exner) * exner` differs in the last bit, hence the tolerance on
+  temperature records), so the driver hands
   `physics.reusable` to IO and IO's own `TemperatureFromThetaExner` provider is
-  skipped. `UFromVn` is not invertible: `u_entry + du != rbf(vn_new)`, a real
+  skipped. `UFromVn` has no exact inverse: `u_entry + du != rbf(vn_new)`, a real
   difference, not round-off, so IO recomputes `u`. That asymmetry is a fact
   about the real model, encoded once, on the recipe.
 - **Nothing is computed for nobody.** With `physics: {}` no provider exists;
   with `output_variables: []` IO has no Input leaves. `model_current` computes
   `temperature` and `u` twice per step in every row of the `run.py` table.
 - **Errors, not skips or defaults**: `MissingInput`, `AmbiguousSource`,
-  `UnappliedIncrement`, `InconsistentDerivation`, `MissingWriteBack`,
+  `UnappliedIncrement`, `InconsistentDerivation`, `MissingInverse`,
   `UnresolvedInput`; an unknown output variable is a `KeyError` into
   `io.VARIABLES`. The one rule that looks like a default, "supplied wins over
   provider", is the reuse mechanism, and a partial supply of a multi-output
@@ -395,7 +406,7 @@ Module and class names follow `model_current` so the two trees read side by side
 ```
 common/quantities.py  10 field aliases + 7 scalar aliases, one line each; names are the CF standard names of data.py
 common/states.py      PrognosticState, TracerState, PrepAdvection, StepInfo
-recipes.py            TemperatureFromThetaExner (write_back ExnerThetaFromTemperature, invertible), UFromVn (write_back VnFromUIncrement)
+recipes.py            TemperatureFromThetaExner (inverse ExnerThetaFromTemperature, exact_inverse), UFromVn (inverse VnFromUIncrement)
 solve_nonhydro.py     SolveNonhydro: Input Now[...] x5 READ, Next[...] x5 READWRITE, substep scalars; Output PrepAdvection
                       owns PredictorCorrectorPair(AdvectiveTendencies) and swaps it in run
 diffusion.py          Diffusion: Input ReadWrite[VnField], ReadWrite[ThetaVField], Read[TimeStep]; Output Empty
@@ -404,17 +415,17 @@ muphys.py             MuphysComponent: Input te = derived_by(TemperatureFromThet
 tmx.py                TmxComponent: Input temperature = derived_by(...), u = derived_by(UFromVn); Output Tendency[T], Tendency[U]
 io.py                 VARIABLES (name -> hint, derived_by); IOMonitor(variables): Input built by state_type from the config
 physics_driver.py     PhysicsDriver(process_intervals): processes from PROCESSES by config name, resolve(...) at init
-                      run: run_providers -> each process (run if active) -> accumulate -> apply -> write_backs -> reusable
+                      run: run_providers -> each process (run if active) -> accumulate -> apply -> inverses -> reusable
 driver.py             Icon4pyDriver(config): owner-states, PhysicsDriver, IOMonitor and its own resolve for IO providers
 ```
 
 Where each tricky case lands: now/next in `solve_nonhydro.py` and
 `tracer_advection.py`; a component-internal predictor/corrector pair in
-`solve_nonhydro.py`; in-place in `diffusion.py` and the two write-back recipes;
+`solve_nonhydro.py`; in-place in `diffusion.py` and the two inverse components;
 hand-off in dycore -> advection (`mass_flx_me` is an `Output` with no tendency
 tag, so it is never accumulated); cadence with cached output in
 `physics_driver.py` (`ProcessTimeControl(2)` for tmx from the config); derived
-inputs, increments and write-backs assembled by `resolve` in
+inputs, increments and inverses assembled by `resolve` in
 `physics_driver.py`; scalars as quantities in `StepInfo`; config-driven IO
 Input in `io.py`, collecting from `prognostic_states.now`, the physics'
 reusable `temperature` and IO's own `UFromVn` provider.
@@ -422,7 +433,7 @@ reusable `temperature` and IO's own `UFromVn` provider.
 ## Checking
 
 - `run.py`: prints `dataflow()` of the proposed model for `example.yaml`
-  (providers, processes, write-backs, IO), then for each of four configs runs
+  (providers, processes, inverses, IO), then for each of four configs runs
   both models for 4 steps, compares the quantities, both sides of the dycore
   pair and the output records, and prints one table row per side with the
   number of `compute_temperature` and `edge_2_cell_vector_rbf_interpolation`
@@ -448,5 +459,5 @@ reusable `temperature` and IO's own `UFromVn` provider.
 - One line added to the layout block of `AGENTS.md` naming `mwe/`.
 - Code is comment-free by request; names carry the meaning.
 - Size as built (non-blank lines): `model_current` 667 across 28 modules,
-  `model_proposed` 585 (of which `framework.py` 271, `recipes.py` 43),
+  `model_proposed` 585 (of which `framework.py` 272, `recipes.py` 43),
   `ops.py` 105 (with the call counter), `config.py` 10, `run.py` + tests 260.

@@ -52,7 +52,7 @@ class PhysicsDriver(fw.Component["PhysicsDriver.Input", fw.Empty]):
                 process.run(process.collect_inputs(input, *produced))
             process.accumulate(self.resolution.increments, input.dtime)
         self.apply(self.resolution.increments, input, *produced)
-        for write_back in self.resolution.write_backs:
-            write_back.run(write_back.collect_inputs(input, self.resolution.increments, *produced))
+        for inverse in self.resolution.inverses:
+            inverse.run(inverse.collect_inputs(input, self.resolution.increments, *produced))
         self.reusable = self.resolution.reusable_outputs(produced)
         return self.output

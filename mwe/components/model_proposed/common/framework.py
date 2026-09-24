@@ -61,10 +61,10 @@ type Next[F] = Annotated[F, Level.NEXT]
 
 @dataclasses.dataclass(frozen=True)
 class Derived:
-    recipe: type[Component[Any, Any]]
+    recipe: type[Recipe[Any, Any]]
 
 
-def derived_by(recipe: type[Component[Any, Any]]) -> Any:
+def derived_by(recipe: type[Recipe[Any, Any]]) -> Any:
     return Derived(recipe)
 
 
@@ -76,7 +76,7 @@ class Decl:
     tag: Tag | None
     level: Level | None
     field_type: Any
-    recipe: type[Component[Any, Any]] | None
+    recipe: type[Recipe[Any, Any]] | None
 
 
 def unwrap(hint: Any) -> tuple[Any, tuple[Any, ...]]:
@@ -218,7 +218,7 @@ class InconsistentDerivation(ValueError):
     pass
 
 
-class MissingWriteBack(ValueError):
+class MissingInverse(ValueError):
     pass
 
 
@@ -238,8 +238,6 @@ def _available(states: Iterable[State | TimeStepPair[Any]]) -> dict[tuple[Quanti
 class Component[InputT: State, OutputT: State]:
     Input: type[InputT]
     Output: type[OutputT]
-    write_back: ClassVar[type[Component[Any, Any]] | None] = None
-    invertible: ClassVar[bool] = False
 
     def __init__(self, output: OutputT) -> None:
         self.output = output
@@ -272,12 +270,17 @@ class Component[InputT: State, OutputT: State]:
             np.asarray(leaves[d.quantity.of].ndarray)[...] += np.asarray(value.ndarray)
 
 
+class Recipe[InputT: State, OutputT: State](Component[InputT, OutputT]):
+    inverse: ClassVar[type[Component[Any, Any]] | None] = None
+    exact_inverse: ClassVar[bool] = False
+
+
 @dataclasses.dataclass(frozen=True)
 class Resolution:
-    providers: tuple[Component[Any, Any], ...]
+    providers: tuple[Recipe[Any, Any], ...]
     increments: State
-    write_backs: tuple[Component[Any, Any], ...]
-    reusable: frozenset[type[Component[Any, Any]]]
+    inverses: tuple[Component[Any, Any], ...]
+    reusable: frozenset[type[Recipe[Any, Any]]]
 
     def run_providers(self, *supplied: State | TimeStepPair[Any]) -> tuple[State, ...]:
         available = _available(supplied)
@@ -298,8 +301,8 @@ def resolve(
     children: Iterable[Component[Any, Any]], sizes: dict[gtx.Dimension, int], *, targets: type[State]
 ) -> Resolution:
     children = tuple(children)
-    recipes: dict[tuple[Quantity, Level | None], type[Component[Any, Any]]] = {}
-    order: list[type[Component[Any, Any]]] = []
+    recipes: dict[tuple[Quantity, Level | None], type[Recipe[Any, Any]]] = {}
+    order: list[type[Recipe[Any, Any]]] = []
 
     def visit(cls: type[State]) -> None:
         for d in cls.declarations():
@@ -323,8 +326,8 @@ def resolve(
 
     provided = {d.quantity: recipe for recipe in order for d in recipe.Output.declarations()}
     target_quantities = {d.quantity for d in targets.declarations()}
-    incremented: set[type[Component[Any, Any]]] = set()
-    write_backs: list[type[Component[Any, Any]]] = []
+    incremented: set[type[Recipe[Any, Any]]] = set()
+    inverses: list[type[Component[Any, Any]]] = []
     for d in increments.declarations():
         parent = d.quantity.of
         if parent is None or parent in target_quantities:
@@ -332,17 +335,17 @@ def resolve(
         if parent not in provided:
             raise UnappliedIncrement(d.quantity.name)
         recipe = provided[parent]
-        if recipe.write_back is None:
-            raise MissingWriteBack(recipe.__name__)
+        if recipe.inverse is None:
+            raise MissingInverse(recipe.__name__)
         incremented.add(recipe)
-        if recipe.write_back not in write_backs:
-            write_backs.append(recipe.write_back)
+        if recipe.inverse not in inverses:
+            inverses.append(recipe.inverse)
 
     return Resolution(
         providers=tuple(recipe(allocate(recipe.Output, sizes)) for recipe in order),
         increments=increments,
-        write_backs=tuple(write_back(Empty()) for write_back in write_backs),
-        reusable=frozenset(recipe for recipe in order if recipe not in incremented or recipe.invertible),
+        inverses=tuple(inverse(Empty()) for inverse in inverses),
+        reusable=frozenset(recipe for recipe in order if recipe not in incremented or recipe.exact_inverse),
     )
 
 

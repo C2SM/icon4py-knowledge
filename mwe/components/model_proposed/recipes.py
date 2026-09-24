@@ -15,7 +15,7 @@ class ExnerThetaFromTemperature(fw.Component["ExnerThetaFromTemperature.Input", 
         return self.output
 
 
-class TemperatureFromThetaExner(fw.Component["TemperatureFromThetaExner.Input", "TemperatureFromThetaExner.Output"]):
+class TemperatureFromThetaExner(fw.Recipe["TemperatureFromThetaExner.Input", "TemperatureFromThetaExner.Output"]):
     class Input(fw.State):
         theta_v: fw.Read[qty.ThetaVField]
         exner: fw.Read[qty.ExnerField]
@@ -23,8 +23,8 @@ class TemperatureFromThetaExner(fw.Component["TemperatureFromThetaExner.Input", 
     class Output(fw.State):
         temperature: qty.TemperatureField
 
-    write_back = ExnerThetaFromTemperature
-    invertible = True
+    inverse = ExnerThetaFromTemperature
+    exact_inverse = True
 
     def run(self, input: Input) -> Output:
         ops.compute_temperature(input.theta_v, input.exner, self.output.temperature)
@@ -48,14 +48,14 @@ class VnFromUIncrement(fw.Component["VnFromUIncrement.Input", fw.Empty]):
         return self.output
 
 
-class UFromVn(fw.Component["UFromVn.Input", "UFromVn.Output"]):
+class UFromVn(fw.Recipe["UFromVn.Input", "UFromVn.Output"]):
     class Input(fw.State):
         vn: fw.Read[qty.VnField]
 
     class Output(fw.State):
         u: qty.UField
 
-    write_back = VnFromUIncrement
+    inverse = VnFromUIncrement
 
     def run(self, input: Input) -> Output:
         ops.edge_2_cell_vector_rbf_interpolation(input.vn, self.output.u)
