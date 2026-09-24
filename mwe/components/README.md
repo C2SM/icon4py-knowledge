@@ -21,6 +21,6 @@ and prints one row per side with `OK` and how many times each side computed
 `temperature` and `u`.
 
 Suggested reading order: `run.py` output, then `model_current/atmosphere/subgrid_scale_physics/muphys/`
-next to `model_proposed/muphys.py` and `model_proposed/quantity_recipes.py`, then
+next to `model_proposed/muphys.py` and `model_proposed/recipes.py`, then
 `physics_driver.py` on both sides, then `driver.py` on both sides, then
 `model_proposed/common/framework.py`.

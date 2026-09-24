@@ -342,7 +342,7 @@ level-free: the tendency is `Tendency[VnField]`.
 ### Derived quantities: the component declares, the composite computes
 
 `MuphysComponent.Input` says `te: Read[TemperatureField] =
-derived_by(quantity_recipes.TemperatureFromThetaExner)`. It does not compute
+derived_by(recipes.TemperatureFromThetaExner)`. It does not compute
 `te`, and `collect_inputs` does not either: it stays pointer selection. The
 composite (`PhysicsDriver`, or the driver for IO) calls `resolve` once at init
 and gets the providers to run, the increments to zero and the write-backs to
@@ -358,7 +358,7 @@ run. Decisions and why:
 - **Recipes are Components**, not functions plus a source list: they carry
   their own Input and Output declarations (so a multi-output recipe is one
   run), own their output buffer, appear as ordinary nodes in `dataflow()`, and
-  live in one shared module (`quantity_recipes.py`) so wrappers pick a recipe
+  live in one shared module (`recipes.py`) so wrappers pick a recipe
   rather than write one. Two wrappers picking different recipes for the same
   quantity is an init-time error, not two temperatures.
 - **The tendency rule is universal; the write-back belongs to the recipe.**
@@ -395,7 +395,7 @@ Module and class names follow `model_current` so the two trees read side by side
 ```
 common/quantities.py  10 field aliases + 7 scalar aliases, one line each; names are the CF standard names of data.py
 common/states.py      PrognosticState, TracerState, PrepAdvection, StepInfo
-quantity_recipes.py   TemperatureFromThetaExner (write_back ExnerThetaFromTemperature, invertible), UFromVn (write_back VnFromUIncrement)
+recipes.py            TemperatureFromThetaExner (write_back ExnerThetaFromTemperature, invertible), UFromVn (write_back VnFromUIncrement)
 solve_nonhydro.py     SolveNonhydro: Input Now[...] x5 READ, Next[...] x5 READWRITE, substep scalars; Output PrepAdvection
                       owns PredictorCorrectorPair(AdvectiveTendencies) and swaps it in run
 diffusion.py          Diffusion: Input ReadWrite[VnField], ReadWrite[ThetaVField], Read[TimeStep]; Output Empty
@@ -448,5 +448,5 @@ reusable `temperature` and IO's own `UFromVn` provider.
 - One line added to the layout block of `AGENTS.md` naming `mwe/`.
 - Code is comment-free by request; names carry the meaning.
 - Size as built (non-blank lines): `model_current` 667 across 28 modules,
-  `model_proposed` 585 (of which `framework.py` 271, `quantity_recipes.py` 43),
+  `model_proposed` 585 (of which `framework.py` 271, `recipes.py` 43),
   `ops.py` 105 (with the call counter), `config.py` 10, `run.py` + tests 260.

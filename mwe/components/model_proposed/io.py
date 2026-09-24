@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
-from model_proposed import quantity_recipes
+from model_proposed import recipes
 from model_proposed.common import framework as fw, quantities as qty
 import ops
 
@@ -12,8 +12,8 @@ VARIABLES: dict[str, tuple[Any, fw.Derived | None]] = {
     "virtual_potential_temperature": (fw.Read[qty.ThetaVField], None),
     "upward_air_velocity": (fw.Read[qty.WField], None),
     "normal_velocity": (fw.Read[qty.VnField], None),
-    "eastward_wind": (fw.Read[qty.UField], fw.derived_by(quantity_recipes.UFromVn)),
-    "temperature": (fw.Read[qty.TemperatureField], fw.derived_by(quantity_recipes.TemperatureFromThetaExner)),
+    "eastward_wind": (fw.Read[qty.UField], fw.derived_by(recipes.UFromVn)),
+    "temperature": (fw.Read[qty.TemperatureField], fw.derived_by(recipes.TemperatureFromThetaExner)),
 }
 
 
