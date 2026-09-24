@@ -53,3 +53,6 @@ cd /tmp/quartz-preview && npx quartz build --serve   # http://localhost:8080
 
 - **Weekly Slack summary**:— `.github/workflows/weekly-slack-summary.yml` posts a
   Monday-morning summary of the last calendar week's activity to Slack.
+- **Weekly icon4py review**: `.github/workflows/icon4py-weekly-review.yml` runs an
+  automated review of C2SM/icon4py and opens a PR with accepted
+  findings. See [`scripts/icon4py-review/README.md`](scripts/icon4py-review/README.md).
