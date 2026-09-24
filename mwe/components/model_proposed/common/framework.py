@@ -283,15 +283,6 @@ class Component[InputT: State, OutputT: State]:
             values[d.name] = available[(d.quantity, d.level)]
         return self.Input(**values)
 
-    def apply(self, increments: State, *targets: State) -> None:
-        leaves = {d.quantity: value for target in targets for d, value in target.leaves()}
-        for d, value in increments.leaves():
-            if d.tag is not Tag.INCREMENT:
-                continue
-            if d.quantity.of not in leaves:
-                raise UnappliedIncrement(d.quantity.name)
-            np.asarray(leaves[d.quantity.of].ndarray)[...] += np.asarray(value.ndarray)
-
 
 class Recipe[InputT: State, OutputT: State](Component[InputT, OutputT]):
     pass
@@ -337,6 +328,17 @@ class Resolution:
             recipe.run(recipe.collect_inputs(process.output, *supplied))
             computed.append(recipe.output)
         return tuple(computed)
+
+    def apply(self, *targets: State) -> None:
+        leaves = {d.quantity: value for target in targets for d, value in target.leaves()}
+        for d, value in self.increments.leaves():
+            if d.quantity.of not in leaves:
+                raise UnappliedIncrement(d.quantity.name)
+            np.asarray(leaves[d.quantity.of].ndarray)[...] += np.asarray(value.ndarray)
+
+    def run_after_apply(self, *supplied: State | TimeStepPair[Any]) -> None:
+        for hook in self.after_apply:
+            hook.run(hook.collect_inputs(*supplied))
 
 
 def resolve(

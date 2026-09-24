@@ -17,10 +17,6 @@ class Owner(fw.State):
     salt: SField
 
 
-class Inc(fw.State):
-    temperature: fw.Increment[TField]
-
-
 class Producer(fw.Process["Producer.Input", "Producer.Output"]):
     class Input(fw.State):
         temperature: fw.Read[fw.Now[TField]]
@@ -195,16 +191,17 @@ def test_collect_inputs_errors() -> None:
 
 
 def test_accumulate_then_apply_adds_dt_times_tendency_to_parent() -> None:
-    owner, inc = fw.allocate(Owner, ops.SIZES), fw.allocate(Inc, ops.SIZES)
+    owner = fw.allocate(Owner, ops.SIZES)
     p = Producer(fw.allocate(Producer.Output, ops.SIZES))
+    resolution = fw.resolve([p], ops.SIZES, targets=Owner)
     p.run(p.collect_inputs(fw.TimeStepPair(owner, fw.allocate(Owner, ops.SIZES)), fw.allocate(Owner, ops.SIZES)))
-    p.accumulate(inc, dt=0.5)
-    p.apply(inc, owner)
+    p.accumulate(resolution.increments, dt=0.5)
+    resolution.apply(owner)
     with pytest.raises(fw.UnappliedIncrement):
-        p.apply(inc, fw.Empty())
+        resolution.apply(fw.Empty())
     assert np.array_equal(ops.arr(owner.temperature), np.full((4, 3), 1.0))
-    fw.zero(inc)
-    assert not ops.arr(inc.temperature).any()
+    fw.zero(resolution.increments)
+    assert not any(ops.arr(value).any() for _, value in resolution.increments.leaves())
 
 
 def test_resolve_builds_providers_increments_updates_and_hooks() -> None:
@@ -223,9 +220,8 @@ def test_resolve_builds_providers_increments_updates_and_hooks() -> None:
     assert resolution.run_providers(owner, *produced) == ()
     consumer.run(consumer.collect_inputs(owner, *produced))
     consumer.accumulate(resolution.increments, 1.0, *resolution.run_updates(consumer, owner))
-    consumer.apply(resolution.increments, owner, *produced)
-    for hook in resolution.after_apply:
-        hook.run(hook.collect_inputs(owner, *produced))
+    resolution.apply(owner, *produced)
+    resolution.run_after_apply(owner, *produced)
     assert np.array_equal(ops.arr(density), np.full((4, 3), 4.0))
     assert np.array_equal(ops.arr(owner.salt), np.full((4, 3), 2.0))
 
@@ -241,7 +237,7 @@ def test_resolve_runs_declared_increment_recipes() -> None:
     consumer.run(consumer.collect_inputs(owner))
     computed = resolution.run_updates(consumer, owner)
     consumer.accumulate(resolution.increments, 1.0, *computed)
-    consumer.apply(resolution.increments, owner)
+    resolution.apply(owner)
     assert np.array_equal(ops.arr(owner.salt), np.full((4, 3), 16.0))
 
 

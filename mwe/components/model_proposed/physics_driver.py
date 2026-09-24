@@ -56,7 +56,6 @@ class PhysicsDriver(fw.Component["PhysicsDriver.Input", fw.Empty]):
                 process.run(process.collect_inputs(input, *produced))
             computed = self.resolution.run_updates(process, input)
             process.accumulate(self.resolution.increments, input.dtime, *computed)
-        self.apply(self.resolution.increments, input, *produced)
-        for hook in self.resolution.after_apply:
-            hook.run(hook.collect_inputs(input, *produced))
+        self.resolution.apply(input, *produced)
+        self.resolution.run_after_apply(input, *produced)
         return self.output

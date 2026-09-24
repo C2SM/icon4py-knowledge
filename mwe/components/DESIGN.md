@@ -187,7 +187,7 @@ the dycore decides, from the same flags, whether to recompute the predictor.
 
 ## `model_proposed`
 
-### `common/framework.py` (the reusable part, 333 lines)
+### `common/framework.py` (the reusable part, 334 lines)
 
 ```python
 @dataclass(frozen=True) class Quantity: name, units, cf_key=None, of: Quantity | None = None
@@ -222,7 +222,6 @@ class Component[InputT, OutputT]:
     def __init__(self, output: OutputT)                       # composition allocates, binds here
     def run(self, input: InputT) -> OutputT                   # abstract
     def collect_inputs(self, *states) -> InputT               # pointer selection only, never computes
-    def apply(self, increments: State, *targets: State) -> None  # composite's hook: Increment leaf -> parent leaf in targets: +=; else raise
 class Recipe[InputT, OutputT](Component[InputT, OutputT])    # a derivation; derived_by accepts nothing else
 class Process[InputT, OutputT](Component[InputT, OutputT]):  # emits tendencies and declares where they land
     Update: type[State] = Empty                               # Increment leaves (from_tendency / derived_by), ReadWrite leaves (after_apply)
@@ -232,6 +231,8 @@ def resolve(children, sizes, *, targets: type[State]) -> Resolution   # composit
 class Resolution: providers; increments; updates; after_apply
     def run_providers(self, *supplied) -> tuple[State, ...]   # skips a provider whose output is already supplied
     def run_updates(self, process, *supplied) -> tuple[State, ...]  # runs the process's increment recipes on its Output
+    def apply(self, *targets) -> None                         # each Increments leaf -> parent leaf in targets: +=; else raise
+    def run_after_apply(self, *supplied) -> None              # the deduplicated hooks, once
 def dataflow(*components) -> str                              # declared reads / writes / produces / updates, `<- Recipe` on derived leaves
 ```
 
@@ -254,9 +255,9 @@ Rules the framework enforces:
   adds the recipe's output increment, computed by `Resolution.run_updates`
   from the process Output and the composite Input. A missing increment leaf
   is an error.
-- `apply` walks `increments`' `Increment` leaves and adds each into the leaf of
-  the parent quantity found in the given targets. A parent found nowhere raises
-  `UnappliedIncrement`. `dt` never appears in `apply`.
+- `Resolution.apply(*targets)` walks the `Increments` leaves and adds each into
+  the leaf of the parent quantity found in the given targets. A parent found
+  nowhere raises `UnappliedIncrement`. `dt` never appears in `apply`.
 - `resolve(children, sizes, targets=CompositeInput)` runs once in a composite's
   `__init__`. Inputs: it collects the `derived_by` recipes from the children's
   Inputs (transitively through the recipes' own Inputs), deduplicates them,
@@ -279,7 +280,8 @@ Rules the framework enforces:
   the outputs before it. `Resolution.run_updates(process, *supplied)` runs
   that process's increment recipes on its Output plus the supplied states and
   returns their outputs for `accumulate`. `Resolution.after_apply` holds the
-  hooks; the composite runs them once after `apply` in parallel update.
+  hooks; `Resolution.run_after_apply(*supplied)` runs them, once after `apply`
+  in parallel update.
 - A `State` built by hand with a marker still in place raises
   `UnresolvedInput`; `kw_only=True` on every `State` lets leaves with a
   `derived_by` default sit anywhere in the declaration order.
@@ -292,17 +294,18 @@ Rules the framework enforces:
   lazy) and `REGISTRY` fills as declarations are read.
 
 Decisions recorded: `Component` is a nominal base class, not a `Protocol`, so
-that the verbs are inherited defaults a component or composite may override:
-`accumulate` is the emitter's hook (a process that wants `2 * dt * tend` or a
-clipped tendency overrides it there, before the sum), `apply` the composite's
-(the summed increments carry no `dt` and no emitter, so a per-process `apply`
-cannot exist). Free functions for the two were considered and rejected for
-that reason. Two subclasses: `Recipe`, an empty marker for what `derived_by`
-accepts (mypy rejects `derived_by(MuphysComponent)`), and `Process`, a
-`Component` with an `Update` block and `accumulate`. `apply` stays on
-`Component` because the composite that applies is a plain `Component`;
-`IOMonitor`, the dycore, diffusion, advection, recipes and hooks are plain
-`Component`s and declare no updates.
+that a verb can be an inherited default a component may override. Only one
+is: `accumulate`, the emitter's hook, on `Process` (a process that wants `2 *
+dt * tend` or a clipped tendency overrides it there, before the sum). `apply`
+is `x += sum(increments)` with nothing per component to override (a composite
+that wants clipping declares an `after_apply` hook), so it lives on
+`Resolution`, which owns the increments, next to `run_providers`,
+`run_updates` and `run_after_apply`; the composite's `run` is the schedule
+that calls them. `Component` is the initial spec: `Input`, `Output`, `run`,
+`collect_inputs`. Two subclasses: `Recipe`, an empty marker for what
+`derived_by` accepts (mypy rejects `derived_by(MuphysComponent)`), and
+`Process`, a `Component` with an `Update` block and `accumulate`. `IOMonitor`,
+the dycore, diffusion, advection, recipes and hooks are plain `Component`s.
 `State` is a base class because the dataclass conversion needs one. Time level
 lives on the declaration and on `Pair`, never on the `Quantity`. Tendencies and
 increments are derived quantities. `dt` enters in `accumulate` so that
@@ -440,7 +443,7 @@ tmx.py                TmxComponent(Process): Input temperature = derived_by(...)
                       Update temperature = from_tendency(); vn = derived_by(VnIncrementFromUTendency); theta_v, exner = after_apply(...)
 io.py                 VARIABLES (name -> hint, derived_by); IOMonitor(variables): Input built by state_type from the config
 physics_driver.py     PhysicsDriver(process_intervals, update="parallel"): processes from PROCESSES by config name, resolve(...) at init
-                      run: run_providers -> each process (run if active, then run_updates, accumulate) -> apply -> after_apply hooks
+                      run: run_providers -> each process (run if active, then run_updates, accumulate) -> resolution.apply -> run_after_apply
 driver.py             Icon4pyDriver(config): owner-states, PhysicsDriver, IOMonitor and its own resolve for IO providers
 ```
 
@@ -484,5 +487,5 @@ providers.
 - One line added to the layout block of `AGENTS.md` naming `mwe/`.
 - Code is comment-free by request; names carry the meaning.
 - Size as built (non-blank lines): `model_current` 666 across 28 modules,
-  `model_proposed` 656 (of which `framework.py` 333, `recipes.py` 41),
-  `ops.py` 105 (with the call counter), `config.py` 10, `run.py` + tests 318.
+  `model_proposed` 658 (of which `framework.py` 334, `recipes.py` 41),
+  `ops.py` 105 (with the call counter), `config.py` 10, `run.py` + tests 316.
