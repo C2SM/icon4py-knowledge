@@ -61,7 +61,7 @@ type Next[F] = Annotated[F, Level.NEXT]
 
 @dataclasses.dataclass(frozen=True)
 class Derived:
-    recipe: type[Recipe[Any, Any]]
+    recipe: type[Recipe]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -71,13 +71,13 @@ class FromTendency:
 
 @dataclasses.dataclass(frozen=True)
 class AfterIncrements:
-    recipe: type[Component[Any, Any]]
+    recipe: type[Component]
 
 
 _MARKERS = (Derived, FromTendency, AfterIncrements)
 
 
-def derived_by(recipe: type[Recipe[Any, Any]]) -> Any:
+def derived_by(recipe: type[Recipe]) -> Any:
     return Derived(recipe)
 
 
@@ -85,7 +85,7 @@ def from_tendency() -> Any:
     return FromTendency()
 
 
-def after_increments(hook: type[Component[Any, Any]]) -> Any:
+def after_increments(hook: type[Component]) -> Any:
     return AfterIncrements(hook)
 
 
@@ -102,7 +102,7 @@ class Decl:
     marker: Derived | FromTendency | AfterIncrements | None
 
     @property
-    def recipe(self) -> type[Recipe[Any, Any]] | None:
+    def recipe(self) -> type[Recipe] | None:
         return self.marker.recipe if isinstance(self.marker, Derived) else None
 
 
@@ -278,17 +278,18 @@ def _available(states: Iterable[State | TimeStepPair[Any]]) -> dict[tuple[Quanti
     return available
 
 
-class Component[InputT: State, OutputT: State]:
-    Input: type[InputT]
-    Output: type[OutputT]
+class Component:
+    Input: type[State]
+    Output: type[State]
+    output: Any
 
-    def __init__(self, output: OutputT) -> None:
+    def __init__(self, output: Any) -> None:
         self.output = output
 
-    def run(self, input: InputT) -> OutputT:
+    def run(self, input: Any) -> Any:
         raise NotImplementedError
 
-    def collect_inputs(self, *states: State | TimeStepPair[Any]) -> InputT:
+    def collect_inputs(self, *states: State | TimeStepPair[Any]) -> Any:
         available = _available(states)
         values = {}
         for d in self.Input.declarations():
@@ -298,11 +299,11 @@ class Component[InputT: State, OutputT: State]:
         return self.Input(**values)
 
 
-class Recipe[InputT: State, OutputT: State](Component[InputT, OutputT]):
+class Recipe(Component):
     pass
 
 
-class Process[InputT: State, OutputT: State](Component[InputT, OutputT]):
+class Process(Component):
     Update: type[State] = Empty
 
     # walk the process's Update increment leaves: from_tendency adds dt times
@@ -324,10 +325,10 @@ class Process[InputT: State, OutputT: State](Component[InputT, OutputT]):
 
 @dataclasses.dataclass(frozen=True)
 class Resolution:
-    providers: tuple[Recipe[Any, Any], ...]
+    providers: tuple[Recipe, ...]
     increments: State
-    increment_recipes: dict[Process[Any, Any], tuple[Recipe[Any, Any], ...]]
-    hooks: tuple[Component[Any, Any], ...]
+    increment_recipes: dict[Process, tuple[Recipe, ...]]
+    hooks: tuple[Component, ...]
 
     # skips a provider whose whole output is already supplied
     def run_providers(self, *supplied: State | TimeStepPair[Any]) -> tuple[State, ...]:
@@ -340,7 +341,7 @@ class Resolution:
             produced.append(provider.output)
         return tuple(produced)
 
-    def run_increment_recipes(self, process: Process[Any, Any], *supplied: State | TimeStepPair[Any]) -> tuple[State, ...]:
+    def run_increment_recipes(self, process: Process, *supplied: State | TimeStepPair[Any]) -> tuple[State, ...]:
         computed: list[State] = []
         for recipe in self.increment_recipes[process]:
             recipe.run(recipe.collect_inputs(process.output, *supplied))
@@ -368,12 +369,12 @@ class Resolution:
 # provider output; every Tendency output must be consumed by some leaf. Returns
 # the Resolution.
 def resolve(
-    children: Iterable[Component[Any, Any]], sizes: dict[gtx.Dimension, int], *, targets: type[State]
+    children: Iterable[Component], sizes: dict[gtx.Dimension, int], *, targets: type[State]
 ) -> Resolution:
     children = tuple(children)
     target_quantities = {d.quantity for d in targets.declarations()}
-    recipes: dict[tuple[Quantity, Level | None], type[Recipe[Any, Any]]] = {}
-    order: list[type[Recipe[Any, Any]]] = []
+    recipes: dict[tuple[Quantity, Level | None], type[Recipe]] = {}
+    order: list[type[Recipe]] = []
 
     def visit(cls: type[State]) -> None:
         for d in cls.declarations():
@@ -390,14 +391,14 @@ def resolve(
     known = target_quantities | {d.quantity for recipe in order for d in recipe.Output.declarations()}
 
     increments: dict[str, tuple[Any, None]] = {}
-    increment_recipes: dict[Process[Any, Any], tuple[Recipe[Any, Any], ...]] = {}
-    hooks: dict[Quantity, type[Component[Any, Any]]] = {}
-    hook_order: list[type[Component[Any, Any]]] = []
+    increment_recipes: dict[Process, tuple[Recipe, ...]] = {}
+    hooks: dict[Quantity, type[Component]] = {}
+    hook_order: list[type[Component]] = []
     for child in children:
         label = type(child).__name__
         outputs = {d.quantity for d in child.Output.declarations()}
         consumed: set[Quantity] = set()
-        computed: list[Recipe[Any, Any]] = []
+        computed: list[Recipe] = []
         for d in child.Update.declarations() if isinstance(child, Process) else ():
             parent = d.quantity.parent
             if isinstance(d.marker, AfterIncrements) and d.intent is Intent.READWRITE:
@@ -449,7 +450,7 @@ def resolve(
 
 # Helper: one line per component, reads, writes, produces, updates, with <-
 # Recipe on derived leaves
-def dataflow(*components: Component[Any, Any]) -> str:
+def dataflow(*components: Component) -> str:
     def text(d: Decl) -> str:
         out = d.quantity.name + (f"@{d.level.value}" if d.level else "")
         if isinstance(d.marker, Derived):

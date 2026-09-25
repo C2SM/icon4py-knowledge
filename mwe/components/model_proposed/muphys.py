@@ -3,7 +3,7 @@ from model_proposed.common import framework as fw, quantities as qty
 import ops
 
 
-class MuphysComponent(fw.Process["MuphysComponent.Input", "MuphysComponent.Output"]):
+class MuphysComponent(fw.Process):
     class Input(fw.State):
         temperature: fw.Read[qty.TemperatureField] = fw.derived_by(recipes.TemperatureFromThetaExner)
         qv: fw.Read[qty.QvField]
@@ -18,6 +18,8 @@ class MuphysComponent(fw.Process["MuphysComponent.Input", "MuphysComponent.Outpu
         qv: fw.Increment[qty.QvField] = fw.from_tendency()
         theta_v: fw.ReadWrite[qty.ThetaVField] = fw.after_increments(recipes.ExnerThetaFromTemperature)
         exner: fw.ReadWrite[qty.ExnerField] = fw.after_increments(recipes.ExnerThetaFromTemperature)
+
+    output: Output
 
     def run(self, input: Input) -> Output:
         ops.muphys(input.temperature, input.qv, self.output.tend_temperature, self.output.tend_qv, self.output.pflx)

@@ -17,8 +17,9 @@ VARIABLES: dict[str, tuple[Any, fw.Derived | None]] = {
 }
 
 
-class IOMonitor(fw.Component[fw.State, fw.Empty]):
+class IOMonitor(fw.Component):
     Output = fw.Empty
+    output: fw.Empty
 
     def __init__(self, variables: Sequence[str]) -> None:
         super().__init__(fw.Empty())
@@ -28,6 +29,7 @@ class IOMonitor(fw.Component[fw.State, fw.Empty]):
             {name: VARIABLES[name] for name in self.variables} | {"simulation_time": (fw.Read[qty.SimulationTime], None)},
         )
         self.dataset: list[tuple[datetime, str, ops.Array]] = []
+
 
     def run(self, input: fw.State) -> fw.Empty:
         time = getattr(input, "simulation_time")

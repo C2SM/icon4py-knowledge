@@ -187,7 +187,7 @@ the dycore decides, from the same flags, whether to recompute the predictor.
 
 ## `model_proposed`
 
-### `common/framework.py` (the reusable part, 334 lines)
+### `common/framework.py` (the reusable part, 364 lines)
 
 ```python
 @dataclass(frozen=True) class Quantity: name, units, cf_key=None, parent: Quantity | None = None
@@ -217,13 +217,13 @@ def from_tendency() -> Any                     # Update leaf default: `x: Increm
 def after_increments(hook: type[Component]) -> Any  # Update leaf default: `y: ReadWrite[YField] = after_increments(Hook)`, run once after the increments
 def state_type(name, leaves: {name: (hint, marker | None)}) -> type[State]  # State class at runtime (config-driven Inputs)
 
-class Component[InputT, OutputT]:
-    Input: type[InputT]; Output: type[OutputT]
-    def __init__(self, output: OutputT)                       # composition allocates, binds here
-    def run(self, input: InputT) -> OutputT                   # abstract
-    def collect_inputs(self, *states) -> InputT               # pointer selection only, never computes
-class Recipe[InputT, OutputT](Component[InputT, OutputT])    # a derivation; derived_by accepts nothing else
-class Process[InputT, OutputT](Component[InputT, OutputT]):  # emits tendencies and declares where they land
+class Component:                                              # not generic, see the decisions below
+    Input: type[State]; Output: type[State]; output: Any      # every subclass narrows: `output: Output`
+    def __init__(self, output)                                # composition allocates, binds here
+    def run(self, input: Input) -> Output                     # abstract
+    def collect_inputs(self, *states) -> Any                  # pointer selection only, never computes
+class Recipe(Component)                                       # a derivation; derived_by accepts nothing else
+class Process(Component):                                     # emits tendencies and declares where they land
     Update: type[State] = Empty                               # Increment leaves (from_tendency / derived_by), ReadWrite leaves (after_increments)
     def accumulate(self, into: State, dt, *computed) -> None  # emitter's hook: each Update increment -> Increment leaf of into: +=
 
@@ -302,7 +302,12 @@ override (a composite that wants clipping declares an `after_increments`
 hook), so it lives on `Resolution`, which owns the increments, next to
 `run_providers` and `run_increment_recipes`; the composite's `run` is the schedule
 that calls them. `Component` is the initial spec: `Input`, `Output`, `run`,
-`collect_inputs`. Two subclasses: `Recipe`, an empty marker for what
+`collect_inputs`. It is not generic in them: pyright (Pylance) reports
+`class C(Component["C.Input", "C.Output"])` as a class that depends on itself and
+types everything inside it as Unknown, and a nested `Input` cannot be named in
+the base list any other way. Each component declares `output: Output` instead,
+one line, so `self.output` is typed in `run`; `collect_inputs` returns `Any`,
+which is what the composites' call sites accept anyway. Two subclasses: `Recipe`, an empty marker for what
 `derived_by` accepts (mypy rejects `derived_by(MuphysComponent)`), and
 `Process`, a `Component` with an `Update` block and `accumulate`. `IOMonitor`,
 the dycore, diffusion, advection, recipes and hooks are plain `Component`s.
@@ -487,5 +492,5 @@ providers.
 - One line added to the layout block of `AGENTS.md` naming `mwe/`.
 - Code is comment-free by request; names carry the meaning.
 - Size as built (non-blank lines): `model_current` 666 across 28 modules,
-  `model_proposed` 658 (of which `framework.py` 334, `recipes.py` 41),
-  `ops.py` 105 (with the call counter), `config.py` 10, `run.py` + tests 316.
+  `model_proposed` 699 (of which `framework.py` 364, `recipes.py` 46),
+  `ops.py` 105 (with the call counter), `config.py` 10, `run.py` + tests 322.

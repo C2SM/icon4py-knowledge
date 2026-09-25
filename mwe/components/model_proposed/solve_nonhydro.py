@@ -6,7 +6,7 @@ class AdvectiveTendencies(fw.State):
     normal_wind: fw.Tendency[qty.VnField]
 
 
-class SolveNonhydro(fw.Component["SolveNonhydro.Input", states.PrepAdvection]):
+class SolveNonhydro(fw.Component):
     class Input(fw.State):
         vn_now: fw.Read[fw.Now[qty.VnField]]
         w_now: fw.Read[fw.Now[qty.WField]]
@@ -24,12 +24,14 @@ class SolveNonhydro(fw.Component["SolveNonhydro.Input", states.PrepAdvection]):
         at_last_substep: fw.Read[qty.AtLastSubstep]
 
     Output = states.PrepAdvection
+    output: states.PrepAdvection
 
     def __init__(self, output: states.PrepAdvection) -> None:
         super().__init__(output)
         self.normal_wind_advective_tendency = fw.PredictorCorrectorPair(
             fw.allocate(AdvectiveTendencies, ops.SIZES), fw.allocate(AdvectiveTendencies, ops.SIZES)
         )
+
 
     def run(self, input: Input) -> states.PrepAdvection:
         ddt_vn_apc = self.normal_wind_advective_tendency

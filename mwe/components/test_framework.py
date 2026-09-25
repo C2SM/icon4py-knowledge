@@ -17,7 +17,7 @@ class Owner(fw.State):
     salt: SField
 
 
-class Producer(fw.Process["Producer.Input", "Producer.Output"]):
+class Producer(fw.Process):
     class Input(fw.State):
         temperature: fw.Read[fw.Now[TField]]
         salt: fw.ReadWrite[SField]
@@ -28,12 +28,14 @@ class Producer(fw.Process["Producer.Input", "Producer.Output"]):
     class Update(fw.State):
         temperature: fw.Increment[TField] = fw.from_tendency()
 
+    output: Output
+
     def run(self, input: Input) -> Output:
         ops.arr(self.output.ddt_temperature)[...] = 2.0
         return self.output
 
 
-class Forgetful(fw.Component["Forgetful.Input", "Forgetful.Output"]):
+class Forgetful(fw.Component):
     class Input(fw.State):
         pass
 
@@ -41,59 +43,67 @@ class Forgetful(fw.Component["Forgetful.Input", "Forgetful.Output"]):
         ddt_temperature: fw.Tendency[TField]
 
 
-class ForgetfulProcess(fw.Process["Forgetful.Input", "Forgetful.Output"]):
+class ForgetfulProcess(fw.Process):
     Input = Forgetful.Input
     Output = Forgetful.Output
 
 
-class DensityFromSalt(fw.Recipe["DensityFromSalt.Input", "DensityFromSalt.Output"]):
+class DensityFromSalt(fw.Recipe):
     class Input(fw.State):
         salt: fw.Read[SField]
 
     class Output(fw.State):
         density: DField
 
+    output: Output
+
     def run(self, input: Input) -> Output:
         ops.arr(self.output.density)[...] = 2.0 * ops.arr(input.salt)
         return self.output
 
 
-class DensityFromNothing(fw.Recipe["DensityFromNothing.Input", "DensityFromNothing.Output"]):
+class DensityFromNothing(fw.Recipe):
     class Input(fw.State):
         pass
 
     class Output(fw.State):
         density: DField
 
+    output: Output
+
     def run(self, input: Input) -> Output:
         return self.output
 
 
-class SaltFromDensity(fw.Component["SaltFromDensity.Input", fw.Empty]):
+class SaltFromDensity(fw.Component):
     class Input(fw.State):
         density: fw.Read[DField]
         salt: fw.ReadWrite[SField]
 
     Output = fw.Empty
 
+    output: fw.Empty
+
     def run(self, input: Input) -> fw.Empty:
         ops.arr(input.salt)[...] = 0.5 * ops.arr(input.density)
         return self.output
 
 
-class SaltIncrementFromDensityTendency(fw.Recipe["SaltIncrementFromDensityTendency.Input", "SaltIncrementFromDensityTendency.Output"]):
+class SaltIncrementFromDensityTendency(fw.Recipe):
     class Input(fw.State):
         ddt_density: fw.Read[fw.Tendency[DField]]
 
     class Output(fw.State):
         salt: fw.Increment[SField]
 
+    output: Output
+
     def run(self, input: Input) -> Output:
         ops.arr(self.output.salt)[...] = 5.0 * ops.arr(input.ddt_density)
         return self.output
 
 
-class Consumer(fw.Process["Consumer.Input", "Consumer.Output"]):
+class Consumer(fw.Process):
     class Input(fw.State):
         density: fw.Read[DField] = fw.derived_by(DensityFromSalt)
         salt: fw.ReadWrite[SField]
@@ -105,12 +115,14 @@ class Consumer(fw.Process["Consumer.Input", "Consumer.Output"]):
         density: fw.Increment[DField] = fw.from_tendency()
         salt: fw.ReadWrite[SField] = fw.after_increments(SaltFromDensity)
 
+    output: Output
+
     def run(self, input: Input) -> Output:
         ops.arr(self.output.ddt_density)[...] = ops.arr(input.density)
         return self.output
 
 
-class IncrementConsumer(fw.Process["IncrementConsumer.Input", "IncrementConsumer.Output"]):
+class IncrementConsumer(fw.Process):
     class Input(fw.State):
         salt: fw.Read[SField]
 
@@ -120,19 +132,21 @@ class IncrementConsumer(fw.Process["IncrementConsumer.Input", "IncrementConsumer
     class Update(fw.State):
         salt: fw.Increment[SField] = fw.derived_by(SaltIncrementFromDensityTendency)
 
+    output: Output
+
     def run(self, input: Input) -> Output:
         ops.arr(self.output.ddt_density)[...] = 3.0
         return self.output
 
 
-class OtherConsumer(fw.Component["OtherConsumer.Input", fw.Empty]):
+class OtherConsumer(fw.Component):
     class Input(fw.State):
         density: fw.Read[DField] = fw.derived_by(DensityFromNothing)
 
     Output = fw.Empty
 
 
-class WrongHook(fw.Process["WrongHook.Input", fw.Empty]):
+class WrongHook(fw.Process):
     class Input(fw.State):
         density: fw.Read[DField] = fw.derived_by(DensityFromSalt)
 
@@ -142,7 +156,7 @@ class WrongHook(fw.Process["WrongHook.Input", fw.Empty]):
         density: fw.ReadWrite[DField] = fw.after_increments(SaltFromDensity)
 
 
-class WrongTendency(fw.Process["WrongTendency.Input", fw.Empty]):
+class WrongTendency(fw.Process):
     class Input(fw.State):
         pass
 

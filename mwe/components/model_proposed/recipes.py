@@ -2,7 +2,7 @@ from model_proposed.common import framework as fw, quantities as qty
 import ops
 
 
-class TemperatureFromThetaExner(fw.Recipe["TemperatureFromThetaExner.Input", "TemperatureFromThetaExner.Output"]):
+class TemperatureFromThetaExner(fw.Recipe):
     class Input(fw.State):
         theta_v: fw.Read[qty.ThetaVField]
         exner: fw.Read[qty.ExnerField]
@@ -10,13 +10,15 @@ class TemperatureFromThetaExner(fw.Recipe["TemperatureFromThetaExner.Input", "Te
     class Output(fw.State):
         temperature: qty.TemperatureField
 
+    output: Output
+
     def run(self, input: Input) -> Output:
         ops.compute_temperature(input.theta_v, input.exner, self.output.temperature)
         return self.output
 
 
 # plain Component, not a Recipe, because it is a hook, not a derivation
-class ExnerThetaFromTemperature(fw.Component["ExnerThetaFromTemperature.Input", fw.Empty]):
+class ExnerThetaFromTemperature(fw.Component):
     class Input(fw.State):
         temperature: fw.Read[qty.TemperatureField]
         exner: fw.ReadWrite[qty.ExnerField]
@@ -24,30 +26,36 @@ class ExnerThetaFromTemperature(fw.Component["ExnerThetaFromTemperature.Input", 
 
     Output = fw.Empty
 
+    output: fw.Empty
+
     def run(self, input: Input) -> fw.Empty:
         ops.update_exner_and_theta_v(input.temperature, input.exner, input.theta_v)
         return self.output
 
 
-class UFromVn(fw.Recipe["UFromVn.Input", "UFromVn.Output"]):
+class UFromVn(fw.Recipe):
     class Input(fw.State):
         vn: fw.Read[qty.VnField]
 
     class Output(fw.State):
         u: qty.UField
 
+    output: Output
+
     def run(self, input: Input) -> Output:
         ops.edge_2_cell_vector_rbf_interpolation(input.vn, self.output.u)
         return self.output
 
 
-class VnIncrementFromUTendency(fw.Recipe["VnIncrementFromUTendency.Input", "VnIncrementFromUTendency.Output"]):
+class VnIncrementFromUTendency(fw.Recipe):
     class Input(fw.State):
         tend_u: fw.Read[fw.Tendency[qty.UField]]
         dtime: fw.Read[qty.TimeStep]
 
     class Output(fw.State):
         vn: fw.Increment[qty.VnField]
+
+    output: Output
 
     def __init__(self, output: Output) -> None:
         super().__init__(output)

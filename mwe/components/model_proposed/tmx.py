@@ -3,7 +3,7 @@ from model_proposed.common import framework as fw, quantities as qty
 import ops
 
 
-class TmxComponent(fw.Process["TmxComponent.Input", "TmxComponent.Output"]):
+class TmxComponent(fw.Process):
     class Input(fw.State):
         temperature: fw.Read[qty.TemperatureField] = fw.derived_by(recipes.TemperatureFromThetaExner)
         u: fw.Read[qty.UField] = fw.derived_by(recipes.UFromVn)
@@ -17,6 +17,8 @@ class TmxComponent(fw.Process["TmxComponent.Input", "TmxComponent.Output"]):
         vn: fw.Increment[qty.VnField] = fw.derived_by(recipes.VnIncrementFromUTendency)
         theta_v: fw.ReadWrite[qty.ThetaVField] = fw.after_increments(recipes.ExnerThetaFromTemperature)
         exner: fw.ReadWrite[qty.ExnerField] = fw.after_increments(recipes.ExnerThetaFromTemperature)
+
+    output: Output
 
     def run(self, input: Input) -> Output:
         ops.tmx(input.temperature, input.u, self.output.tend_temperature, self.output.tend_u)
