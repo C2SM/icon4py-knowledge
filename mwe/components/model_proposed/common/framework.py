@@ -89,6 +89,8 @@ def after_apply(recipe: type[Component[Any, Any]]) -> Any:
     return AfterApply(recipe)
 
 
+# one declaration read back from a leaf: name, quantity, intent, tag, level,
+# field type, marker
 @dataclasses.dataclass(frozen=True)
 class Decl:
     name: str
@@ -104,6 +106,7 @@ class Decl:
         return self.marker.recipe if isinstance(self.marker, Derived) else None
 
 
+# walks TypeAliasType, generic aliases of aliases and nested Annotated.
 def unwrap(hint: Any) -> tuple[Any, tuple[Any, ...]]:
     meta: list[Any] = []
     while True:
@@ -118,6 +121,7 @@ def unwrap(hint: Any) -> tuple[Any, tuple[Any, ...]]:
             return hint, tuple(meta)
 
 
+# turns the quantity into its tendency or increment when tagged
 def _decl(name: str, hint: Any, default: Any) -> Decl:
     base, meta = unwrap(hint)
     q = next(m for m in meta if isinstance(m, Quantity))
@@ -135,6 +139,7 @@ def _decl(name: str, hint: Any, default: Any) -> Decl:
 _DECLARATIONS: dict[type, tuple[Decl, ...]] = {}
 
 
+# cached per class
 def declarations(cls: type) -> tuple[Decl, ...]:
     if cls not in _DECLARATIONS:
         hints = typing.get_type_hints(cls, include_extras=True)
@@ -156,6 +161,8 @@ class State:
         dataclasses.dataclass(frozen=True, eq=False, kw_only=True)(cls)
 
     def __post_init__(self) -> None:
+        # raises UnresolvedInput if a marker is still in a leaf, so a
+        # hand-built State cannot smuggle a derived_by through
         for d, value in self.leaves():
             if isinstance(value, _MARKERS):
                 raise UnresolvedInput(f"{type(self).__name__}.{d.name}")
@@ -173,6 +180,7 @@ class Empty(State):
     pass
 
 
+# builds a State class at runtime; IO uses it
 def state_type(name: str, leaves: dict[str, tuple[Any, Any]]) -> type[State]:
     def body(namespace: dict[str, Any]) -> None:
         namespace["__annotations__"] = {leaf: hint for leaf, (hint, _) in leaves.items()}
@@ -251,6 +259,7 @@ class InconsistentUpdate(ValueError):
     pass
 
 
+# flattens to {(quantity, level): value}, tagging pair sides, AmbiguousSource on two objects for one key
 def _available(states: Iterable[State | TimeStepPair[Any]]) -> dict[tuple[Quantity, Level | None], Any]:
     available: dict[tuple[Quantity, Level | None], Any] = {}
     for state in states:
@@ -291,6 +300,9 @@ class Recipe[InputT: State, OutputT: State](Component[InputT, OutputT]):
 class Process[InputT: State, OutputT: State](Component[InputT, OutputT]):
     Update: type[State] = Empty
 
+    # walk the process's Update increment leaves: from_tendency adds dt times
+    # the matching Tendency output, derived_by adds the recipe output that
+    # run_updates computed
     def accumulate(self, into: State, dt: float, *computed: State) -> None:
         targets = {d.quantity: value for d, value in into.leaves()}
         tendencies = {d.quantity: value for d, value in self.output.leaves()}
@@ -312,6 +324,7 @@ class Resolution:
     updates: dict[Process[Any, Any], tuple[Recipe[Any, Any], ...]]
     after_apply: tuple[Component[Any, Any], ...]
 
+    # skips a provider whose whole output is already supplied
     def run_providers(self, *supplied: State | TimeStepPair[Any]) -> tuple[State, ...]:
         available = _available(supplied)
         produced: list[State] = []
@@ -329,6 +342,8 @@ class Resolution:
             computed.append(recipe.output)
         return tuple(computed)
 
+    # add each Increments leaf into the leaf of its parent quantity among the
+    # targets; a parent found nowhere is UnappliedIncrement
     def apply(self, *targets: State) -> None:
         leaves = {d.quantity: value for target in targets for d, value in target.leaves()}
         for d, value in self.increments.leaves():
@@ -341,6 +356,14 @@ class Resolution:
             hook.run(hook.collect_inputs(*supplied))
 
 
+# First pass: visit each child's Input for derived_by, recurse into recipe
+# Inputs, dedupe, order dependencies first. Second pass, per Process: hooks
+# must write the leaf they hang on, and one hook per quantity; from_tendency
+# needs the matching tendency in Output; derived_by increment leaves get one
+# recipe instance per process, its inputs checked against the process Output
+# and the composite Input; every increment parent must be a target leaf or a
+# provider output; every Tendency output must be consumed by some leaf. Returns
+# the Resolution.
 def resolve(
     children: Iterable[Component[Any, Any]], sizes: dict[gtx.Dimension, int], *, targets: type[State]
 ) -> Resolution:
@@ -421,6 +444,8 @@ def resolve(
     )
 
 
+# Helper: one line per component, reads, writes, produces, updates, with <-
+# Recipe on derived leaves
 def dataflow(*components: Component[Any, Any]) -> str:
     def text(d: Decl) -> str:
         out = d.quantity.name + (f"@{d.level.value}" if d.level else "")

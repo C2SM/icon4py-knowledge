@@ -15,6 +15,7 @@ class TemperatureFromThetaExner(fw.Recipe["TemperatureFromThetaExner.Input", "Te
         return self.output
 
 
+# plain Component, not a Recipe, because it is a hook, not a derivation
 class ExnerThetaFromTemperature(fw.Component["ExnerThetaFromTemperature.Input", fw.Empty]):
     class Input(fw.State):
         temperature: fw.Read[qty.TemperatureField]
