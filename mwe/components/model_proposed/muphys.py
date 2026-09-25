@@ -5,8 +5,8 @@ import ops
 
 class MuphysComponent(fw.Process):
     class Input(fw.State):
-        temperature: fw.Read[qty.TemperatureField] = fw.derived_by(recipes.TemperatureFromThetaExner)
-        qv: fw.Read[qty.QvField]
+        temperature: qty.TemperatureField = fw.derived_by(recipes.TemperatureFromThetaExner)
+        qv: qty.QvField
 
     class Output(fw.State):
         tend_temperature: fw.Tendency[qty.TemperatureField]
@@ -16,11 +16,8 @@ class MuphysComponent(fw.Process):
     class Update(fw.State):
         temperature: fw.Increment[qty.TemperatureField] = fw.from_tendency()
         qv: fw.Increment[qty.QvField] = fw.from_tendency()
-        theta_v: fw.ReadWrite[qty.ThetaVField] = fw.after_increments(recipes.ExnerThetaFromTemperature)
-        exner: fw.ReadWrite[qty.ExnerField] = fw.after_increments(recipes.ExnerThetaFromTemperature)
+        theta_v: qty.ThetaVField = fw.after_increments(recipes.ExnerThetaFromTemperature)
+        exner: qty.ExnerField = fw.after_increments(recipes.ExnerThetaFromTemperature)
 
-    output: Output
-
-    def run(self, input: Input) -> Output:
-        ops.muphys(input.temperature, input.qv, self.output.tend_temperature, self.output.tend_qv, self.output.pflx)
-        return self.output
+    def run(self, input: Input, output: Output) -> None:
+        ops.muphys(input.temperature, input.qv, output.tend_temperature, output.tend_qv, output.pflx)

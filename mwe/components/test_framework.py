@@ -24,8 +24,8 @@ class Owner(fw.State):
 
 class Producer(fw.Process):
     class Input(fw.State):
-        temperature: fw.Read[fw.Now[TField]]
-        salt: fw.ReadWrite[SField]
+        temperature: TField
+        salt: SField
 
     class Output(fw.State):
         ddt_temperature: fw.Tendency[TField]
@@ -33,11 +33,8 @@ class Producer(fw.Process):
     class Update(fw.State):
         temperature: fw.Increment[TField] = fw.from_tendency()
 
-    output: Output
-
-    def run(self, input: Input) -> Output:
-        ops.arr(self.output.ddt_temperature)[...] = 2.0
-        return self.output
+    def run(self, input: Input, output: Output) -> None:
+        ops.arr(output.ddt_temperature)[...] = 2.0
 
 
 class Forgetful(fw.Component):
@@ -55,16 +52,13 @@ class ForgetfulProcess(fw.Process):
 
 class DensityFromSalt(fw.Recipe):
     class Input(fw.State):
-        salt: fw.Read[SField]
+        salt: SField
 
     class Output(fw.State):
         density: DField
 
-    output: Output
-
-    def run(self, input: Input) -> Output:
-        ops.arr(self.output.density)[...] = 2.0 * ops.arr(input.salt)
-        return self.output
+    def run(self, input: Input, output: Output) -> None:
+        ops.arr(output.density)[...] = 2.0 * ops.arr(input.salt)
 
 
 class DensityFromNothing(fw.Recipe):
@@ -74,62 +68,51 @@ class DensityFromNothing(fw.Recipe):
     class Output(fw.State):
         density: DField
 
-    output: Output
-
-    def run(self, input: Input) -> Output:
-        return self.output
+    def run(self, input: Input, output: Output) -> None:
+        pass
 
 
 class SaltFromDensity(fw.Component):
     class Input(fw.State):
-        density: fw.Read[DField]
-        salt: fw.ReadWrite[SField]
+        density: DField
 
-    Output = fw.Empty
+    class Output(fw.State):
+        salt: SField
 
-    output: fw.Empty
-
-    def run(self, input: Input) -> fw.Empty:
-        ops.arr(input.salt)[...] = 0.5 * ops.arr(input.density)
-        return self.output
+    def run(self, input: Input, output: Output) -> None:
+        ops.arr(output.salt)[...] = 0.5 * ops.arr(input.density)
 
 
 class SaltIncrementFromDensityTendency(fw.Recipe):
     class Input(fw.State):
-        ddt_density: fw.Read[fw.Tendency[DField]]
+        ddt_density: fw.Tendency[DField]
 
     class Output(fw.State):
         salt: fw.Increment[SField]
 
-    output: Output
-
-    def run(self, input: Input) -> Output:
-        ops.arr(self.output.salt)[...] = 5.0 * ops.arr(input.ddt_density)
-        return self.output
+    def run(self, input: Input, output: Output) -> None:
+        ops.arr(output.salt)[...] = 5.0 * ops.arr(input.ddt_density)
 
 
 class Consumer(fw.Process):
     class Input(fw.State):
-        density: fw.Read[DField] = fw.derived_by(DensityFromSalt)
-        salt: fw.ReadWrite[SField]
+        density: DField = fw.derived_by(DensityFromSalt)
+        salt: SField
 
     class Output(fw.State):
         ddt_density: fw.Tendency[DField]
 
     class Update(fw.State):
         density: fw.Increment[DField] = fw.from_tendency()
-        salt: fw.ReadWrite[SField] = fw.after_increments(SaltFromDensity)
+        salt: SField = fw.after_increments(SaltFromDensity)
 
-    output: Output
-
-    def run(self, input: Input) -> Output:
-        ops.arr(self.output.ddt_density)[...] = ops.arr(input.density)
-        return self.output
+    def run(self, input: Input, output: Output) -> None:
+        ops.arr(output.ddt_density)[...] = ops.arr(input.density)
 
 
 class IncrementConsumer(fw.Process):
     class Input(fw.State):
-        salt: fw.Read[SField]
+        salt: SField
 
     class Output(fw.State):
         ddt_density: fw.Tendency[DField]
@@ -137,28 +120,25 @@ class IncrementConsumer(fw.Process):
     class Update(fw.State):
         salt: fw.Increment[SField] = fw.derived_by(SaltIncrementFromDensityTendency)
 
-    output: Output
-
-    def run(self, input: Input) -> Output:
-        ops.arr(self.output.ddt_density)[...] = 3.0
-        return self.output
+    def run(self, input: Input, output: Output) -> None:
+        ops.arr(output.ddt_density)[...] = 3.0 * ops.arr(input.salt)
 
 
 class OtherConsumer(fw.Component):
     class Input(fw.State):
-        density: fw.Read[DField] = fw.derived_by(DensityFromNothing)
+        density: DField = fw.derived_by(DensityFromNothing)
 
     Output = fw.Empty
 
 
 class WrongHook(fw.Process):
     class Input(fw.State):
-        density: fw.Read[DField] = fw.derived_by(DensityFromSalt)
+        density: DField = fw.derived_by(DensityFromSalt)
 
     Output = fw.Empty
 
     class Update(fw.State):
-        density: fw.ReadWrite[DField] = fw.after_increments(SaltFromDensity)
+        density: DField = fw.after_increments(SaltFromDensity)
 
 
 class WrongTendency(fw.Process):
@@ -171,13 +151,28 @@ class WrongTendency(fw.Process):
         salt: fw.Increment[SField] = fw.from_tendency()
 
 
-def test_declarations_carry_quantity_intent_level_and_derived_tendency() -> None:
+class Doubler(fw.Component):
+    class Input(fw.State):
+        salt: SField
+
+    class Output(fw.State):
+        salt: SField
+
+    in_place = frozenset({"salt"})
+
+    def run(self, input: Input, output: Output) -> None:
+        ops.arr(output.salt)[...] = 2.0 * ops.arr(input.salt)
+
+
+class NotInPlaceDoubler(Doubler):
+    in_place = frozenset()
+
+
+def test_declarations_carry_quantity_tag_and_marker() -> None:
     by_name = {d.name: d for d in Producer.Input.declarations()}
-    t = by_name["temperature"]
-    assert (t.quantity.name, t.intent, t.level) == ("test_temperature", fw.Intent.READ, fw.Level.NOW)
-    assert (by_name["salt"].intent, by_name["salt"].level) == (fw.Intent.READWRITE, None)
+    assert (by_name["temperature"].quantity.name, by_name["temperature"].tag) == ("test_temperature", None)
     (out,) = Producer.Output.declarations()
-    assert out.quantity.parent is not None
+    assert out.tag is fw.Tag.TENDENCY and out.quantity.parent is not None
     assert (out.quantity.name, out.quantity.parent.name, out.quantity.units) == (
         "tendency_of_test_temperature",
         "test_temperature",
@@ -187,46 +182,73 @@ def test_declarations_carry_quantity_intent_level_and_derived_tendency() -> None
     assert [type(d.marker) for d in Consumer.Update.declarations()] == [fw.FromTendency, fw.AfterIncrements]
 
 
-def test_collect_inputs_resolves_pair_levels_and_plain_states() -> None:
-    pair = fw.TimeStepPair(fw.allocate(Owner, ops.SIZES, ops.initial), fw.allocate(Owner, ops.SIZES))
-    plain = fw.allocate(Owner, ops.SIZES)
-    p = Producer(fw.allocate(Producer.Output, ops.SIZES))
-    got = p.collect_inputs(pair, plain)
-    assert got.temperature is pair.now.temperature and got.salt is plain.salt
+def test_collect_picks_leaves_by_quantity_from_several_states() -> None:
+    owner = fw.allocate(Owner, ops.SIZES)
+    other = fw.allocate(Producer.Output, ops.SIZES)
+    p = Producer()
+    got = p.collect_inputs(owner, other)
+    assert got.temperature is owner.temperature and got.salt is owner.salt
+    assert p.collect_output(other).ddt_temperature is other.ddt_temperature
+    view = fw.collect(Owner, owner)
+    assert view is not owner and view.salt is owner.salt
 
 
-def test_collect_inputs_errors() -> None:
-    p = Producer(fw.allocate(Producer.Output, ops.SIZES))
+def test_collect_errors() -> None:
+    p = Producer()
     with pytest.raises(fw.MissingInput):
-        p.collect_inputs(fw.allocate(Owner, ops.SIZES))
+        p.collect_inputs(fw.allocate(Producer.Output, ops.SIZES))
     with pytest.raises(fw.AmbiguousSource):
-        p.collect_inputs(
-            fw.TimeStepPair(fw.allocate(Owner, ops.SIZES), fw.allocate(Owner, ops.SIZES)),
-            fw.allocate(Owner, ops.SIZES),
-            fw.allocate(Owner, ops.SIZES),
-        )
+        p.collect_inputs(fw.allocate(Owner, ops.SIZES), fw.allocate(Owner, ops.SIZES))
     with pytest.raises(fw.UnresolvedInput):
         Consumer.Input(salt=fw.allocate(Owner, ops.SIZES).salt)
 
 
+def test_call_refuses_undeclared_aliasing() -> None:
+    owner = fw.allocate(Owner, ops.SIZES)
+    ops.arr(owner.salt)[...] = 1.0
+    doubler = Doubler()
+    doubler(doubler.collect_inputs(owner), doubler.collect_output(owner))
+    assert np.array_equal(ops.arr(owner.salt), np.full((4, 3), 2.0))
+    strict = NotInPlaceDoubler()
+    with pytest.raises(fw.AliasedOutput, match="NotInPlaceDoubler.salt"):
+        strict(strict.collect_inputs(owner), strict.collect_output(owner))
+    other = fw.allocate(Owner, ops.SIZES)
+    strict(strict.collect_inputs(owner), strict.collect_output(other))
+    assert np.array_equal(ops.arr(other.salt), np.full((4, 3), 4.0))
+
+
 def test_accumulate_then_update_adds_dt_times_tendency_to_parent() -> None:
     owner = fw.allocate(Owner, ops.SIZES)
-    p = Producer(fw.allocate(Producer.Output, ops.SIZES))
-    resolution = fw.resolve([p], ops.SIZES, targets=Owner)
-    p.run(p.collect_inputs(fw.TimeStepPair(owner, fw.allocate(Owner, ops.SIZES)), fw.allocate(Owner, ops.SIZES)))
-    p.accumulate(resolution.increments, dt=0.5)
-    resolution.update(owner)
+    p = Producer()
+    output = fw.allocate(Producer.Output, ops.SIZES)
+    resolution = fw.resolve([p], ops.SIZES, input=Owner, output=Owner)
+    p(p.collect_inputs(owner), output)
+    p.accumulate(resolution.increments, 0.5, output)
+    resolution.update(owner, owner)
     with pytest.raises(fw.UnappliedIncrement):
-        resolution.update(fw.Empty())
+        resolution.update(fw.Empty(), fw.Empty())
     assert np.array_equal(ops.arr(owner.temperature), np.full((4, 3), 1.0))
     fw.zero(resolution.increments)
     assert not any(ops.arr(value).any() for _, value in resolution.increments.leaves())
 
 
-def test_resolve_builds_providers_increments_updates_and_hooks() -> None:
-    consumer = Consumer(fw.allocate(Consumer.Output, ops.SIZES))
-    resolution = fw.resolve([consumer], ops.SIZES, targets=Owner)
-    assert [type(p) for p in resolution.providers] == [DensityFromSalt]
+def test_update_into_a_separate_output_copies_what_has_no_increment() -> None:
+    owner = fw.allocate(Owner, ops.SIZES, ops.initial)
+    target = fw.allocate(Owner, ops.SIZES)
+    p = Producer()
+    output = fw.allocate(Producer.Output, ops.SIZES)
+    resolution = fw.resolve([p], ops.SIZES, input=Owner, output=Owner)
+    p(p.collect_inputs(owner), output)
+    p.accumulate(resolution.increments, 1.0, output)
+    resolution.update(owner, target)
+    assert np.array_equal(ops.arr(target.salt), ops.arr(owner.salt))
+    assert np.array_equal(ops.arr(target.temperature), ops.arr(owner.temperature) + 2.0)
+
+
+def test_resolve_builds_providers_increments_recipes_and_hooks() -> None:
+    consumer = Consumer()
+    resolution = fw.resolve([consumer], ops.SIZES, input=Owner, output=Owner)
+    assert [type(p) for p, _ in resolution.providers] == [DensityFromSalt]
     assert [d.quantity.name for d in resolution.increments.declarations()] == ["increment_of_test_density"]
     assert resolution.increment_recipes == {consumer: ()}
     assert [type(h) for h in resolution.hooks] == [SaltFromDensity]
@@ -234,63 +256,68 @@ def test_resolve_builds_providers_increments_updates_and_hooks() -> None:
     owner = fw.allocate(Owner, ops.SIZES)
     ops.arr(owner.salt)[...] = 1.0
     produced = resolution.run_providers(owner)
-    density = resolution.providers[0].output.density
-    assert produced == (resolution.providers[0].output,) and np.array_equal(ops.arr(density), np.full((4, 3), 2.0))
+    provided = resolution.providers[0][1]
+    density = ops.arr(getattr(provided, "density"))
+    assert produced == (provided,) and np.array_equal(density, np.full((4, 3), 2.0))
     assert resolution.run_providers(owner, *produced) == ()
-    consumer.run(consumer.collect_inputs(owner, *produced))
-    consumer.accumulate(resolution.increments, 1.0, *resolution.run_increment_recipes(consumer, owner))
-    resolution.update(owner, *produced)
-    assert np.array_equal(ops.arr(density), np.full((4, 3), 4.0))
+    output = fw.allocate(Consumer.Output, ops.SIZES)
+    consumer(consumer.collect_inputs(owner, *produced), output)
+    consumer.accumulate(resolution.increments, 1.0, output, *resolution.run_increment_recipes(consumer, output, owner))
+    resolution.update(owner, owner, *produced)
+    assert np.array_equal(density, np.full((4, 3), 4.0))
     assert np.array_equal(ops.arr(owner.salt), np.full((4, 3), 2.0))
 
 
 def test_resolve_runs_declared_increment_recipes() -> None:
-    consumer = IncrementConsumer(fw.allocate(IncrementConsumer.Output, ops.SIZES))
-    resolution = fw.resolve([consumer], ops.SIZES, targets=Owner)
-    assert [type(r) for r in resolution.increment_recipes[consumer]] == [SaltIncrementFromDensityTendency]
+    consumer = IncrementConsumer()
+    resolution = fw.resolve([consumer], ops.SIZES, input=Owner, output=Owner)
+    assert [type(r) for r, _ in resolution.increment_recipes[consumer]] == [SaltIncrementFromDensityTendency]
     assert [d.quantity.name for d in resolution.increments.declarations()] == ["increment_of_test_salt"]
 
     owner = fw.allocate(Owner, ops.SIZES)
     ops.arr(owner.salt)[...] = 1.0
-    consumer.run(consumer.collect_inputs(owner))
-    computed = resolution.run_increment_recipes(consumer, owner)
-    consumer.accumulate(resolution.increments, 1.0, *computed)
-    resolution.update(owner)
+    output = fw.allocate(IncrementConsumer.Output, ops.SIZES)
+    consumer(consumer.collect_inputs(owner), output)
+    computed = resolution.run_increment_recipes(consumer, output, owner)
+    consumer.accumulate(resolution.increments, 1.0, output, *computed)
+    resolution.update(owner, owner)
     assert np.array_equal(ops.arr(owner.salt), np.full((4, 3), 16.0))
 
 
 def test_resolve_errors() -> None:
-    consumer = Consumer(fw.allocate(Consumer.Output, ops.SIZES))
+    consumer = Consumer()
     with pytest.raises(fw.InconsistentDerivation):
-        fw.resolve([consumer, OtherConsumer(fw.Empty())], ops.SIZES, targets=Owner)
+        fw.resolve([consumer, OtherConsumer()], ops.SIZES, input=Owner, output=Owner)
     fw.DERIVATIONS.clear()
-    fw.resolve([consumer], ops.SIZES, targets=Owner)
+    fw.resolve([consumer], ops.SIZES, input=Owner, output=Owner)
     with pytest.raises(fw.InconsistentDerivation, match="DensityFromSalt vs DensityFromNothing"):
-        fw.resolve([OtherConsumer(fw.Empty())], ops.SIZES, targets=fw.Empty)
+        fw.resolve([OtherConsumer()], ops.SIZES, input=fw.Empty, output=fw.Empty)
     with pytest.raises(fw.UnappliedIncrement):
-        fw.resolve([Producer(fw.allocate(Producer.Output, ops.SIZES))], ops.SIZES, targets=fw.Empty)
+        fw.resolve([Producer()], ops.SIZES, input=fw.Empty, output=fw.Empty)
     with pytest.raises(fw.UnappliedTendency):
-        fw.resolve([Forgetful(fw.allocate(Forgetful.Output, ops.SIZES))], ops.SIZES, targets=Owner)
+        fw.resolve([Forgetful()], ops.SIZES, input=Owner, output=Owner)
     with pytest.raises(fw.UnappliedTendency):
-        fw.resolve([ForgetfulProcess(fw.allocate(Forgetful.Output, ops.SIZES))], ops.SIZES, targets=Owner)
+        fw.resolve([ForgetfulProcess()], ops.SIZES, input=Owner, output=Owner)
     with pytest.raises(fw.InconsistentUpdate):
-        fw.resolve([WrongHook(fw.Empty())], ops.SIZES, targets=Owner)
+        fw.resolve([WrongHook()], ops.SIZES, input=Owner, output=Owner)
     with pytest.raises(fw.InconsistentUpdate):
-        fw.resolve([WrongTendency(fw.Empty())], ops.SIZES, targets=Owner)
+        fw.resolve([WrongTendency()], ops.SIZES, input=Owner, output=Owner)
+    with pytest.raises(fw.InconsistentUpdate, match="neither an input nor incremented"):
+        fw.resolve([], ops.SIZES, input=fw.Empty, output=Owner)
 
 
 def test_state_type_builds_a_declared_state() -> None:
-    cls = fw.state_type("Dynamic", {"salt": (fw.Read[SField], None), "density": (fw.Read[DField], fw.derived_by(DensityFromSalt))})
+    cls = fw.state_type("Dynamic", {"salt": (SField, None), "density": (DField, fw.derived_by(DensityFromSalt))})
     assert [(d.name, d.quantity.name, d.recipe) for d in cls.declarations()] == [
         ("salt", "test_salt", None),
         ("density", "test_density", DensityFromSalt),
     ]
 
 
-def test_dataflow_lists_reads_writes_produces_updates() -> None:
-    text = fw.dataflow(Producer(fw.allocate(Producer.Output, ops.SIZES)), Consumer(fw.allocate(Consumer.Output, ops.SIZES)))
-    assert "reads: test_temperature@now" in text
-    assert "writes: test_salt" in text
+def test_dataflow_lists_reads_produces_updates() -> None:
+    text = fw.dataflow(Producer(), Consumer(), Doubler())
+    assert "reads: test_temperature, test_salt" in text
     assert "produces: tendency_of_test_temperature" in text
     assert "test_density <- DensityFromSalt" in text
     assert "updates: increment_of_test_density <- tendency, test_salt <- after increments SaltFromDensity" in text
+    assert "produces: test_salt (in place)" in text

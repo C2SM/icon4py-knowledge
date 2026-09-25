@@ -4,14 +4,15 @@ import ops
 
 class Diffusion(fw.Component):
     class Input(fw.State):
-        vn: fw.ReadWrite[qty.VnField]
-        theta_v: fw.ReadWrite[qty.ThetaVField]
-        dtime: fw.Read[qty.TimeStep]
+        vn: qty.VnField
+        theta_v: qty.ThetaVField
+        dtime: qty.TimeStep
 
-    Output = fw.Empty
+    class Output(fw.State):
+        vn: qty.VnField
+        theta_v: qty.ThetaVField
 
-    output: fw.Empty
+    in_place = frozenset({"vn", "theta_v"})
 
-    def run(self, input: Input) -> fw.Empty:
-        ops.diffuse(input.vn, input.theta_v, input.dtime)
-        return self.output
+    def run(self, input: Input, output: Output) -> None:
+        ops.diffuse(input.vn, input.theta_v, input.dtime, output.vn, output.theta_v)

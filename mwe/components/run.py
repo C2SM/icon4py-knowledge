@@ -57,14 +57,14 @@ def run_proposed(run_config: config.Config) -> dict[str, Any]:
         "exner": ops.arr(now.exner),
         "theta_v": ops.arr(now.theta_v),
         "qv": ops.arr(icon4py_driver.tracers.now.qv),
-        "mass_flx_me": ops.arr(icon4py_driver.solve_nonhydro.output.mass_flx_me),
+        "mass_flx_me": ops.arr(icon4py_driver.prep_advection.mass_flx_me),
         "ddt_vn_apc.predictor": ops.arr(icon4py_driver.solve_nonhydro.normal_wind_advective_tendency.predictor.normal_wind),
         "ddt_vn_apc.corrector": ops.arr(icon4py_driver.solve_nonhydro.normal_wind_advective_tendency.corrector.normal_wind),
         "dataset": icon4py_driver.io_monitor.dataset,
         "calls": _calls(),
     }
     if "muphys" in run_config.physics:
-        result["pflx"] = ops.arr(icon4py_driver.physics.processes["muphys"][0].output.pflx)
+        result["pflx"] = ops.arr(getattr(icon4py_driver.physics.outputs["muphys"], "pflx"))
     return result
 
 
@@ -92,11 +92,11 @@ def print_dataflow(run_config: config.Config) -> None:
             d.solve_nonhydro,
             d.diffusion,
             d.tracer_advection,
-            *p.resolution.providers,
+            *[recipe for recipe, _ in p.resolution.providers],
             *[process for process, _ in p.processes.values()],
-            *[recipe for recipes in p.resolution.increment_recipes.values() for recipe in recipes],
+            *[recipe for recipes in p.resolution.increment_recipes.values() for recipe, _ in recipes],
             *p.resolution.hooks,
-            *d.io_resolution.providers,
+            *[recipe for recipe, _ in d.io_resolution.providers],
             d.io_monitor,
         )
     )

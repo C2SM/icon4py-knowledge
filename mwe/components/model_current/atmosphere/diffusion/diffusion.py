@@ -4,4 +4,4 @@ import ops
 
 class Diffusion:
     def run(self, prognostic_state: prognostics.PrognosticState, dtime: float) -> None:
-        ops.diffuse(prognostic_state.vn, prognostic_state.theta_v, dtime)
+        ops.diffuse(prognostic_state.vn, prognostic_state.theta_v, dtime, prognostic_state.vn, prognostic_state.theta_v)

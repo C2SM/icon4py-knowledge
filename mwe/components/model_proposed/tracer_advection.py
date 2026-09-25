@@ -4,15 +4,12 @@ import ops
 
 class Advection(fw.Component):
     class Input(fw.State):
-        p_tracer_now: fw.Read[fw.Now[qty.QvField]]
-        p_tracer_new: fw.ReadWrite[fw.Next[qty.QvField]]
-        mass_flx_me: fw.Read[qty.MassFluxField]
-        dtime: fw.Read[qty.TimeStep]
+        qv: qty.QvField
+        mass_flx_me: qty.MassFluxField
+        dtime: qty.TimeStep
 
-    Output = fw.Empty
+    class Output(fw.State):
+        qv: qty.QvField
 
-    output: fw.Empty
-
-    def run(self, input: Input) -> fw.Empty:
-        ops.advect(input.p_tracer_now, input.p_tracer_new, input.mass_flx_me, input.dtime)
-        return self.output
+    def run(self, input: Input, output: Output) -> None:
+        ops.advect(input.qv, output.qv, input.mass_flx_me, input.dtime)

@@ -24,39 +24,47 @@ class ProcessTimeControl:
 
 class PhysicsDriver(fw.Component):
     class Input(fw.State):
-        vn: fw.ReadWrite[qty.VnField]
-        w: fw.Read[qty.WField]
-        rho: fw.Read[qty.RhoField]
-        exner: fw.ReadWrite[qty.ExnerField]
-        theta_v: fw.ReadWrite[qty.ThetaVField]
-        qv: fw.ReadWrite[qty.QvField]
-        dtime: fw.Read[qty.TimeStep]
-        step_index: fw.Read[qty.StepIndex]
+        vn: qty.VnField
+        w: qty.WField
+        rho: qty.RhoField
+        exner: qty.ExnerField
+        theta_v: qty.ThetaVField
+        qv: qty.QvField
+        dtime: qty.TimeStep
+        step_index: qty.StepIndex
 
-    Output = fw.Empty
-    output: fw.Empty
+    class Output(fw.State):
+        vn: qty.VnField
+        exner: qty.ExnerField
+        theta_v: qty.ThetaVField
+        qv: qty.QvField
+
+    in_place = frozenset({"vn", "exner", "theta_v", "qv"})
 
     def __init__(self, process_intervals: Mapping[str, int], update: UpdateMode = "parallel") -> None:
-        super().__init__(fw.Empty())
         if update != "parallel":
             raise NotImplementedError(f"update={update!r}: update per process, re-derive between processes")
         self.update = update
         self.processes: dict[str, tuple[fw.Process, ProcessTimeControl]] = {
-            name: (PROCESSES[name](fw.allocate(PROCESSES[name].Output, ops.SIZES)), ProcessTimeControl(interval))
-            for name, interval in process_intervals.items()
+            name: (PROCESSES[name](), ProcessTimeControl(interval)) for name, interval in process_intervals.items()
+        }
+        self.outputs: dict[str, fw.State] = {
+            name: fw.allocate(PROCESSES[name].Output, ops.SIZES) for name in process_intervals
         }
         self.resolution = fw.resolve(
-            [process for process, _ in self.processes.values()], ops.SIZES, targets=PhysicsDriver.Input
+            [process for process, _ in self.processes.values()],
+            ops.SIZES,
+            input=PhysicsDriver.Input,
+            output=PhysicsDriver.Output,
         )
 
-
-    def run(self, input: Input) -> fw.Empty:
+    def run(self, input: Input, output: Output) -> None:
         produced = self.resolution.run_providers(input)
         fw.zero(self.resolution.increments)
-        for process, time_control in self.processes.values():
+        for name, (process, time_control) in self.processes.items():
+            process_output = self.outputs[name]
             if time_control.is_active(input.step_index):
-                process.run(process.collect_inputs(input, *produced))
-            computed = self.resolution.run_increment_recipes(process, input)
-            process.accumulate(self.resolution.increments, input.dtime, *computed)
-        self.resolution.update(input, *produced)
-        return self.output
+                process(process.collect_inputs(input, *produced), process_output)
+            computed = self.resolution.run_increment_recipes(process, process_output, input)
+            process.accumulate(self.resolution.increments, input.dtime, process_output, *computed)
+        self.resolution.update(input, output, *produced)

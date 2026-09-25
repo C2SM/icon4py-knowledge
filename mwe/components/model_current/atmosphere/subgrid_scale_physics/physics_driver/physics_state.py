@@ -60,7 +60,9 @@ class ApplyToPrognostic:
             ops.arr(self._new_te)[...] = ops.arr(entry_state.diagnostics.temperature) + dt_seconds * ops.arr(
                 acc["tend_temperature"]
             )
-            ops.update_exner_and_theta_v(self._new_te, entry_state.exner, entry_state.theta_v)
+            ops.update_exner_and_theta_v(
+                self._new_te, entry_state.exner, entry_state.theta_v, entry_state.exner, entry_state.theta_v
+            )
         if "tend_u" in acc:
             ops.compute_vn_from_uv(acc["tend_u"], self._ddt_vn)
             ops.arr(entry_state.vn)[...] += dt_seconds * ops.arr(self._ddt_vn)

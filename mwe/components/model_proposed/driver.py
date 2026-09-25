@@ -13,17 +13,18 @@ class Icon4pyDriver:
             fw.allocate(states.PrognosticState, ops.SIZES, ops.initial), fw.allocate(states.PrognosticState, ops.SIZES)
         )
         self.tracers = fw.TimeStepPair(fw.allocate(states.TracerState, ops.SIZES, ops.initial), fw.allocate(states.TracerState, ops.SIZES))
-        self.solve_nonhydro = solve_nonhydro.SolveNonhydro(fw.allocate(states.PrepAdvection, ops.SIZES))
-        self.diffusion = diffusion.Diffusion(fw.Empty())
-        self.tracer_advection = tracer_advection.Advection(fw.Empty())
+        self.prep_advection = fw.allocate(states.PrepAdvection, ops.SIZES)
+        self.solve_nonhydro = solve_nonhydro.SolveNonhydro()
+        self.diffusion = diffusion.Diffusion()
+        self.tracer_advection = tracer_advection.Advection()
         self.physics = physics_driver.PhysicsDriver(run_config.physics)
         self.io_monitor = io.IOMonitor(run_config.output_variables)
-        self.io_resolution = fw.resolve([self.io_monitor], ops.SIZES, targets=fw.Empty)
+        self.io_resolution = fw.resolve([self.io_monitor], ops.SIZES, input=fw.Empty, output=fw.Empty)
 
     def _store_output(self, info: states.StepInfo) -> None:
-        supplied = (self.prognostic_states.now,)
-        produced = self.io_resolution.run_providers(*supplied)
-        self.io_monitor.run(self.io_monitor.collect_inputs(*supplied, *produced, info))
+        now = self.prognostic_states.now
+        produced = self.io_resolution.run_providers(now)
+        self.io_monitor(self.io_monitor.collect_inputs(now, *produced, info), fw.Empty())
 
     def time_integration(self, n_time_steps: int) -> None:
         for time_step in range(n_time_steps):
@@ -41,9 +42,16 @@ class Icon4pyDriver:
 
     def _integrate_one_time_step(self, info: states.StepInfo) -> None:
         self._do_dyn_substepping(info)
-        self.diffusion.run(self.diffusion.collect_inputs(self.prognostic_states.next, info))
-        self.tracer_advection.run(self.tracer_advection.collect_inputs(self.tracers, self.solve_nonhydro.output, info))
-        self.physics.run(self.physics.collect_inputs(self.prognostic_states.next, self.tracers.next, info))
+        prognostic_next, tracers_next = self.prognostic_states.next, self.tracers.next
+        self.diffusion(self.diffusion.collect_inputs(prognostic_next, info), self.diffusion.collect_output(prognostic_next))
+        self.tracer_advection(
+            self.tracer_advection.collect_inputs(self.tracers.now, self.prep_advection, info),
+            self.tracer_advection.collect_output(tracers_next),
+        )
+        self.physics(
+            self.physics.collect_inputs(prognostic_next, tracers_next, info),
+            self.physics.collect_output(prognostic_next, tracers_next),
+        )
         self.prognostic_states.swap()
         self.tracers.swap()
 
@@ -54,6 +62,9 @@ class Icon4pyDriver:
                 at_first_substep=dyn_substep == 0,
                 at_last_substep=dyn_substep == info.ndyn_substeps - 1,
             )
-            self.solve_nonhydro.run(self.solve_nonhydro.collect_inputs(self.prognostic_states, substep))
+            self.solve_nonhydro(
+                self.solve_nonhydro.collect_inputs(self.prognostic_states.now, substep),
+                self.solve_nonhydro.collect_output(self.prognostic_states.next, self.prep_advection),
+            )
             if not substep.at_last_substep:
                 self.prognostic_states.swap()

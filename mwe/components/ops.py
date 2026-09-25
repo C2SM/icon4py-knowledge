@@ -98,9 +98,9 @@ def compute_advection_in_horizontal_momentum(vn: Field, normal_wind_advective_te
 
 
 @counted
-def diffuse(vn: Field, theta_v: Field, dtime: float) -> None:
-    arr(vn)[...] -= dtime * 0.05 * arr(vn)
-    arr(theta_v)[...] -= dtime * 0.05 * arr(theta_v)
+def diffuse(vn: Field, theta_v: Field, dtime: float, vn_new: Field, theta_v_new: Field) -> None:
+    arr(vn_new)[...] = arr(vn) - dtime * 0.05 * arr(vn)
+    arr(theta_v_new)[...] = arr(theta_v) - dtime * 0.05 * arr(theta_v)
 
 
 @counted
@@ -133,9 +133,11 @@ def tmx(temperature: Field, u: Field, ddt_temperature: Field, ddt_u: Field) -> N
 
 
 @counted
-def update_exner_and_theta_v(temperature: Field, exner: Field, theta_v: Field) -> None:
-    arr(exner)[...] *= 1.0 + 0.001 * (arr(temperature) - arr(theta_v) * arr(exner))
-    arr(theta_v)[...] = arr(temperature) / arr(exner)
+def update_exner_and_theta_v(
+    temperature: Field, exner: Field, theta_v: Field, exner_new: Field, theta_v_new: Field
+) -> None:
+    arr(exner_new)[...] = arr(exner) * (1.0 + 0.001 * (arr(temperature) - arr(theta_v) * arr(exner)))
+    arr(theta_v_new)[...] = arr(temperature) / arr(exner_new)
 
 
 @counted
