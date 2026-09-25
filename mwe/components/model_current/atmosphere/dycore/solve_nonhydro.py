@@ -22,6 +22,9 @@ class SolveNonhydro:
                 prognostic_states.current.vn,
                 diagnostic_state_nh.normal_wind_advective_tendency.predictor,  # type: ignore[arg-type]
             )
+        ops.interpolate_to_half_levels(
+            prognostic_states.current.theta_v, diagnostic_state_nh.theta_v_at_cells_on_half_levels
+        )
         ops.dycore_step(
             vn_now=prognostic_states.current.vn,
             w_now=prognostic_states.current.w,
@@ -33,6 +36,7 @@ class SolveNonhydro:
             rho_new=prognostic_states.next.rho,
             exner_new=prognostic_states.next.exner,
             theta_v_new=prognostic_states.next.theta_v,
+            theta_v_ic=diagnostic_state_nh.theta_v_at_cells_on_half_levels,
             mass_flx_me=prep_adv.mass_flx_me,
             predictor_normal_wind_advective_tendency=diagnostic_state_nh.normal_wind_advective_tendency.predictor,  # type: ignore[arg-type]
             corrector_normal_wind_advective_tendency=diagnostic_state_nh.normal_wind_advective_tendency.corrector,  # type: ignore[arg-type]

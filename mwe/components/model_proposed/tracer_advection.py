@@ -6,7 +6,7 @@ class Advection(fw.Component):
     class Input(fw.State):
         qv: qty.QvField
         mass_flx_me: qty.MassFluxField
-        dtime: qty.TimeStep
+        dtime: qty.TimeStepValue
 
     class Output(fw.State):
         qv: qty.QvField

@@ -14,7 +14,8 @@ Show the proposed design in action next to the current one, without distraction:
   line to code they work on daily;
 - both models read the same two-line `example.yaml`; `run.py` asserts equality
   over a four-config matrix, prints the proposed model's declared dataflow and
-  counts how often each side computes `temperature` and `u`;
+  counts how often each side computes `temperature`, `u` and `theta_v` on
+  half levels;
 - both models pass `mypy --strict`.
 
 Explicitly out of scope: real physics, real grids, halo exchange, restart, IO
@@ -23,7 +24,7 @@ sequential update beyond the `PhysicsDriver(update=...)` stub, py2fgen.
 
 ## Scope
 
-### Quantities (11)
+### Quantities (11, `theta_v` at two locations)
 
 | quantity      | dims    | role                                                              |
 |---------------|---------|-------------------------------------------------------------------|
@@ -32,6 +33,7 @@ sequential update beyond the `PhysicsDriver(update=...)` stub, py2fgen.
 | `rho`         | Cell, K | prognostic, same pair                                             |
 | `exner`       | Cell, K | prognostic, same pair                                             |
 | `theta_v`     | Cell, K | prognostic, same pair                                             |
+| `theta_v_ic`  | Cell, KHalf | `theta_v` relocated to half levels by a declared recipe (`ThetaVToHalfLevels`), read by the dycore; `theta_v_at_cells_on_half_levels` in icon4py |
 | `qv`          | Cell, K | tracer, now/next pair, swapped once per time step                 |
 | `mass_flx_me` | Edge, K | dycore output handed to tracer advection, never accumulated       |
 | `temperature` | Cell, K | derived by a recipe when a process or IO asks; incremented and pushed into exner/theta_v as the processes' `Update` declares |
@@ -54,7 +56,7 @@ the config (`example.yaml`: muphys every step, tmx every 2).
 
 ### Grid and data
 
-4 cells, 6 edges, 3 levels. Fields are gt4py fields (`gtx.zeros`) so the type
+4 cells, 6 edges, 3 levels (4 half levels). Fields are gt4py fields (`gtx.zeros`) so the type
 aliases, mypy and gt4py's type translation are the real thing. All arithmetic is
 in place on `.ndarray`. Edge/cell transfers are slices:
 `to_cells(e) = 0.5 * (e[:4] + e[2:])`, `to_edges(c) = concatenate(c, c[:2])`.
@@ -70,6 +72,7 @@ named after the icon4py program it stands in for where one exists:
 |------------------------------------------------------------|------------------------------------------|
 | `dycore_step(*_now, *_new, mass_flx_me, predictor_..., corrector_..., dtime, ...)` | predictor + corrector, one substep; reads the predictor tendency, writes the corrector |
 | `compute_advection_in_horizontal_momentum(vn, ddt_vn_apc)` | the velocity-advection program of the same name |
+| `interpolate_to_half_levels(theta_v, theta_v_ic)`         | the half-level interpolation of `theta_v` in the predictor step |
 | `diffuse(vn, theta_v, dtime, vn_new, theta_v_new)`         | diffusion; in place when the composer aliases |
 | `advect(p_tracer_now, p_tracer_new, mass_flx_me, dtime)`   | tracer advection                         |
 | `compute_temperature(theta_v, exner, temperature)`         | `compute_virtual_temperature_and_temperature` |
@@ -79,7 +82,7 @@ named after the icon4py program it stands in for where one exists:
 | `update_exner_and_theta_v(temperature, exner, theta_v, exner_new, theta_v_new)` | the program of the same name; in place when aliased |
 | `compute_vn_from_uv(u, vn)`                                | the stencil of the same name             |
 
-`dycore_step` reads the `now` fields, writes the `new` fields and `mass_flx_me`;
+`dycore_step` reads the `now` fields and `theta_v_ic`, writes the `new` fields and `mass_flx_me`;
 it applies `0.5 * (predictor + corrector)` of the vn advective tendency.
 
 ### Time loop (identical in both models)
@@ -88,7 +91,9 @@ Per time step:
 
 1. `ndyn_substeps` times: on the first substep compute the predictor vn advective
    tendency from `vn@now`, otherwise swap the predictor/corrector pair so the last
-   corrector becomes this predictor (ICON `itime_scheme=4`); `dycore_step(now,
+   corrector becomes this predictor (ICON `itime_scheme=4`); relocate `theta_v@now` to half levels (a
+   declared recipe on the proposed side, a call inside the dycore on the
+   current side); `dycore_step(now,
    next, ...)`; swap the prognostic pair unless last substep.
 2. `diffuse` from `prognostic_states.next` into `prognostic_states.next`: in place
    because the driver passes the same buffers on both sides.
@@ -149,7 +154,7 @@ model_current/
     states/tracer_states.py        TracerField, TracerState.active_fields/.copy
     states/tracer_prep_adv_states.py  TracerPrepAdvState (mass_flx_me)
     states/diagnostic_state.py     DiagnosticState (temperature, u)
-    states/nonhydro_states.py      DiagnosticStateNonHydro (normal_wind_advective_tendency: PredictorCorrectorPair)
+    states/nonhydro_states.py      DiagnosticStateNonHydro (normal_wind_advective_tendency: PredictorCorrectorPair, theta_v_at_cells_on_half_levels)
     components/components.py       Component protocol (inputs/outputs_properties, __call__)
     components/component_state.py  ComponentState protocol (as_component_input)
     io/io.py                       IOMonitor.store(state, model_time)
@@ -188,20 +193,22 @@ the dycore decides, from the same flags, whether to recompute the predictor.
 
 ## `model_proposed`
 
-### `common/framework.py` (the reusable part, 379 lines)
+### `common/framework.py` (the reusable part, 462 lines)
 
 ```python
-@dataclass(frozen=True) class Quantity: name, units, cf_key=None, parent: Quantity | None = None
-def quantity(name, *, units, cf_key=None) -> Quantity      # registers in REGISTRY[name]
-def tendency_of(q) -> Quantity                              # memoized; parent=q, units=f"{q.units} s-1"
-def increment_of(q) -> Quantity                             # memoized; parent=q, units=q.units
+class Quantity:                                               # type-level tag, never instantiated; one subclass per quantity
+    name, units, cf_key, parent, locations: ClassVar         # class kwargs: name=, units=, cf_key=, locations=; registers in REGISTRY[name]
+def tendency_of(q) -> type[Quantity]                          # memoized derived tag; parent=q, units=f"{q.units} s-1", same locations
+def increment_of(q) -> type[Quantity]                         # memoized derived tag; parent=q, units=q.units
+type Cell[Q], CellK[Q], CellKHalf[Q], Edge[Q], EdgeK[Q], EdgeKHalf[Q] = Annotated[fa.<...>Field[wpfloat], Q]   # the locations
+type Scalar[T, Q] = Annotated[T, Q]
 
 type Tendency[F]  = Annotated[F, Tag.TENDENCY]
 type Increment[F] = Annotated[F, Tag.INCREMENT]
 
 @dataclass_transform(frozen_default=True)
 class State:                                   # __init_subclass__ applies dataclass(frozen=True, eq=False, kw_only=True)
-    @classmethod def declarations(cls) -> tuple[Decl, ...]    # cached: name, quantity, tag, field type, marker
+    @classmethod def declarations(cls) -> tuple[Decl, ...]    # cached: name, quantity, tag, location, field type, marker; key = (quantity, location)
     def leaves(self) -> Iterator[tuple[Decl, Any]]            # (declaration, value) pairs
 class Pair[S]: first: S; second: S; swap()                    # 15 lines for the three classes
 class TimeStepPair[S](Pair[S]): now; next                     # driver-owned: `.now` goes in as input, `.next` as output
@@ -212,6 +219,7 @@ def derived_by(recipe: type[Recipe]) -> Any    # leaf default: `temperature: TFi
 def from_tendency() -> Any                     # Update leaf default: `x: Increment[XField] = from_tendency()`, += dt * own Tendency[X]
 def after_increments(hook: type[Component]) -> Any  # Update leaf default: `y: YField = after_increments(Hook)`, run once after the increments
 def state_type(name, leaves: {name: (hint, marker | None)}) -> type[State]  # State class at runtime (config-driven Inputs)
+def relocation(recipe: type[Recipe]) -> type[Recipe]         # registers a recipe moving one quantity between two of its locations, RELOCATIONS[(q, from, to)]
 
 class Component:                                              # not generic, see the decisions below
     Input: type[State]; Output: type[State]                   # a leaf in Input is read, a leaf in Output is written
@@ -235,14 +243,24 @@ def dataflow(*components) -> str                              # declared reads /
 
 Rules the framework enforces:
 
-- Every field of a `State` subclass is typed by an alias whose `Annotated`
-  metadata carries a `Quantity`; `Tendency`/`Increment` are generic aliases that
-  erase to the field type for mypy and gt4py. Reading the declaration means
-  unwrapping `TypeAliasType`, generic aliases of `TypeAliasType`, and nested
-  `Annotated`.
-- `collect(cls, *states)` flattens the given states into `{quantity: value}`
-  and picks one value per declaration of `cls`. Two different buffers for one
-  quantity raise `AmbiguousSource`; an unresolved declaration raises
+- Every field of a `State` subclass is typed by a location alias applied to a
+  quantity tag, `CellK[ThetaV]`: an `Annotated` whose metadata carries the tag;
+  `Tendency`/`Increment` wrap it. All erase to the field type for mypy and
+  gt4py. Reading the declaration means unwrapping `TypeAliasType`, generic
+  aliases of `TypeAliasType` (substituting the tag into the metadata by hand,
+  since `Annotated` cannot be parameterised there) and nested `Annotated`; the
+  alias object is the location. Everything resolves on `(quantity, location)`:
+  `theta_v` at cells and `theta_v` at half levels are two keys, one registry
+  entry. A location the tag does not declare (`locations=`) raises
+  `InvalidLocation` when the declaration is read.
+- `relocation(recipe)` registers a `Recipe` whose one Output leaf is a quantity
+  the Input carries at another location, one recipe per `(quantity, from, to)`
+  (`InconsistentRelocation`). A consumer names it with `derived_by` like any
+  recipe; the table exists so that a family-level lookup can be added later
+  (the option is written up in `quantities.py`).
+- `collect(cls, *states)` flattens the given states into `{(quantity, location):
+  value}` and picks one value per declaration of `cls`. Two different buffers
+  for one key raise `AmbiguousSource`; an unresolved declaration raises
   `MissingInput`. The same buffer twice is fine. Scalars resolve exactly like
   fields. No component ever sees a `TimeStepPair`: the composer passes `.now`
   as input and `.next` as output.
@@ -267,7 +285,7 @@ Rules the framework enforces:
   runs once in a composite's `__init__`. Inputs: it collects the `derived_by`
   recipes from the children's Inputs (transitively through the recipes' own
   Inputs), deduplicates them, orders dependencies first, allocates one instance
-  and one output buffer each; two recipes on one quantity raise
+  and one output buffer each; two recipes on one `(quantity, location)` raise
   `InconsistentDerivation`, within one composite or across composites:
   `resolve` records every derivation in the process-wide `DERIVATIONS`
   registry, so physics deriving `temperature` by one recipe and IO by another
@@ -332,7 +350,15 @@ advection, recipes and hooks are plain `Component`s. `State` is a base class
 because the dataclass conversion needs one. Tendencies and increments are
 derived quantities. `dt` enters in `accumulate` so that components with
 different cadences can accumulate with their own `dt`; the MWE uses the step
-`dt` for both to match `model_current` numerically.
+`dt` for both to match `model_current` numerically. `Quantity` is a class,
+never instantiated, after egparedes' phantom-types note: the metadata sits on
+the class, `parent` and `locations` too, and the same classes are meant to
+become the phantom type argument of the field (`fa.CellKField[wpfloat,
+ThetaV]`) once gt4py's `Field` can carry one; until then the tag rides in
+`Annotated` metadata and `unwrap` is the one place that would change. The
+location aliases live in the framework, `fw.CellKHalf[ThetaV]`, rather than
+as nested aliases on each tag (`ThetaV.CellKHalfField`), because pyright
+refuses a `type` alias inside a class body that names the class.
 
 ### Why the driver owns the pairs and no component sees one
 
@@ -454,10 +480,11 @@ process and the hooks to run after the increments. Decisions and why:
 Module and class names follow `model_current` so the two trees read side by side.
 
 ```
-common/quantities.py  10 field aliases + 7 scalar aliases, one line each; names are the CF standard names of data.py
+common/quantities.py  10 quantity tags with their locations, 11 field aliases (theta_v at cells and at half levels), 7 scalar tags and aliases;
+                      names are the CF standard names of data.py; the family-level relocation option and the static caveat as a comment
 common/states.py      PrognosticState, TracerState, PrepAdvection, StepInfo
-recipes.py            Recipes TemperatureFromThetaExner, UFromVn, VnIncrementFromUTendency (Tendency[U] + dt -> Increment[Vn]); hook ExnerThetaFromTemperature, in_place exner, theta_v
-solve_nonhydro.py     SolveNonhydro: Input the five prognostics (the driver passes `now`), substep scalars; Output the five prognostics (`next`) + mass_flx_me
+recipes.py            Recipes TemperatureFromThetaExner, UFromVn, VnIncrementFromUTendency (Tendency[U] + dt -> Increment[Vn]), relocation ThetaVToHalfLevels; hook ExnerThetaFromTemperature, in_place exner, theta_v
+solve_nonhydro.py     SolveNonhydro: Input the five prognostics (the driver passes `now`), theta_v_ic = derived_by(ThetaVToHalfLevels), substep scalars; Output the five prognostics (`next`) + mass_flx_me
                       owns PredictorCorrectorPair(AdvectiveTendencies) and swaps it in run
 diffusion.py          Diffusion: Input vn, theta_v, dtime; Output vn, theta_v; in_place both (the driver passes `next` on both sides)
 tracer_advection.py   Advection: Input qv (tracers.now), mass_flx_me (the driver's prep_advection), dtime; Output qv (tracers.next)
@@ -469,11 +496,14 @@ io.py                 VARIABLES (name -> hint, derived_by); IOMonitor(variables)
 physics_driver.py     PhysicsDriver(process_intervals, update="parallel"): processes and their output buffers from PROCESSES by config name, resolve(...) at init
                       Input the prognostics, qv, dtime, step_index; Output vn, exner, theta_v, qv, in_place all four
                       run: run_providers -> each process (call if active, then run_increment_recipes, accumulate) -> resolution.update(input, output, *produced)
-driver.py             Icon4pyDriver(config): owner states and pairs, prep_advection, PhysicsDriver, IOMonitor and its own resolve;
+driver.py             Icon4pyDriver(config): owner states and pairs, prep_advection, PhysicsDriver, IOMonitor, one resolve for the dycore's
+                      derived input and one for IO;
                       every call is component(collect_inputs(...), collect_output(...))
 ```
 
-Where each tricky case lands: now/next in `driver.py` (`.now` in, `.next` out
+Where each tricky case lands: one quantity at two locations in
+`solve_nonhydro.py` (`theta_v_ic`, a declared relocation, resolved by the driver
+and run once per substep); now/next in `driver.py` (`.now` in, `.next` out
 for the dycore and advection); a component-internal predictor/corrector pair in
 `solve_nonhydro.py`; in-place by declared aliasing in `diffusion.py`, the after-increments hook and
 `physics_driver.py`;
@@ -491,13 +521,14 @@ providers.
   (providers, processes, increment recipes, hooks, IO), then for each of four configs runs
   both models for 4 steps, compares the quantities, both sides of the dycore
   pair and the output records, and prints one table row per side with the
-  number of `compute_temperature` and `edge_2_cell_vector_rbf_interpolation`
-  calls: `model_current` 8 and 8 in every row; `model_proposed` 8 and 8
-  (`example.yaml`), 8 and 8 (tmx only), 4 and 0 (no physics, `temperature`
-  output only), 4 and 4 (no output). Exit code 1 on any mismatch.
+  number of `compute_temperature`, `edge_2_cell_vector_rbf_interpolation` and
+  `interpolate_to_half_levels` calls: `model_current` 8, 8 and 8 in every row;
+  `model_proposed` 8, 8, 8 (`example.yaml`), 8, 8, 8 (tmx only), 4, 0, 8 (no
+  physics, `temperature` output only), 4, 4, 8 (no output). Exit code 1 on any mismatch.
 - `test_equivalence.py`: the same matrix as four pytest cases, asserting
   agreement and the call counts.
-- `test_framework.py`: fifteen unit tests of the framework verbs, `resolve`,
+- `test_framework.py`: eighteen unit tests of the framework verbs, locations,
+  `relocation`, `resolve`,
   its errors and `state_type`.
 - `mypy.ini`: `strict = True`; `implicit_reexport = True` for `model_current.*`
   only, as icon4py's own `pyproject.toml` sets it. Command:
@@ -513,6 +544,6 @@ providers.
 - `README.md` in the folder: purpose, the three commands.
 - One line added to the layout block of `AGENTS.md` naming `mwe/`.
 - Code is comment-free by request; names carry the meaning.
-- Size as built (non-blank lines): `model_current` 668 across 28 modules,
-  `model_proposed` 717 (of which `framework.py` 379, `recipes.py` 40),
-  `ops.py` 107 (with the call counter), `config.py` 10, `run.py` + tests 352.
+- Size as built (non-blank lines): `model_current` 674 across 28 modules,
+  `model_proposed` 840 (of which `framework.py` 462, `recipes.py` 48),
+  `ops.py` 115 (with the call counter), `config.py` 10, `run.py` + tests 404.

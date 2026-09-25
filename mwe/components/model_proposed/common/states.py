@@ -18,10 +18,10 @@ class PrepAdvection(fw.State):
 
 
 class StepInfo(fw.State):
-    dtime: qty.TimeStep
-    substep_dtime: qty.SubstepTimeStep
-    ndyn_substeps: qty.SubstepCount
-    step_index: qty.StepIndex
-    simulation_time: qty.SimulationTime
-    at_first_substep: qty.AtFirstSubstep
-    at_last_substep: qty.AtLastSubstep
+    dtime: qty.TimeStepValue
+    substep_dtime: qty.SubstepTimeStepValue
+    ndyn_substeps: qty.SubstepCountValue
+    step_index: qty.StepIndexValue
+    simulation_time: qty.SimulationTimeValue
+    at_first_substep: qty.AtFirstSubstepValue
+    at_last_substep: qty.AtLastSubstepValue

@@ -9,8 +9,9 @@ import numpy as np
 from icon4py.model.common import dimension as dims, type_alias as ta
 
 NCELLS, NEDGES, NLEV = 4, 6, 3
-SIZES: dict[gtx.Dimension, int] = {dims.CellDim: NCELLS, dims.EdgeDim: NEDGES, dims.KDim: NLEV}
+SIZES: dict[gtx.Dimension, int] = {dims.CellDim: NCELLS, dims.EdgeDim: NEDGES, dims.KDim: NLEV, dims.KHalfDim: NLEV + 1}
 CELL, CELL_K, EDGE_K = (dims.CellDim,), (dims.CellDim, dims.KDim), (dims.EdgeDim, dims.KDim)
+CELL_KHALF = (dims.CellDim, dims.KHalfDim)
 DTIME, NDYN_SUBSTEPS, N_STEPS = 1.0, 2, 4
 START = datetime(2026, 1, 1)
 
@@ -71,6 +72,7 @@ def dycore_step(
     rho_new: Field,
     exner_new: Field,
     theta_v_new: Field,
+    theta_v_ic: Field,
     mass_flx_me: Field,
     predictor_normal_wind_advective_tendency: Field,
     corrector_normal_wind_advective_tendency: Field,
@@ -87,9 +89,17 @@ def dycore_step(
     compute_advection_in_horizontal_momentum(vn_new, corrector_normal_wind_advective_tendency)
     advection = 0.5 * (arr(predictor_normal_wind_advective_tendency) + arr(corrector_normal_wind_advective_tendency))
     arr(vn_new)[...] = arr(vn_now) + dtime * (pressure_gradient + advection)
-    arr(w_new)[...] = arr(w_now) + dtime * (arr(rho_new) - arr(rho_now))
+    buoyancy = 0.01 * (arr(theta_v_ic)[:, 1:] - arr(theta_v_ic)[:, :-1])
+    arr(w_new)[...] = arr(w_now) + dtime * (arr(rho_new) - arr(rho_now) + buoyancy)
     arr(exner_new)[...] = arr(exner_now) * (1.0 + dtime * 0.01 * (arr(rho_new) - arr(rho_now)))
     arr(theta_v_new)[...] = arr(theta_v_now) + dtime * 0.1 * arr(w_new)
+
+
+@counted
+def interpolate_to_half_levels(theta_v: Field, theta_v_ic: Field) -> None:
+    arr(theta_v_ic)[:, 0] = arr(theta_v)[:, 0]
+    arr(theta_v_ic)[:, 1:NLEV] = 0.5 * (arr(theta_v)[:, :-1] + arr(theta_v)[:, 1:])
+    arr(theta_v_ic)[:, NLEV] = arr(theta_v)[:, -1]
 
 
 @counted

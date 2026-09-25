@@ -30,8 +30,8 @@ class PhysicsDriver(fw.Component):
         exner: qty.ExnerField
         theta_v: qty.ThetaVField
         qv: qty.QvField
-        dtime: qty.TimeStep
-        step_index: qty.StepIndex
+        dtime: qty.TimeStepValue
+        step_index: qty.StepIndexValue
 
     class Output(fw.State):
         vn: qty.VnField

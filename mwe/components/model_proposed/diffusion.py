@@ -6,7 +6,7 @@ class Diffusion(fw.Component):
     class Input(fw.State):
         vn: qty.VnField
         theta_v: qty.ThetaVField
-        dtime: qty.TimeStep
+        dtime: qty.TimeStepValue
 
     class Output(fw.State):
         vn: qty.VnField

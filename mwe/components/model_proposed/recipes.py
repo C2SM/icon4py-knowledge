@@ -45,7 +45,7 @@ class UFromVn(fw.Recipe):
 class VnIncrementFromUTendency(fw.Recipe):
     class Input(fw.State):
         tend_u: fw.Tendency[qty.UField]
-        dtime: qty.TimeStep
+        dtime: qty.TimeStepValue
 
     class Output(fw.State):
         vn: fw.Increment[qty.VnField]
@@ -56,3 +56,15 @@ class VnIncrementFromUTendency(fw.Recipe):
     def run(self, input: Input, output: Output) -> None:
         ops.compute_vn_from_uv(input.tend_u, self._ddt_vn)
         ops.arr(output.vn)[...] = input.dtime * ops.arr(self._ddt_vn)
+
+
+@fw.relocation
+class ThetaVToHalfLevels(fw.Recipe):
+    class Input(fw.State):
+        theta_v: qty.ThetaVField
+
+    class Output(fw.State):
+        theta_v_ic: qty.ThetaVAtCellsOnHalfLevels
+
+    def run(self, input: Input, output: Output) -> None:
+        ops.interpolate_to_half_levels(input.theta_v, output.theta_v_ic)

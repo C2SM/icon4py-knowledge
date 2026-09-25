@@ -10,7 +10,7 @@ import config
 import ops
 
 HERE = pathlib.Path(__file__).parent
-COUNTED = ("compute_temperature", "edge_2_cell_vector_rbf_interpolation")
+COUNTED = ("compute_temperature", "edge_2_cell_vector_rbf_interpolation", "interpolate_to_half_levels")
 CONFIGS: dict[str, config.Config] = {
     "example": config.load(HERE / "example.yaml"),
     "no_muphys": config.Config(output_variables=("temperature", "eastward_wind"), physics={"tmx": 2}),
@@ -89,6 +89,7 @@ def print_dataflow(run_config: config.Config) -> None:
     p = d.physics
     print(
         fw.dataflow(
+            *[recipe for recipe, _ in d.dycore_resolution.providers],
             d.solve_nonhydro,
             d.diffusion,
             d.tracer_advection,

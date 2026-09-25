@@ -18,7 +18,7 @@ stencils.
 `run.py` prints the proposed model's declared dataflow for `example.yaml`, then
 runs both models on four configs (the example, tmx only, no physics, no output)
 and prints one row per side with `OK` and how many times each side computed
-`temperature` and `u`. All comparisons are bit-exact.
+`temperature`, `u` and `theta_v` on half levels. All comparisons are bit-exact.
 
 Suggested reading order: `run.py` output, then `model_current/atmosphere/subgrid_scale_physics/muphys/`
 next to `model_proposed/muphys.py` and `model_proposed/recipes.py`, then

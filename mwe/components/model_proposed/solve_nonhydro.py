@@ -1,3 +1,4 @@
+from model_proposed import recipes
 from model_proposed.common import framework as fw, quantities as qty
 import ops
 
@@ -13,10 +14,11 @@ class SolveNonhydro(fw.Component):
         rho: qty.RhoField
         exner: qty.ExnerField
         theta_v: qty.ThetaVField
-        substep_dtime: qty.SubstepTimeStep
-        ndyn_substeps: qty.SubstepCount
-        at_first_substep: qty.AtFirstSubstep
-        at_last_substep: qty.AtLastSubstep
+        theta_v_ic: qty.ThetaVAtCellsOnHalfLevels = fw.derived_by(recipes.ThetaVToHalfLevels)
+        substep_dtime: qty.SubstepTimeStepValue
+        ndyn_substeps: qty.SubstepCountValue
+        at_first_substep: qty.AtFirstSubstepValue
+        at_last_substep: qty.AtLastSubstepValue
 
     class Output(fw.State):
         vn: qty.VnField
@@ -43,6 +45,7 @@ class SolveNonhydro(fw.Component):
             rho_now=input.rho,
             exner_now=input.exner,
             theta_v_now=input.theta_v,
+            theta_v_ic=input.theta_v_ic,
             vn_new=output.vn,
             w_new=output.w,
             rho_new=output.rho,

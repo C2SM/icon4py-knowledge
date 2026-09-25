@@ -24,7 +24,7 @@ class IOMonitor(fw.Component):
         self.variables = tuple(variables)
         self.Input = fw.state_type(
             "Input",
-            {name: VARIABLES[name] for name in self.variables} | {"simulation_time": (qty.SimulationTime, None)},
+            {name: VARIABLES[name] for name in self.variables} | {"simulation_time": (qty.SimulationTimeValue, None)},
         )
         self.dataset: list[tuple[datetime, str, ops.Array]] = []
 
