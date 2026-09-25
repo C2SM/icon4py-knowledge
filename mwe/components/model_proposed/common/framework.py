@@ -70,11 +70,11 @@ class FromTendency:
 
 
 @dataclasses.dataclass(frozen=True)
-class AfterApply:
+class AfterIncrements:
     recipe: type[Component[Any, Any]]
 
 
-_MARKERS = (Derived, FromTendency, AfterApply)
+_MARKERS = (Derived, FromTendency, AfterIncrements)
 
 
 def derived_by(recipe: type[Recipe[Any, Any]]) -> Any:
@@ -85,8 +85,8 @@ def from_tendency() -> Any:
     return FromTendency()
 
 
-def after_apply(recipe: type[Component[Any, Any]]) -> Any:
-    return AfterApply(recipe)
+def after_increments(hook: type[Component[Any, Any]]) -> Any:
+    return AfterIncrements(hook)
 
 
 # one declaration read back from a leaf: name, quantity, intent, tag, level,
@@ -99,7 +99,7 @@ class Decl:
     tag: Tag | None
     level: Level | None
     field_type: Any
-    marker: Derived | FromTendency | AfterApply | None
+    marker: Derived | FromTendency | AfterIncrements | None
 
     @property
     def recipe(self) -> type[Recipe[Any, Any]] | None:
@@ -307,7 +307,7 @@ class Process[InputT: State, OutputT: State](Component[InputT, OutputT]):
 
     # walk the process's Update increment leaves: from_tendency adds dt times
     # the matching Tendency output, derived_by adds the recipe output that
-    # run_updates computed
+    # run_increment_recipes computed
     def accumulate(self, into: State, dt: float, *computed: State) -> None:
         targets = {d.quantity: value for d, value in into.leaves()}
         tendencies = {d.quantity: value for d, value in self.output.leaves()}
@@ -326,8 +326,8 @@ class Process[InputT: State, OutputT: State](Component[InputT, OutputT]):
 class Resolution:
     providers: tuple[Recipe[Any, Any], ...]
     increments: State
-    updates: dict[Process[Any, Any], tuple[Recipe[Any, Any], ...]]
-    after_apply: tuple[Component[Any, Any], ...]
+    increment_recipes: dict[Process[Any, Any], tuple[Recipe[Any, Any], ...]]
+    hooks: tuple[Component[Any, Any], ...]
 
     # skips a provider whose whole output is already supplied
     def run_providers(self, *supplied: State | TimeStepPair[Any]) -> tuple[State, ...]:
@@ -340,25 +340,23 @@ class Resolution:
             produced.append(provider.output)
         return tuple(produced)
 
-    def run_updates(self, process: Process[Any, Any], *supplied: State | TimeStepPair[Any]) -> tuple[State, ...]:
+    def run_increment_recipes(self, process: Process[Any, Any], *supplied: State | TimeStepPair[Any]) -> tuple[State, ...]:
         computed: list[State] = []
-        for recipe in self.updates[process]:
+        for recipe in self.increment_recipes[process]:
             recipe.run(recipe.collect_inputs(process.output, *supplied))
             computed.append(recipe.output)
         return tuple(computed)
 
     # add each Increments leaf into the leaf of its parent quantity among the
-    # targets; a parent found nowhere is UnappliedIncrement
-    def apply(self, *targets: State) -> None:
-        leaves = {d.quantity: value for target in targets for d, value in target.leaves()}
+    # states; a parent found nowhere is UnappliedIncrement; then the hooks, once
+    def update(self, *states: State) -> None:
+        leaves = {d.quantity: value for state in states for d, value in state.leaves()}
         for d, value in self.increments.leaves():
             if d.quantity.parent not in leaves:
                 raise UnappliedIncrement(d.quantity.name)
             np.asarray(leaves[d.quantity.parent].ndarray)[...] += np.asarray(value.ndarray)
-
-    def run_after_apply(self, *supplied: State | TimeStepPair[Any]) -> None:
-        for hook in self.after_apply:
-            hook.run(hook.collect_inputs(*supplied))
+        for hook in self.hooks:
+            hook.run(hook.collect_inputs(*states))
 
 
 # First pass: visit each child's Input for derived_by, recurse into recipe
@@ -392,7 +390,7 @@ def resolve(
     known = target_quantities | {d.quantity for recipe in order for d in recipe.Output.declarations()}
 
     increments: dict[str, tuple[Any, None]] = {}
-    updates: dict[Process[Any, Any], tuple[Recipe[Any, Any], ...]] = {}
+    increment_recipes: dict[Process[Any, Any], tuple[Recipe[Any, Any], ...]] = {}
     hooks: dict[Quantity, type[Component[Any, Any]]] = {}
     hook_order: list[type[Component[Any, Any]]] = []
     for child in children:
@@ -402,7 +400,7 @@ def resolve(
         computed: list[Recipe[Any, Any]] = []
         for d in child.Update.declarations() if isinstance(child, Process) else ():
             parent = d.quantity.parent
-            if isinstance(d.marker, AfterApply) and d.intent is Intent.READWRITE:
+            if isinstance(d.marker, AfterIncrements) and d.intent is Intent.READWRITE:
                 hook = d.marker.recipe
                 if not any(h.quantity == d.quantity and h.intent is Intent.READWRITE for h in hook.Input.declarations()):
                     raise InconsistentUpdate(f"{label}.{d.name}: {hook.__name__} does not write {d.quantity.name}")
@@ -439,13 +437,13 @@ def resolve(
             if d.tag is Tag.TENDENCY and d.quantity not in consumed:
                 raise UnappliedTendency(f"{label}.{d.name}")
         if isinstance(child, Process):
-            updates[child] = tuple(computed)
+            increment_recipes[child] = tuple(computed)
 
     return Resolution(
         providers=tuple(recipe(allocate(recipe.Output, sizes)) for recipe in order),
         increments=allocate(state_type("Increments", increments), sizes),
-        updates=updates,
-        after_apply=tuple(hook(Empty()) for hook in hook_order),
+        increment_recipes=increment_recipes,
+        hooks=tuple(hook(Empty()) for hook in hook_order),
     )
 
 
@@ -458,8 +456,8 @@ def dataflow(*components: Component[Any, Any]) -> str:
             out += f" <- {d.marker.recipe.__name__}"
         elif isinstance(d.marker, FromTendency):
             out += " <- tendency"
-        elif isinstance(d.marker, AfterApply):
-            out += f" <- after apply {d.marker.recipe.__name__}"
+        elif isinstance(d.marker, AfterIncrements):
+            out += f" <- after increments {d.marker.recipe.__name__}"
         return out
 
     def names(decls: tuple[Decl, ...], intent: Intent | None = None) -> str:

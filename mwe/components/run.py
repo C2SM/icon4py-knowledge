@@ -94,8 +94,8 @@ def print_dataflow(run_config: config.Config) -> None:
             d.tracer_advection,
             *p.resolution.providers,
             *[process for process, _ in p.processes.values()],
-            *[recipe for recipes in p.resolution.updates.values() for recipe in recipes],
-            *p.resolution.after_apply,
+            *[recipe for recipes in p.resolution.increment_recipes.values() for recipe in recipes],
+            *p.resolution.hooks,
             *d.io_resolution.providers,
             d.io_monitor,
         )

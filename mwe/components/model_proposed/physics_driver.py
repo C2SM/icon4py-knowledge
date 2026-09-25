@@ -38,7 +38,7 @@ class PhysicsDriver(fw.Component["PhysicsDriver.Input", fw.Empty]):
     def __init__(self, process_intervals: Mapping[str, int], update: UpdateMode = "parallel") -> None:
         super().__init__(fw.Empty())
         if update != "parallel":
-            raise NotImplementedError(f"update={update!r}: apply and after_apply per process, re-derive between processes")
+            raise NotImplementedError(f"update={update!r}: update per process, re-derive between processes")
         self.update = update
         self.processes: dict[str, tuple[fw.Process[Any, Any], ProcessTimeControl]] = {
             name: (PROCESSES[name](fw.allocate(PROCESSES[name].Output, ops.SIZES)), ProcessTimeControl(interval))
@@ -54,8 +54,7 @@ class PhysicsDriver(fw.Component["PhysicsDriver.Input", fw.Empty]):
         for process, time_control in self.processes.values():
             if time_control.is_active(input.step_index):
                 process.run(process.collect_inputs(input, *produced))
-            computed = self.resolution.run_updates(process, input)
+            computed = self.resolution.run_increment_recipes(process, input)
             process.accumulate(self.resolution.increments, input.dtime, *computed)
-        self.resolution.apply(input, *produced)
-        self.resolution.run_after_apply(input, *produced)
+        self.resolution.update(input, *produced)
         return self.output

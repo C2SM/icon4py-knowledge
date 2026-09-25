@@ -214,7 +214,7 @@ class PredictorCorrectorPair[S](Pair[S]): predictor; corrector  # component-inte
 def allocate(cls: type[S], sizes: dict[Dimension, int]) -> S  # gtx.zeros per alias dims, scalars zero
 def derived_by(recipe: type[Recipe]) -> Any    # leaf default: `temperature: Read[TField] = derived_by(Recipe)`; on an Update Increment leaf too
 def from_tendency() -> Any                     # Update leaf default: `x: Increment[XField] = from_tendency()`, += dt * own Tendency[X]
-def after_apply(hook: type[Component]) -> Any  # Update leaf default: `y: ReadWrite[YField] = after_apply(Hook)`, run once after apply
+def after_increments(hook: type[Component]) -> Any  # Update leaf default: `y: ReadWrite[YField] = after_increments(Hook)`, run once after the increments
 def state_type(name, leaves: {name: (hint, marker | None)}) -> type[State]  # State class at runtime (config-driven Inputs)
 
 class Component[InputT, OutputT]:
@@ -224,15 +224,14 @@ class Component[InputT, OutputT]:
     def collect_inputs(self, *states) -> InputT               # pointer selection only, never computes
 class Recipe[InputT, OutputT](Component[InputT, OutputT])    # a derivation; derived_by accepts nothing else
 class Process[InputT, OutputT](Component[InputT, OutputT]):  # emits tendencies and declares where they land
-    Update: type[State] = Empty                               # Increment leaves (from_tendency / derived_by), ReadWrite leaves (after_apply)
+    Update: type[State] = Empty                               # Increment leaves (from_tendency / derived_by), ReadWrite leaves (after_increments)
     def accumulate(self, into: State, dt, *computed) -> None  # emitter's hook: each Update increment -> Increment leaf of into: +=
 
 def resolve(children, sizes, *, targets: type[State]) -> Resolution   # composite init: read the children's declarations
-class Resolution: providers; increments; updates; after_apply
+class Resolution: providers; increments; increment_recipes; hooks
     def run_providers(self, *supplied) -> tuple[State, ...]   # skips a provider whose output is already supplied
-    def run_updates(self, process, *supplied) -> tuple[State, ...]  # runs the process's increment recipes on its Output
-    def apply(self, *targets) -> None                         # each Increments leaf -> parent leaf in targets: +=; else raise
-    def run_after_apply(self, *supplied) -> None              # the deduplicated hooks, once
+    def run_increment_recipes(self, process, *supplied) -> tuple[State, ...]  # runs the process's increment recipes on its Output
+    def update(self, *states) -> None                         # each Increments leaf -> parent leaf in states: +=, else raise; then the deduplicated hooks, once
 def dataflow(*components) -> str                              # declared reads / writes / produces / updates, `<- Recipe` on derived leaves
 ```
 
@@ -252,12 +251,13 @@ Rules the framework enforces:
 - `accumulate` (on `Process`) walks the `Update` leaves tagged `Increment`:
   `from_tendency()` adds `dt * value` of the process's own `Tendency` output
   of the same parent into the `Increment` leaf of `into`; `derived_by(recipe)`
-  adds the recipe's output increment, computed by `Resolution.run_updates`
+  adds the recipe's output increment, computed by `Resolution.run_increment_recipes`
   from the process Output and the composite Input. A missing increment leaf
   is an error.
-- `Resolution.apply(*targets)` walks the `Increments` leaves and adds each into
-  the leaf of the parent quantity found in the given targets. A parent found
-  nowhere raises `UnappliedIncrement`. `dt` never appears in `apply`.
+- `Resolution.update(*states)` walks the `Increments` leaves and adds each into
+  the leaf of the parent quantity found in the given states, then runs the
+  hooks once. A parent found
+  nowhere raises `UnappliedIncrement`. `dt` never appears in `update`.
 - `resolve(children, sizes, targets=CompositeInput)` runs once in a composite's
   `__init__`. Inputs: it collects the `derived_by` recipes from the children's
   Inputs (transitively through the recipes' own Inputs), deduplicates them,
@@ -265,23 +265,23 @@ Rules the framework enforces:
   `(quantity, level)` raise `InconsistentDerivation`. Updates: for every
   `Process` it reads `Update`; the `Increment` leaves build the `Increments`
   state and, for `derived_by`, one recipe instance per process; the
-  `ReadWrite` leaves with `after_apply` collect the hooks, deduplicated.
+  `ReadWrite` leaves with `after_increments` collect the hooks, deduplicated.
   Errors, all at init: an increment whose parent is neither a target leaf nor
   a provider output, `UnappliedIncrement`; a `Tendency` output that no `Update`
   leaf consumes, or any `Tendency` output of a non-`Process`,
   `UnappliedTendency`; `from_tendency()` without the matching tendency, a
   `derived_by` recipe that does not produce the leaf's increment, an
-  `after_apply` hook that does not write the leaf's quantity, two processes
+  `after_increments` hook that does not write the leaf's quantity, two processes
   naming different hooks for one quantity, or a leaf with no marker,
   `InconsistentUpdate`; a recipe or hook input that no process Output, target
   or provider supplies, `MissingInput`.
 - `Resolution.run_providers(*supplied)` runs the providers whose output is not
   already among the supplied states ("supplied wins"), in order, each seeing
-  the outputs before it. `Resolution.run_updates(process, *supplied)` runs
+  the outputs before it. `Resolution.run_increment_recipes(process, *supplied)` runs
   that process's increment recipes on its Output plus the supplied states and
-  returns their outputs for `accumulate`. `Resolution.after_apply` holds the
-  hooks; `Resolution.run_after_apply(*supplied)` runs them, once after `apply`
-  in parallel update.
+  returns their outputs for `accumulate`. `Resolution.hooks` holds the
+  hooks; `Resolution.update(*states)` adds the increments and then runs them,
+  once, in parallel update.
 - A `State` built by hand with a marker still in place raises
   `UnresolvedInput`; `kw_only=True` on every `State` lets leaves with a
   `derived_by` default sit anywhere in the declaration order.
@@ -296,11 +296,11 @@ Rules the framework enforces:
 Decisions recorded: `Component` is a nominal base class, not a `Protocol`, so
 that a verb can be an inherited default a component may override. Only one
 is: `accumulate`, the emitter's hook, on `Process` (a process that wants `2 *
-dt * tend` or a clipped tendency overrides it there, before the sum). `apply`
-is `x += sum(increments)` with nothing per component to override (a composite
-that wants clipping declares an `after_apply` hook), so it lives on
-`Resolution`, which owns the increments, next to `run_providers`,
-`run_updates` and `run_after_apply`; the composite's `run` is the schedule
+dt * tend` or a clipped tendency overrides it there, before the sum). `update`
+is `x += sum(increments)` then the hooks, with nothing per component to
+override (a composite that wants clipping declares an `after_increments`
+hook), so it lives on `Resolution`, which owns the increments, next to
+`run_providers` and `run_increment_recipes`; the composite's `run` is the schedule
 that calls them. `Component` is the initial spec: `Input`, `Output`, `run`,
 `collect_inputs`. Two subclasses: `Recipe`, an empty marker for what
 `derived_by` accepts (mypy rejects `derived_by(MuphysComponent)`), and
@@ -370,10 +370,10 @@ derived_by(recipes.TemperatureFromThetaExner)`. It does not compute
 `temperature`, and `collect_inputs` does not either: it stays pointer selection.
 `MuphysComponent.Update` says where its tendencies land: `temperature: Increment =
 from_tendency()`, `qv: Increment = from_tendency()`, `theta_v: ReadWrite =
-after_apply(recipes.ExnerThetaFromTemperature)`, `exner` likewise. The composite
+after_increments(recipes.ExnerThetaFromTemperature)`, `exner` likewise. The composite
 (`PhysicsDriver`, or the driver for IO) calls `resolve` once at init and gets
 the providers to run, the increments to zero, the increment recipes to run per
-process and the hooks to run after `apply`. Decisions and why:
+process and the hooks to run after the increments. Decisions and why:
 
 - **Not in `collect_inputs`.** An `if temperature in state: use it else: compute`
   inside the component gives two temperatures in one physics step when two
@@ -393,7 +393,7 @@ process and the hooks to run after `apply`. Decisions and why:
   `x: Increment[XField] = from_tendency()` is `x += dt * tend_x`; `vn:
   Increment[VnField] = derived_by(recipes.VnIncrementFromUTendency)` is `vn +=
   dt * P(tend_u)`, the increment route, because `rbf(P(u)) != u` and so there is
-  no `VnFromU`; `theta_v`, `exner: ReadWrite = after_apply(ExnerThetaFromTemperature)`
+  no `VnFromU`; `theta_v`, `exner: ReadWrite = after_increments(ExnerThetaFromTemperature)`
   is the EOS on the incremented `temperature`. Reading a process tells you
   everything it touches; the granule wrapper is the layer that knows the host
   conventions. icon4py's `ApplyToPrognostic` says the same by tendency name,
@@ -410,7 +410,7 @@ process and the hooks to run after `apply`. Decisions and why:
   processes: same declarations, different schedule. `PhysicsDriver(update=
   "parallel")` is the only mode built; `"sequential"` raises `NotImplementedError`.
 - **IO reuses only declared Outputs, so IO recomputes.** The post-hook
-  `temperature` buffer is the provider's, mutated by `apply`; nobody declares it
+  `temperature` buffer is the provider's, mutated by `update`; nobody declares it
   valid, so IO derives its own from the prognostics, exactly as `model_current`
   does, and every output record is bit-identical. The flag that marked it
   reusable went with the inverse; it can return as a declaration if the
@@ -438,18 +438,18 @@ solve_nonhydro.py     SolveNonhydro: Input Now[...] x5 READ, Next[...] x5 READWR
 diffusion.py          Diffusion: Input ReadWrite[VnField], ReadWrite[ThetaVField], Read[TimeStep]; Output Empty
 tracer_advection.py   Advection: Input Now[QvField] READ, Next[QvField] READWRITE, Read[MassFluxField], Read[TimeStep]
 muphys.py             MuphysComponent(Process): Input temperature = derived_by(TemperatureFromThetaExner), qv; Output Tendency[T], Tendency[Qv], pflx
-                      Update temperature, qv = from_tendency(); theta_v, exner = after_apply(ExnerThetaFromTemperature)
+                      Update temperature, qv = from_tendency(); theta_v, exner = after_increments(ExnerThetaFromTemperature)
 tmx.py                TmxComponent(Process): Input temperature = derived_by(...), u = derived_by(UFromVn); Output Tendency[T], Tendency[U]
-                      Update temperature = from_tendency(); vn = derived_by(VnIncrementFromUTendency); theta_v, exner = after_apply(...)
+                      Update temperature = from_tendency(); vn = derived_by(VnIncrementFromUTendency); theta_v, exner = after_increments(...)
 io.py                 VARIABLES (name -> hint, derived_by); IOMonitor(variables): Input built by state_type from the config
 physics_driver.py     PhysicsDriver(process_intervals, update="parallel"): processes from PROCESSES by config name, resolve(...) at init
-                      run: run_providers -> each process (run if active, then run_updates, accumulate) -> resolution.apply -> run_after_apply
+                      run: run_providers -> each process (run if active, then run_increment_recipes, accumulate) -> resolution.update
 driver.py             Icon4pyDriver(config): owner-states, PhysicsDriver, IOMonitor and its own resolve for IO providers
 ```
 
 Where each tricky case lands: now/next in `solve_nonhydro.py` and
 `tracer_advection.py`; a component-internal predictor/corrector pair in
-`solve_nonhydro.py`; in-place in `diffusion.py` and the after-apply hook;
+`solve_nonhydro.py`; in-place in `diffusion.py` and the after-increments hook;
 hand-off in dycore -> advection (`mass_flx_me` is an `Output` with no tendency
 tag, so it is never accumulated); cadence with cached output in
 `physics_driver.py` (`ProcessTimeControl(2)` for tmx from the config); derived

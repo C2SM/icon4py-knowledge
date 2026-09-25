@@ -15,8 +15,8 @@ class TmxComponent(fw.Process["TmxComponent.Input", "TmxComponent.Output"]):
     class Update(fw.State):
         temperature: fw.Increment[qty.TemperatureField] = fw.from_tendency()
         vn: fw.Increment[qty.VnField] = fw.derived_by(recipes.VnIncrementFromUTendency)
-        theta_v: fw.ReadWrite[qty.ThetaVField] = fw.after_apply(recipes.ExnerThetaFromTemperature)
-        exner: fw.ReadWrite[qty.ExnerField] = fw.after_apply(recipes.ExnerThetaFromTemperature)
+        theta_v: fw.ReadWrite[qty.ThetaVField] = fw.after_increments(recipes.ExnerThetaFromTemperature)
+        exner: fw.ReadWrite[qty.ExnerField] = fw.after_increments(recipes.ExnerThetaFromTemperature)
 
     def run(self, input: Input) -> Output:
         ops.tmx(input.temperature, input.u, self.output.tend_temperature, self.output.tend_u)
