@@ -264,6 +264,9 @@ class InconsistentUpdate(ValueError):
     pass
 
 
+DERIVATIONS: dict[tuple[Quantity, Level | None], type[Recipe]] = {}
+
+
 # flattens to {(quantity, level): value}, tagging pair sides, AmbiguousSource on two objects for one key
 def _available(states: Iterable[State | TimeStepPair[Any]]) -> dict[tuple[Quantity, Level | None], Any]:
     available: dict[tuple[Quantity, Level | None], Any] = {}
@@ -373,15 +376,15 @@ def resolve(
 ) -> Resolution:
     children = tuple(children)
     target_quantities = {d.quantity for d in targets.declarations()}
-    recipes: dict[tuple[Quantity, Level | None], type[Recipe]] = {}
     order: list[type[Recipe]] = []
 
     def visit(cls: type[State]) -> None:
         for d in cls.declarations():
             if d.recipe is None:
                 continue
-            if recipes.setdefault((d.quantity, d.level), d.recipe) is not d.recipe:
-                raise InconsistentDerivation(d.quantity.name)
+            known_recipe = DERIVATIONS.setdefault((d.quantity, d.level), d.recipe)
+            if known_recipe is not d.recipe:
+                raise InconsistentDerivation(f"{d.quantity.name}: {known_recipe.__name__} vs {d.recipe.__name__}")
             if d.recipe not in order:
                 visit(d.recipe.Input)
                 order.append(d.recipe)

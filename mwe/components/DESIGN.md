@@ -262,7 +262,10 @@ Rules the framework enforces:
   `__init__`. Inputs: it collects the `derived_by` recipes from the children's
   Inputs (transitively through the recipes' own Inputs), deduplicates them,
   orders dependencies first, allocates one instance each; two recipes on one
-  `(quantity, level)` raise `InconsistentDerivation`. Updates: for every
+  `(quantity, level)` raise `InconsistentDerivation`, within one composite or
+  across composites: `resolve` records every derivation in the process-wide
+  `DERIVATIONS` registry, so physics deriving `temperature` by one recipe and IO
+  by another fails at the second `resolve` (tests clear the registry). Updates: for every
   `Process` it reads `Update`; the `Increment` leaves build the `Increments`
   state and, for `derived_by`, one recipe instance per process; the
   `ReadWrite` leaves with `after_increments` collect the hooks, deduplicated.

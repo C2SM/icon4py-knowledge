@@ -12,6 +12,11 @@ type SField = Annotated[fa.CellKField[ta.wpfloat], fw.quantity("test_salt", unit
 type DField = Annotated[fa.CellKField[ta.wpfloat], fw.quantity("test_density", units="kg m-3")]
 
 
+@pytest.fixture(autouse=True)
+def _fresh_derivations() -> None:
+    fw.DERIVATIONS.clear()
+
+
 class Owner(fw.State):
     temperature: TField
     salt: SField
@@ -258,6 +263,10 @@ def test_resolve_errors() -> None:
     consumer = Consumer(fw.allocate(Consumer.Output, ops.SIZES))
     with pytest.raises(fw.InconsistentDerivation):
         fw.resolve([consumer, OtherConsumer(fw.Empty())], ops.SIZES, targets=Owner)
+    fw.DERIVATIONS.clear()
+    fw.resolve([consumer], ops.SIZES, targets=Owner)
+    with pytest.raises(fw.InconsistentDerivation, match="DensityFromSalt vs DensityFromNothing"):
+        fw.resolve([OtherConsumer(fw.Empty())], ops.SIZES, targets=fw.Empty)
     with pytest.raises(fw.UnappliedIncrement):
         fw.resolve([Producer(fw.allocate(Producer.Output, ops.SIZES))], ops.SIZES, targets=fw.Empty)
     with pytest.raises(fw.UnappliedTendency):
