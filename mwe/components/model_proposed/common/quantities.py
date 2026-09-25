@@ -1,0 +1,56 @@
+from datetime import datetime
+
+from model_proposed.common import framework as fw
+
+
+class Vn(fw.Quantity, name="normal_velocity", units="m s-1", cf_key="vn", locations=(fw.EdgeK,)): ...
+class W(fw.Quantity, name="upward_air_velocity", units="m s-1", cf_key="w", locations=(fw.CellK,)): ...
+class Rho(fw.Quantity, name="air_density", units="kg m-3", cf_key="rho", locations=(fw.CellK,)): ...
+class Exner(fw.Quantity, name="dimensionless_exner_function", units="1", cf_key="exner", locations=(fw.CellK,)): ...
+class ThetaV(fw.Quantity, name="virtual_potential_temperature", units="K", cf_key="theta_v", locations=(fw.CellK, fw.CellKHalf)): ...
+class Qv(fw.Quantity, name="specific_humidity", units="1", cf_key="qv", locations=(fw.CellK,)): ...
+class MassFlux(fw.Quantity, name="mass_flux_at_edges", units="kg m-2 s-1", locations=(fw.EdgeK,)): ...
+class Temperature(fw.Quantity, name="air_temperature", units="K", cf_key="temperature", locations=(fw.CellK,)): ...
+class U(fw.Quantity, name="eastward_wind", units="m s-1", cf_key="u", locations=(fw.CellK,)): ...
+class Precip(fw.Quantity, name="precipitation_flux", units="kg m-2 s-1", locations=(fw.Cell,)): ...
+
+type VnField = fw.EdgeK[Vn]
+type WField = fw.CellK[W]
+type RhoField = fw.CellK[Rho]
+type ExnerField = fw.CellK[Exner]
+type ThetaVField = fw.CellK[ThetaV]
+type ThetaVAtCellsOnHalfLevels = fw.CellKHalf[ThetaV]
+type QvField = fw.CellK[Qv]
+type MassFluxField = fw.EdgeK[MassFlux]
+type TemperatureField = fw.CellK[Temperature]
+type UField = fw.CellK[U]
+type PrecipField = fw.Cell[Precip]
+
+# Relocations between a quantity's locations are recipes decorated with
+# `fw.relocation` (recipes.ThetaVToHalfLevels), and a consumer names one
+# explicitly: `theta_v_ic: ThetaVAtCellsOnHalfLevels = derived_by(ThetaVToHalfLevels)`.
+# Option kept for later: a family-level lookup, where a leaf declared at a
+# location nobody supplies and with no `derived_by` is served by the recipe
+# `fw.RELOCATIONS[(quantity, supplied location, wanted location)]`; direct
+# edges only, error when two supplied locations both have one, `derived_by`
+# still overrides. Static caveat: to mypy and pyright `fw.CellKHalf[ThetaV]` is
+# `Field[Dims[Unknown, Unknown], wpfloat]` (dims are runtime objects), so a
+# location mismatch is caught by the framework at init, not by the checker;
+# an undeclared location (`locations=`) is caught at import.
+
+
+class TimeStep(fw.Quantity, name="time_step", units="s"): ...
+class SubstepTimeStep(fw.Quantity, name="dynamics_substep", units="s"): ...
+class SubstepCount(fw.Quantity, name="dynamics_substep_count", units="1"): ...
+class StepIndex(fw.Quantity, name="step_index", units="1"): ...
+class SimulationTime(fw.Quantity, name="simulation_time", units="1"): ...
+class AtFirstSubstep(fw.Quantity, name="at_first_substep", units="1"): ...
+class AtLastSubstep(fw.Quantity, name="at_last_substep", units="1"): ...
+
+type TimeStepValue = fw.Scalar[float, TimeStep]
+type SubstepTimeStepValue = fw.Scalar[float, SubstepTimeStep]
+type SubstepCountValue = fw.Scalar[int, SubstepCount]
+type StepIndexValue = fw.Scalar[int, StepIndex]
+type SimulationTimeValue = fw.Scalar[datetime, SimulationTime]
+type AtFirstSubstepValue = fw.Scalar[bool, AtFirstSubstep]
+type AtLastSubstepValue = fw.Scalar[bool, AtLastSubstep]
