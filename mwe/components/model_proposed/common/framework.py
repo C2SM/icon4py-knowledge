@@ -16,7 +16,7 @@ class Quantity:
     name: str
     units: str
     cf_key: str | None = None
-    of: Quantity | None = None
+    parent: Quantity | None = None
 
 
 REGISTRY: dict[str, Quantity] = {}
@@ -28,12 +28,12 @@ def quantity(name: str, *, units: str, cf_key: str | None = None) -> Quantity:
 
 def tendency_of(q: Quantity) -> Quantity:
     name = f"tendency_of_{q.name}"
-    return REGISTRY.setdefault(name, Quantity(name, f"{q.units} s-1", of=q))
+    return REGISTRY.setdefault(name, Quantity(name, f"{q.units} s-1", parent=q))
 
 
 def increment_of(q: Quantity) -> Quantity:
     name = f"increment_of_{q.name}"
-    return REGISTRY.setdefault(name, Quantity(name, q.units, of=q))
+    return REGISTRY.setdefault(name, Quantity(name, q.units, parent=q))
 
 
 class Intent(enum.Enum):
@@ -189,6 +189,11 @@ def state_type(name: str, leaves: dict[str, tuple[Any, Any]]) -> type[State]:
     return typing.cast(type[State], types.new_class(name, (State,), exec_body=body))
 
 
+# Naming, open (2026-09-25): Level.NOW / Level.NEXT and TimeStepPair follow ICON's
+# "time level" (nnow / nnew), but in icon4py "level" reads as vertical level. jcanton:
+# "step" covers exactly the meaning, now/next and current/new are all words for time
+# steps n and n+1, and predictor/corrector are the two steps of one time step, so
+# "step" does not collide with "time step". Not changed yet; to settle with the group.
 class Pair[S: State]:
     def __init__(self, first: S, second: S) -> None:
         self.first, self.second = first, second
@@ -308,10 +313,10 @@ class Process[InputT: State, OutputT: State](Component[InputT, OutputT]):
         tendencies = {d.quantity: value for d, value in self.output.leaves()}
         available = _available(computed)
         for d in self.Update.declarations():
-            if d.tag is not Tag.INCREMENT or d.quantity.of is None:
+            if d.tag is not Tag.INCREMENT or d.quantity.parent is None:
                 continue
             if isinstance(d.marker, FromTendency):
-                tendency = tendencies[tendency_of(d.quantity.of)]
+                tendency = tendencies[tendency_of(d.quantity.parent)]
                 np.asarray(targets[d.quantity].ndarray)[...] += dt * np.asarray(tendency.ndarray)
             elif isinstance(d.marker, Derived):
                 np.asarray(targets[d.quantity].ndarray)[...] += np.asarray(available[(d.quantity, None)].ndarray)
@@ -347,9 +352,9 @@ class Resolution:
     def apply(self, *targets: State) -> None:
         leaves = {d.quantity: value for target in targets for d, value in target.leaves()}
         for d, value in self.increments.leaves():
-            if d.quantity.of not in leaves:
+            if d.quantity.parent not in leaves:
                 raise UnappliedIncrement(d.quantity.name)
-            np.asarray(leaves[d.quantity.of].ndarray)[...] += np.asarray(value.ndarray)
+            np.asarray(leaves[d.quantity.parent].ndarray)[...] += np.asarray(value.ndarray)
 
     def run_after_apply(self, *supplied: State | TimeStepPair[Any]) -> None:
         for hook in self.after_apply:
@@ -396,7 +401,7 @@ def resolve(
         consumed: set[Quantity] = set()
         computed: list[Recipe[Any, Any]] = []
         for d in child.Update.declarations() if isinstance(child, Process) else ():
-            parent = d.quantity.of
+            parent = d.quantity.parent
             if isinstance(d.marker, AfterApply) and d.intent is Intent.READWRITE:
                 hook = d.marker.recipe
                 if not any(h.quantity == d.quantity and h.intent is Intent.READWRITE for h in hook.Input.declarations()):

@@ -158,8 +158,8 @@ def test_declarations_carry_quantity_intent_level_and_derived_tendency() -> None
     assert (t.quantity.name, t.intent, t.level) == ("test_temperature", fw.Intent.READ, fw.Level.NOW)
     assert (by_name["salt"].intent, by_name["salt"].level) == (fw.Intent.READWRITE, None)
     (out,) = Producer.Output.declarations()
-    assert out.quantity.of is not None
-    assert (out.quantity.name, out.quantity.of.name, out.quantity.units) == (
+    assert out.quantity.parent is not None
+    assert (out.quantity.name, out.quantity.parent.name, out.quantity.units) == (
         "tendency_of_test_temperature",
         "test_temperature",
         "K s-1",

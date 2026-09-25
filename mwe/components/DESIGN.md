@@ -190,10 +190,10 @@ the dycore decides, from the same flags, whether to recompute the predictor.
 ### `common/framework.py` (the reusable part, 334 lines)
 
 ```python
-@dataclass(frozen=True) class Quantity: name, units, cf_key=None, of: Quantity | None = None
+@dataclass(frozen=True) class Quantity: name, units, cf_key=None, parent: Quantity | None = None
 def quantity(name, *, units, cf_key=None) -> Quantity      # registers in REGISTRY[name]
-def tendency_of(q) -> Quantity                              # memoized; of=q, units=f"{q.units} s-1"
-def increment_of(q) -> Quantity                             # memoized; of=q, units=q.units
+def tendency_of(q) -> Quantity                              # memoized; parent=q, units=f"{q.units} s-1"
+def increment_of(q) -> Quantity                             # memoized; parent=q, units=q.units
 
 type Read[F]      = Annotated[F, Intent.READ]
 type ReadWrite[F] = Annotated[F, Intent.READWRITE]
