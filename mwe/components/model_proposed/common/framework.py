@@ -11,9 +11,12 @@ import gt4py.next as gtx
 import numpy as np
 from icon4py.model.common import field_type_aliases as fa, type_alias as ta
 
+# Quantity, State and Component
+# All in one file only for the MWE; to be split when implemented in icon4py.
 
-class DuplicateQuantity(ValueError):
-    pass
+# ------------------------------------------------------------------------------
+# Quantity
+# ------------------------------------------------------------------------------
 
 
 # A type-level tag, never instantiated:
@@ -52,10 +55,8 @@ class Quantity:
         raise TypeError(f"{cls.__name__} is a type-level tag, not a value")
 
 
-# the class name is the internal name (labels, registry, derived tags);
-# standard_name is the CF one (cfconventions.org) where the table has it, and
-# whichever exists is the key the output config uses
-REGISTRY: dict[str, type[Quantity]] = {}
+class DuplicateQuantity(ValueError):
+    pass
 
 
 class UnknownQuantity(KeyError):
@@ -69,14 +70,41 @@ def lookup(key: str) -> type[Quantity]:
     raise UnknownQuantity(key)
 
 
-def _derived(prefix: str, q: type[Quantity], units: str, cf_prefix: str | None = None) -> type[Quantity]:
+# the class name is the internal name (labels, registry, derived tags);
+# standard_name is the CF one (cfconventions.org) where the table has it, and
+# whichever exists is the key the output config uses
+REGISTRY: dict[str, type[Quantity]] = {}
+
+
+# locations:
+# generic aliases that put a quantity tag on a field type; the alias object is
+# the location in every key
+type Cell[Q] = Annotated[fa.CellField[ta.wpfloat], Q]
+type CellK[Q] = Annotated[fa.CellKField[ta.wpfloat], Q]
+type CellKHalf[Q] = Annotated[fa.CellKHalfField[ta.wpfloat], Q]
+type Edge[Q] = Annotated[fa.EdgeField[ta.wpfloat], Q]
+type EdgeK[Q] = Annotated[fa.EdgeKField[ta.wpfloat], Q]
+type EdgeKHalf[Q] = Annotated[fa.EdgeKHalfField[ta.wpfloat], Q]
+type Scalar[T, Q] = Annotated[T, Q]
+
+
+def _derived(
+    prefix: str, q: type[Quantity], units: str, cf_prefix: str | None = None
+) -> type[Quantity]:
     name = prefix + q.__name__
     if name not in REGISTRY:
-        standard_name = cf_prefix + q.standard_name if cf_prefix and q.standard_name else None
+        standard_name = (
+            cf_prefix + q.standard_name if cf_prefix and q.standard_name else None
+        )
         types.new_class(
             name,
             (Quantity,),
-            {"locations": q.locations, "standard_name": standard_name, "units": units, "parent": q},
+            {
+                "locations": q.locations,
+                "standard_name": standard_name,
+                "units": units,
+                "parent": q,
+            },
         )
     return REGISTRY[name]
 
@@ -89,15 +117,9 @@ def increment_of(q: type[Quantity]) -> type[Quantity]:
     return _derived("IncrementOf", q, q.units)
 
 
-# locations: generic aliases that put a quantity tag on a field type; the alias
-# object is the location in every key
-type Cell[Q] = Annotated[fa.CellField[ta.wpfloat], Q]
-type CellK[Q] = Annotated[fa.CellKField[ta.wpfloat], Q]
-type CellKHalf[Q] = Annotated[fa.CellKHalfField[ta.wpfloat], Q]
-type Edge[Q] = Annotated[fa.EdgeField[ta.wpfloat], Q]
-type EdgeK[Q] = Annotated[fa.EdgeKField[ta.wpfloat], Q]
-type EdgeKHalf[Q] = Annotated[fa.EdgeKHalfField[ta.wpfloat], Q]
-type Scalar[T, Q] = Annotated[T, Q]
+# ------------------------------------------------------------------------------
+# State
+# ------------------------------------------------------------------------------
 
 
 class Tag(enum.Enum):
@@ -164,8 +186,12 @@ class Decl:
 
     @property
     def label(self) -> str:
-        located = self.quantity.locations is not None and len(self.quantity.locations) > 1
-        return self.quantity.__name__ + (f"@{location_name(self.location)}" if located else "")
+        located = (
+            self.quantity.locations is not None and len(self.quantity.locations) > 1
+        )
+        return self.quantity.__name__ + (
+            f"@{location_name(self.location)}" if located else ""
+        )
 
 
 # walks TypeAliasType, generic aliases of aliases and nested Annotated; a
@@ -177,10 +203,14 @@ def unwrap(hint: Any) -> tuple[Any, tuple[Any, ...], Any]:
     while True:
         if isinstance(hint, typing.TypeAliasType):
             hint = hint.__value__
-        elif isinstance(hint, types.GenericAlias) and isinstance(hint.__origin__, typing.TypeAliasType):
+        elif isinstance(hint, types.GenericAlias) and isinstance(
+            hint.__origin__, typing.TypeAliasType
+        ):
             alias, args = hint.__origin__, hint.__args__
             value: Any = alias.__value__
-            if typing.get_origin(value) is Annotated and any(isinstance(m, typing.TypeVar) for m in value.__metadata__):
+            if typing.get_origin(value) is Annotated and any(
+                isinstance(m, typing.TypeVar) for m in value.__metadata__
+            ):
                 bound = dict(zip(alias.__type_params__, args, strict=True))
                 meta = [bound.get(m, m) for m in value.__metadata__] + meta
                 location = alias
@@ -223,7 +253,8 @@ def declarations(cls: type) -> tuple[Decl, ...]:
         hints = typing.get_type_hints(cls, include_extras=True)
         fields: dict[str, Any] = getattr(cls, "__dataclass_fields__", {})
         _DECLARATIONS[cls] = tuple(
-            _decl(name, hint, fields[name].default if name in fields else None) for name, hint in hints.items()
+            _decl(name, hint, fields[name].default if name in fields else None)
+            for name, hint in hints.items()
         )
     return _DECLARATIONS[cls]
 
@@ -261,8 +292,16 @@ class Empty(State):
 # builds a State class at runtime; IO uses it
 def state_type(name: str, leaves: dict[str, tuple[Any, Any]]) -> type[State]:
     def body(namespace: dict[str, Any]) -> None:
-        namespace["__annotations__"] = {leaf: hint for leaf, (hint, _) in leaves.items()}
-        namespace.update({leaf: default for leaf, (_, default) in leaves.items() if default is not None})
+        namespace["__annotations__"] = {
+            leaf: hint for leaf, (hint, _) in leaves.items()
+        }
+        namespace.update(
+            {
+                leaf: default
+                for leaf, (_, default) in leaves.items()
+                if default is not None
+            }
+        )
 
     return typing.cast(type[State], types.new_class(name, (State,), exec_body=body))
 
@@ -303,7 +342,9 @@ class PredictorCorrectorPair[S: State](Pair[S]):
 
 
 def allocate[S: State](
-    cls: type[S], sizes: dict[gtx.Dimension, int], fill: Callable[[str, tuple[int, ...]], Any] | None = None
+    cls: type[S],
+    sizes: dict[gtx.Dimension, int],
+    fill: Callable[[str, tuple[int, ...]], Any] | None = None,
 ) -> S:
     values = {}
     for d in cls.declarations():
@@ -319,6 +360,10 @@ def zero(state: State) -> None:
     for _, value in state.leaves():
         np.asarray(value.ndarray)[...] = 0.0
 
+
+# ------------------------------------------------------------------------------
+# Componenet
+# ------------------------------------------------------------------------------
 
 class MissingInput(KeyError):
     pass
@@ -366,12 +411,20 @@ def relocation[R: type[Recipe]](recipe: R) -> R:
     if len(outputs) != 1:
         raise InconsistentRelocation(f"{recipe.__name__}: one output leaf expected")
     (out,) = outputs
-    sources = [d for d in recipe.Input.declarations() if d.quantity is out.quantity and d.location is not out.location]
+    sources = [
+        d
+        for d in recipe.Input.declarations()
+        if d.quantity is out.quantity and d.location is not out.location
+    ]
     if len(sources) != 1:
-        raise InconsistentRelocation(f"{recipe.__name__}: {out.quantity.__name__} at another location expected in Input")
+        raise InconsistentRelocation(
+            f"{recipe.__name__}: {out.quantity.__name__} at another location expected in Input"
+        )
     key = (out.quantity, sources[0].location, out.location)
     if RELOCATIONS.setdefault(key, recipe) is not recipe:
-        raise InconsistentRelocation(f"{out.quantity.__name__}: {RELOCATIONS[key].__name__} vs {recipe.__name__}")
+        raise InconsistentRelocation(
+            f"{out.quantity.__name__}: {RELOCATIONS[key].__name__} vs {recipe.__name__}"
+        )
     return recipe
 
 
@@ -436,7 +489,9 @@ class Process(Component):
     # walk the process's Update increment leaves: from_tendency adds dt times
     # the matching Tendency leaf of output, derived_by adds the recipe output
     # that run_increment_recipes computed
-    def accumulate(self, into: State, dt: float, output: State, *computed: State) -> None:
+    def accumulate(
+        self, into: State, dt: float, output: State, *computed: State
+    ) -> None:
         targets = {d.key: value for d, value in into.leaves()}
         tendencies = {d.key: value for d, value in output.leaves()}
         available = _available(computed)
@@ -445,9 +500,13 @@ class Process(Component):
                 continue
             if isinstance(d.marker, FromTendency):
                 tendency = tendencies[(tendency_of(d.quantity.parent), d.location)]
-                np.asarray(targets[d.key].ndarray)[...] += dt * np.asarray(tendency.ndarray)
+                np.asarray(targets[d.key].ndarray)[...] += dt * np.asarray(
+                    tendency.ndarray
+                )
             elif isinstance(d.marker, Derived):
-                np.asarray(targets[d.key].ndarray)[...] += np.asarray(available[d.key].ndarray)
+                np.asarray(targets[d.key].ndarray)[...] += np.asarray(
+                    available[d.key].ndarray
+                )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -468,7 +527,9 @@ class Resolution:
             produced.append(output)
         return tuple(produced)
 
-    def run_increment_recipes(self, process: Process, output: State, *supplied: State) -> tuple[State, ...]:
+    def run_increment_recipes(
+        self, process: Process, output: State, *supplied: State
+    ) -> tuple[State, ...]:
         computed: list[State] = []
         for recipe, recipe_output in self.increment_recipes[process]:
             recipe(recipe.collect_inputs(output, *supplied), recipe_output)
@@ -491,9 +552,16 @@ class Resolution:
             parent = _parent_key(d)
             if parent not in outputs:
                 raise UnappliedIncrement(d.label)
-            np.add(np.asarray(inputs[parent].ndarray), np.asarray(value.ndarray), out=np.asarray(outputs[parent].ndarray))
+            np.add(
+                np.asarray(inputs[parent].ndarray),
+                np.asarray(value.ndarray),
+                out=np.asarray(outputs[parent].ndarray),
+            )
         for hook in self.hooks:
-            hook(hook.collect_inputs(output, *produced), hook.collect_output(output, *produced))
+            hook(
+                hook.collect_inputs(output, *produced),
+                hook.collect_output(output, *produced),
+            )
 
 
 # First pass: visit each child's Input for derived_by, recurse into recipe
@@ -506,7 +574,11 @@ class Resolution:
 # by some leaf; every composite output is an input or incremented. Returns the
 # Resolution.
 def resolve(
-    children: Iterable[Component], sizes: dict[gtx.Dimension, int], *, input: type[State], output: type[State]
+    children: Iterable[Component],
+    sizes: dict[gtx.Dimension, int],
+    *,
+    input: type[State],
+    output: type[State],
 ) -> Resolution:
     children = tuple(children)
     input_keys = {d.key for d in input.declarations()}
@@ -519,14 +591,18 @@ def resolve(
                 continue
             known_recipe = DERIVATIONS.setdefault(d.key, d.recipe)
             if known_recipe is not d.recipe:
-                raise InconsistentDerivation(f"{d.label}: {known_recipe.__name__} vs {d.recipe.__name__}")
+                raise InconsistentDerivation(
+                    f"{d.label}: {known_recipe.__name__} vs {d.recipe.__name__}"
+                )
             if d.recipe not in order:
                 visit(d.recipe.Input)
                 order.append(d.recipe)
 
     for child in children:
         visit(child.Input)
-    known = output_keys | {d.key for recipe in order for d in recipe.Output.declarations()}
+    known = output_keys | {
+        d.key for recipe in order for d in recipe.Output.declarations()
+    }
 
     increments: dict[str, tuple[Any, None]] = {}
     incremented: set[Key] = set()
@@ -543,9 +619,13 @@ def resolve(
             if isinstance(d.marker, AfterIncrements):
                 hook = d.marker.recipe
                 if d.key not in {h.key for h in hook.Output.declarations()}:
-                    raise InconsistentUpdate(f"{label}.{d.name}: {hook.__name__} does not write {d.label}")
+                    raise InconsistentUpdate(
+                        f"{label}.{d.name}: {hook.__name__} does not write {d.label}"
+                    )
                 if d.key not in known:
-                    raise InconsistentUpdate(f"{label}.{d.name}: {d.label} is not an output of the composite")
+                    raise InconsistentUpdate(
+                        f"{label}.{d.name}: {d.label} is not an output of the composite"
+                    )
                 if hooks.setdefault(d.key, hook) is not hook:
                     raise InconsistentUpdate(d.label)
                 if hook not in hook_order:
@@ -559,12 +639,16 @@ def resolve(
             parent_key = (parent, d.location)
             if isinstance(d.marker, FromTendency):
                 if (tendency_of(parent), d.location) not in outputs:
-                    raise InconsistentUpdate(f"{label}.{d.name}: no tendency of {parent.__name__} in Output")
+                    raise InconsistentUpdate(
+                        f"{label}.{d.name}: no tendency of {parent.__name__} in Output"
+                    )
                 consumed.add((tendency_of(parent), d.location))
             elif isinstance(d.marker, Derived):
                 recipe = d.marker.recipe
                 if d.key not in {o.key for o in recipe.Output.declarations()}:
-                    raise InconsistentUpdate(f"{label}.{d.name}: {recipe.__name__} does not produce {d.label}")
+                    raise InconsistentUpdate(
+                        f"{label}.{d.name}: {recipe.__name__} does not produce {d.label}"
+                    )
                 for i in recipe.Input.declarations():
                     if i.key not in outputs and i.key not in input_keys:
                         raise MissingInput(f"{recipe.__name__}.{i.name}: {i.label}")
@@ -576,7 +660,10 @@ def resolve(
             if parent_key not in known:
                 raise UnappliedIncrement(d.label)
             increment_alias: Any = Increment
-            increments[f"{parent.__name__}__{location_name(d.location)}"] = (increment_alias[d.location[parent]], None)
+            increments[f"{parent.__name__}__{location_name(d.location)}"] = (
+                increment_alias[d.location[parent]],
+                None,
+            )
             incremented.add(parent_key)
         for d in child.Output.declarations():
             if d.tag is Tag.TENDENCY and d.key not in consumed:
@@ -585,7 +672,9 @@ def resolve(
             increment_recipes[child] = tuple(computed)
     for d in output.declarations():
         if d.key not in input_keys and d.key not in incremented:
-            raise InconsistentUpdate(f"{output.__qualname__}.{d.name}: neither an input nor incremented")
+            raise InconsistentUpdate(
+                f"{output.__qualname__}.{d.name}: neither an input nor incremented"
+            )
 
     return Resolution(
         providers=tuple((recipe(), allocate(recipe.Output, sizes)) for recipe in order),
@@ -609,7 +698,12 @@ def dataflow(*components: Component) -> str:
         return out
 
     def names(decls: tuple[Decl, ...], in_place: frozenset[str] = frozenset()) -> str:
-        return ", ".join(text(d) + (" (in place)" if d.name in in_place else "") for d in decls) or "-"
+        return (
+            ", ".join(
+                text(d) + (" (in place)" if d.name in in_place else "") for d in decls
+            )
+            or "-"
+        )
 
     return "\n".join(
         f"{type(c).__name__:<26} reads: {names(c.Input.declarations())}"
