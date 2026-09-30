@@ -196,7 +196,7 @@ the dycore decides, from the same flags, whether to recompute the predictor.
 
 ## `model_proposed`
 
-### `common/framework.py` (the reusable part, 484 lines)
+### `common/framework.py` (the reusable part, 576 lines)
 
 ```python
 class Quantity:                                               # type-level tag, never instantiated; one subclass per quantity
@@ -218,11 +218,9 @@ class Pair[S]: first: S; second: S; swap()                    # 15 lines for the
 class TimeStepPair[S](Pair[S]): now; next                     # driver-owned: `.now` goes in as input, `.next` as output
 class PredictorCorrectorPair[S](Pair[S]): predictor; corrector  # component-internal, never collected
 def allocate(cls: type[S], sizes: dict[Dimension, int]) -> S  # gtx.zeros per alias dims, scalars zero
-def collect(cls: type[S], *states) -> S                       # one leaf per declaration of cls, picked from states by quantity
-def derived_by(recipe: type[Recipe]) -> Any    # leaf default: `temperature: TField = derived_by(Recipe)`; on an Update Increment leaf too
-def from_tendency() -> Any                     # Update leaf default: `x: Increment[XField] = from_tendency()`, += dt * own Tendency[X]
-def after_increments(hook: type[Component]) -> Any  # Update leaf default: `y: YField = after_increments(Hook)`, run once after the increments
+class Marker                                                  # base of the leaf defaults below; the state band only carries one on the Decl
 def state_type(name, leaves: {name: (hint, marker | None)}) -> type[State]  # State class at runtime (config-driven Inputs)
+def collect(cls: type[S], *states) -> S                       # one leaf per declaration of cls, picked from states by quantity
 def relocation(recipe: type[Recipe]) -> type[Recipe]         # registers a recipe moving one quantity between two of its locations, RELOCATIONS[(q, from, to)]
 
 class Component:                                              # not generic, see the decisions below
@@ -233,6 +231,9 @@ class Component:                                              # not generic, see
     def collect_inputs(self, *states) -> Any                  # collect(self.Input, *states)
     def collect_output(self, *states) -> Any                  # collect(self.Output, *states)
 class Recipe(Component)                                       # a derivation; derived_by accepts nothing else
+def derived_by(recipe: type[Recipe]) -> Any    # leaf default (Marker): `temperature: TField = derived_by(Recipe)`; on an Update Increment leaf too
+def from_tendency() -> Any                     # Update leaf default: `x: Increment[XField] = from_tendency()`, += dt * own Tendency[X]
+def after_increments(hook: type[Component]) -> Any  # Update leaf default: `y: YField = after_increments(Hook)`, run once after the increments
 class Process(Component):                                     # emits tendencies and declares where they land
     Update: type[State] = Empty                               # Increment leaves (from_tendency / derived_by), plain leaves (after_increments)
     def accumulate(self, into: State, dt, output, *computed) -> None  # emitter's hook: each Update increment -> Increment leaf of into: +=
@@ -559,5 +560,5 @@ providers.
 - One line added to the layout block of `AGENTS.md` naming `mwe/`.
 - Code is comment-free by request; names carry the meaning.
 - Size as built (non-blank lines): `model_current` 674 across 28 modules,
-  `model_proposed` 865 (of which `framework.py` 484, `recipes.py` 48),
+  `model_proposed` 958 (of which `framework.py` 576, `recipes.py` 48),
   `ops.py` 115 (with the call counter), `config.py` 10, `run.py` + tests 421.

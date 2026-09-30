@@ -205,7 +205,7 @@ def test_declarations_carry_quantity_tag_and_marker() -> None:
         "Pressure",
         "Pa s-1",
     )
-    assert {d.name: d.recipe for d in Consumer.Input.declarations()} == {"density": DensityFromSalt, "salt": None}
+    assert {d.name: d.marker for d in Consumer.Input.declarations()} == {"density": fw.Derived(DensityFromSalt), "salt": None}
     assert [type(d.marker) for d in Consumer.Update.declarations()] == [fw.FromTendency, fw.AfterIncrements]
 
 
@@ -383,9 +383,9 @@ def test_relocation_registers_one_recipe_per_edge() -> None:
 
 def test_state_type_builds_a_declared_state() -> None:
     cls = fw.state_type("Dynamic", {"salt": (SField, None), "density": (DField, fw.derived_by(DensityFromSalt))})
-    assert [(d.name, d.quantity.__name__, d.recipe) for d in cls.declarations()] == [
+    assert [(d.name, d.quantity.__name__, d.marker) for d in cls.declarations()] == [
         ("salt", "Salt", None),
-        ("density", "Density", DensityFromSalt),
+        ("density", "Density", fw.Derived(DensityFromSalt)),
     ]
 
 

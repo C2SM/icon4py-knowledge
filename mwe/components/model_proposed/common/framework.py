@@ -131,34 +131,10 @@ type Tendency[F] = Annotated[F, Tag.TENDENCY]
 type Increment[F] = Annotated[F, Tag.INCREMENT]
 
 
-@dataclasses.dataclass(frozen=True)
-class Derived:
-    recipe: type[Recipe]
-
-
-@dataclasses.dataclass(frozen=True)
-class FromTendency:
+# a leaf default that says how the leaf is produced; the concrete markers are
+# defined with the components they name, the state only carries them
+class Marker:
     pass
-
-
-@dataclasses.dataclass(frozen=True)
-class AfterIncrements:
-    recipe: type[Component]
-
-
-_MARKERS = (Derived, FromTendency, AfterIncrements)
-
-
-def derived_by(recipe: type[Recipe]) -> Any:
-    return Derived(recipe)
-
-
-def from_tendency() -> Any:
-    return FromTendency()
-
-
-def after_increments(hook: type[Component]) -> Any:
-    return AfterIncrements(hook)
 
 
 def location_name(location: Any) -> str:
@@ -174,15 +150,11 @@ class Decl:
     tag: Tag | None
     location: Any
     field_type: Any
-    marker: Derived | FromTendency | AfterIncrements | None
+    marker: Marker | None
 
     @property
     def key(self) -> tuple[type[Quantity], Any]:
         return (self.quantity, self.location)
-
-    @property
-    def recipe(self) -> type[Recipe] | None:
-        return self.marker.recipe if isinstance(self.marker, Derived) else None
 
     @property
     def label(self) -> str:
@@ -240,7 +212,7 @@ def _decl(name: str, hint: Any, default: Any) -> Decl:
         q = increment_of(q)
     if q.locations is not None and location not in q.locations:
         raise InvalidLocation(f"{name}: {q.__name__} at {location_name(location)}")
-    marker = default if isinstance(default, _MARKERS) else None
+    marker = default if isinstance(default, Marker) else None
     return Decl(name, q, tag, location, base, marker)
 
 
@@ -273,7 +245,7 @@ class State:
         # raises UnresolvedInput if a marker is still in a leaf, so a
         # hand-built State cannot smuggle a derived_by through
         for d, value in self.leaves():
-            if isinstance(value, _MARKERS):
+            if isinstance(value, Marker):
                 raise UnresolvedInput(f"{type(self).__name__}.{d.name}")
 
     @classmethod
@@ -362,7 +334,7 @@ def zero(state: State) -> None:
 
 
 # ------------------------------------------------------------------------------
-# Componenet
+# Component
 # ------------------------------------------------------------------------------
 
 class MissingInput(KeyError):
@@ -478,6 +450,35 @@ class Recipe(Component):
     pass
 
 
+# leaf defaults: derived_by on an Input leaf or an Update Increment leaf,
+# from_tendency and after_increments on Update leaves
+@dataclasses.dataclass(frozen=True)
+class Derived(Marker):
+    recipe: type[Recipe]
+
+
+@dataclasses.dataclass(frozen=True)
+class FromTendency(Marker):
+    pass
+
+
+@dataclasses.dataclass(frozen=True)
+class AfterIncrements(Marker):
+    recipe: type[Component]
+
+
+def derived_by(recipe: type[Recipe]) -> Any:
+    return Derived(recipe)
+
+
+def from_tendency() -> Any:
+    return FromTendency()
+
+
+def after_increments(hook: type[Component]) -> Any:
+    return AfterIncrements(hook)
+
+
 def _parent_key(d: Decl) -> Key:
     assert d.quantity.parent is not None
     return (d.quantity.parent, d.location)
@@ -587,16 +588,17 @@ def resolve(
 
     def visit(cls: type[State]) -> None:
         for d in cls.declarations():
-            if d.recipe is None:
+            if not isinstance(d.marker, Derived):
                 continue
-            known_recipe = DERIVATIONS.setdefault(d.key, d.recipe)
-            if known_recipe is not d.recipe:
+            recipe = d.marker.recipe
+            known_recipe = DERIVATIONS.setdefault(d.key, recipe)
+            if known_recipe is not recipe:
                 raise InconsistentDerivation(
-                    f"{d.label}: {known_recipe.__name__} vs {d.recipe.__name__}"
+                    f"{d.label}: {known_recipe.__name__} vs {recipe.__name__}"
                 )
-            if d.recipe not in order:
-                visit(d.recipe.Input)
-                order.append(d.recipe)
+            if recipe not in order:
+                visit(recipe.Input)
+                order.append(recipe)
 
     for child in children:
         visit(child.Input)
