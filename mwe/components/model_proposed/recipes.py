@@ -64,7 +64,7 @@ class ThetaVToHalfLevels(fw.Recipe):
         theta_v: qty.ThetaVField
 
     class Output(fw.State):
-        theta_v_ic: qty.ThetaVAtCellsOnHalfLevels
+        theta_v_ic: qty.ThetaVAtCellsOnHalfLevelsField
 
     def run(self, input: Input, output: Output) -> None:
         ops.interpolate_to_half_levels(input.theta_v, output.theta_v_ic)

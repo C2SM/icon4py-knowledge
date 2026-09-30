@@ -19,7 +19,7 @@ type WField = fw.CellK[W]
 type RhoField = fw.CellK[Rho]
 type ExnerField = fw.CellK[Exner]
 type ThetaVField = fw.CellK[ThetaV]
-type ThetaVAtCellsOnHalfLevels = fw.CellKHalf[ThetaV]
+type ThetaVAtCellsOnHalfLevelsField = fw.CellKHalf[ThetaV]
 type QvField = fw.CellK[Qv]
 type MassFluxField = fw.EdgeK[MassFlux]
 type TemperatureField = fw.CellK[Temperature]
@@ -29,7 +29,7 @@ type PrecipitationFluxField = fw.Cell[PrecipitationFlux]
 # Relocations between a quantity's grid locations are recipes decorated with
 # `fw.relocation` (recipes.ThetaVToHalfLevels), and a consumer uses one
 # explicitly:
-# `theta_v_ic: ThetaVAtCellsOnHalfLevels = derived_by(ThetaVToHalfLevels)`.
+# `theta_v_ic: ThetaVAtCellsOnHalfLevelsField = derived_by(ThetaVToHalfLevels)`.
 # Option kept for later: a family-level lookup, where a leaf declared at a
 # location nobody supplies and with no `derived_by` is served by the recipe
 # `fw.RELOCATIONS[(quantity, supplied location, wanted location)]`; direct

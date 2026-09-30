@@ -14,7 +14,7 @@ class SolveNonhydro(fw.Component):
         rho: qty.RhoField
         exner: qty.ExnerField
         theta_v: qty.ThetaVField
-        theta_v_ic: qty.ThetaVAtCellsOnHalfLevels = fw.derived_by(recipes.ThetaVToHalfLevels)
+        theta_v_ic: qty.ThetaVAtCellsOnHalfLevelsField = fw.derived_by(recipes.ThetaVToHalfLevels)
         substep_dtime: qty.SubstepTimeStepValue
         ndyn_substeps: qty.SubstepCountValue
         at_first_substep: qty.AtFirstSubstepValue
