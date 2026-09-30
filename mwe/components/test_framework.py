@@ -5,12 +5,12 @@ import ops
 from model_proposed.common import framework as fw
 
 
-class Temperature(fw.Quantity, name="test_temperature", units="K", locations=(fw.CellK,)): ...
-class Salt(fw.Quantity, name="test_salt", units="1", locations=(fw.CellK, fw.CellKHalf)): ...
-class Density(fw.Quantity, name="test_density", units="kg m-3"): ...
+class Pressure(fw.Quantity, units="Pa", standard_name="air_pressure", locations=(fw.CellK,)): ...
+class Salt(fw.Quantity, units="1", locations=(fw.CellK, fw.CellKHalf)): ...
+class Density(fw.Quantity, units="kg m-3"): ...
 
 
-type TField = fw.CellK[Temperature]
+type TField = fw.CellK[Pressure]
 type SField = fw.CellK[Salt]
 type SHalfField = fw.CellKHalf[Salt]
 type DField = fw.CellK[Density]
@@ -197,13 +197,13 @@ class HalfConsumer(fw.Component):
 
 def test_declarations_carry_quantity_tag_and_marker() -> None:
     by_name = {d.name: d for d in Producer.Input.declarations()}
-    assert (by_name["temperature"].quantity.name, by_name["temperature"].tag) == ("test_temperature", None)
+    assert (by_name["temperature"].quantity.__name__, by_name["temperature"].tag) == ("Pressure", None)
     (out,) = Producer.Output.declarations()
     assert out.tag is fw.Tag.TENDENCY and out.quantity.parent is not None
-    assert (out.quantity.name, out.quantity.parent.name, out.quantity.units) == (
-        "tendency_of_test_temperature",
-        "test_temperature",
-        "K s-1",
+    assert (out.quantity.__name__, out.quantity.parent.__name__, out.quantity.units) == (
+        "TendencyOfPressure",
+        "Pressure",
+        "Pa s-1",
     )
     assert {d.name: d.recipe for d in Consumer.Input.declarations()} == {"density": DensityFromSalt, "salt": None}
     assert [type(d.marker) for d in Consumer.Update.declarations()] == [fw.FromTendency, fw.AfterIncrements]
@@ -276,7 +276,7 @@ def test_resolve_builds_providers_increments_recipes_and_hooks() -> None:
     consumer = Consumer()
     resolution = fw.resolve([consumer], ops.SIZES, input=Owner, output=Owner)
     assert [type(p) for p, _ in resolution.providers] == [DensityFromSalt]
-    assert [d.quantity.name for d in resolution.increments.declarations()] == ["increment_of_test_density"]
+    assert [d.quantity.__name__ for d in resolution.increments.declarations()] == ["IncrementOfDensity"]
     assert resolution.increment_recipes == {consumer: ()}
     assert [type(h) for h in resolution.hooks] == [SaltFromDensity]
 
@@ -299,7 +299,7 @@ def test_resolve_runs_declared_increment_recipes() -> None:
     consumer = IncrementConsumer()
     resolution = fw.resolve([consumer], ops.SIZES, input=Owner, output=Owner)
     assert [type(r) for r, _ in resolution.increment_recipes[consumer]] == [SaltIncrementFromDensityTendency]
-    assert [d.quantity.name for d in resolution.increments.declarations()] == ["increment_of_test_salt"]
+    assert [d.quantity.__name__ for d in resolution.increments.declarations()] == ["IncrementOfSalt"]
 
     owner = fw.allocate(Owner, ops.SIZES)
     ops.arr(owner.salt)[...] = 1.0
@@ -337,28 +337,30 @@ def test_location_is_part_of_the_key() -> None:
     owner = fw.allocate(Owner, ops.SIZES)
     half = fw.allocate(HalfOwner, ops.SIZES)
     assert ops.arr(half.salt_ic).shape == (4, 4)
-    with pytest.raises(fw.MissingInput, match="test_salt@CellKHalf"):
+    with pytest.raises(fw.MissingInput, match="Salt@CellKHalf"):
         fw.collect(HalfOwner, owner)
     assert fw.collect(HalfOwner, owner, half).salt_ic is half.salt_ic
     assert fw.collect(Owner, owner, half).salt is owner.salt
     labels = {d.name: d.label for d in (*Owner.declarations(), *HalfOwner.declarations())}
-    assert labels == {"temperature": "test_temperature", "salt": "test_salt@CellK", "salt_ic": "test_salt@CellKHalf"}
+    assert labels == {"temperature": "Pressure", "salt": "Salt@CellK", "salt_ic": "Salt@CellKHalf"}
 
 
 def test_quantity_tags_are_types_with_declared_locations() -> None:
     with pytest.raises(TypeError):
         Salt()
     with pytest.raises(fw.DuplicateQuantity):
-
-        class Again(fw.Quantity, name="test_salt", units="1"): ...
-
+        type("Salt", (fw.Quantity,), {}, units="1")
     class Misplaced(fw.State):
-        temperature: fw.CellKHalf[Temperature]
+        temperature: fw.CellKHalf[Pressure]
 
-    with pytest.raises(fw.InvalidLocation, match="test_temperature at CellKHalf"):
+    with pytest.raises(fw.InvalidLocation, match="Pressure at CellKHalf"):
         Misplaced.declarations()
     assert fw.tendency_of(Salt).locations == Salt.locations and fw.tendency_of(Salt).parent is Salt
-    assert fw.tendency_of(Salt) is fw.tendency_of(Salt) and fw.REGISTRY["tendency_of_test_salt"] is fw.tendency_of(Salt)
+    assert fw.tendency_of(Salt) is fw.tendency_of(Salt) and fw.REGISTRY["TendencyOfSalt"] is fw.tendency_of(Salt)
+    assert (fw.tendency_of(Pressure).standard_name, fw.tendency_of(Salt).standard_name) == ("tendency_of_air_pressure", None)
+    assert fw.lookup("air_pressure") is Pressure and fw.lookup("Salt") is Salt
+    with pytest.raises(fw.UnknownQuantity):
+        fw.lookup("salinity")
 
 
 def test_relocation_registers_one_recipe_per_edge() -> None:
@@ -376,21 +378,21 @@ def test_relocation_registers_one_recipe_per_edge() -> None:
     ops.arr(owner.salt)[...] = [[1.0, 3.0, 5.0]] * 4
     (produced,) = resolution.run_providers(owner)
     assert np.array_equal(ops.arr(consumer.collect_inputs(owner, produced).salt_ic), [[1.0, 2.0, 4.0, 5.0]] * 4)
-    assert "test_salt@CellKHalf <- SaltToHalfLevels" in fw.dataflow(consumer)
+    assert "Salt@CellKHalf <- SaltToHalfLevels" in fw.dataflow(consumer)
 
 
 def test_state_type_builds_a_declared_state() -> None:
     cls = fw.state_type("Dynamic", {"salt": (SField, None), "density": (DField, fw.derived_by(DensityFromSalt))})
-    assert [(d.name, d.quantity.name, d.recipe) for d in cls.declarations()] == [
-        ("salt", "test_salt", None),
-        ("density", "test_density", DensityFromSalt),
+    assert [(d.name, d.quantity.__name__, d.recipe) for d in cls.declarations()] == [
+        ("salt", "Salt", None),
+        ("density", "Density", DensityFromSalt),
     ]
 
 
 def test_dataflow_lists_reads_produces_updates() -> None:
     text = fw.dataflow(Producer(), Consumer(), Doubler())
-    assert "reads: test_temperature, test_salt@CellK" in text
-    assert "produces: tendency_of_test_temperature" in text
-    assert "test_density <- DensityFromSalt" in text
-    assert "updates: increment_of_test_density <- tendency, test_salt@CellK <- after increments SaltFromDensity" in text
-    assert "produces: test_salt@CellK (in place)" in text
+    assert "reads: Pressure, Salt@CellK" in text
+    assert "produces: TendencyOfPressure" in text
+    assert "Density <- DensityFromSalt" in text
+    assert "updates: IncrementOfDensity <- tendency, Salt@CellK <- after increments SaltFromDensity" in text
+    assert "produces: Salt@CellK (in place)" in text

@@ -1,8 +1,10 @@
+import dataclasses
 import pathlib
 from typing import Any
 
 import numpy as np
 
+from model_current.common.states import data as state_data
 from model_current.driver import driver as current
 from model_proposed import driver as proposed
 from model_proposed.common import framework as fw
@@ -13,10 +15,20 @@ HERE = pathlib.Path(__file__).parent
 COUNTED = ("compute_temperature", "edge_2_cell_vector_rbf_interpolation", "interpolate_to_half_levels")
 CONFIGS: dict[str, config.Config] = {
     "example": config.load(HERE / "example.yaml"),
-    "no_muphys": config.Config(output_variables=("temperature", "eastward_wind"), physics={"tmx": 2}),
-    "no_physics": config.Config(output_variables=("temperature",), physics={}),
+    "no_muphys": config.Config(output_variables=("air_temperature", "eastward_wind"), physics={"tmx": 2}),
+    "no_physics": config.Config(output_variables=("air_temperature",), physics={}),
     "no_output": config.Config(output_variables=(), physics={"muphys": 1, "tmx": 2}),
 }
+
+
+# the config names output variables by CF standard name; model_current names
+# them by its own dict keys, so the harness translates on the way in and out
+ICON_KEY: dict[str, str] = {
+    meta.standard_name: key
+    for table in (state_data.PROGNOSTIC_CF_ATTRIBUTES, state_data.DIAGNOSTIC_CF_ATTRIBUTES)
+    for key, meta in table.items()
+}
+STANDARD_NAME: dict[str, str] = {key: name for name, key in ICON_KEY.items()}
 
 
 def _calls() -> dict[str, int]:
@@ -25,7 +37,10 @@ def _calls() -> dict[str, int]:
 
 def run_current(run_config: config.Config) -> dict[str, Any]:
     ops.CALLS.clear()
-    ds, icon4py_driver = current.run_driver(run_config)
+    legacy_config = dataclasses.replace(
+        run_config, output_variables=tuple(ICON_KEY[name] for name in run_config.output_variables)
+    )
+    ds, icon4py_driver = current.run_driver(legacy_config)
     now = ds.prognostics.current
     result = {
         "rho": ops.arr(now.rho),
@@ -37,7 +52,7 @@ def run_current(run_config: config.Config) -> dict[str, Any]:
         "mass_flx_me": ops.arr(ds.prep_tracer_advection_prognostic.mass_flx_me),
         "ddt_vn_apc.predictor": ops.arr(ds.solve_nonhydro_diagnostic.normal_wind_advective_tendency.predictor),  # type: ignore[arg-type]
         "ddt_vn_apc.corrector": ops.arr(ds.solve_nonhydro_diagnostic.normal_wind_advective_tendency.corrector),  # type: ignore[arg-type]
-        "dataset": icon4py_driver.io_monitor.dataset,
+        "dataset": [(time, STANDARD_NAME[key], array) for time, key, array in icon4py_driver.io_monitor.dataset],
         "calls": _calls(),
     }
     if "muphys" in run_config.physics:

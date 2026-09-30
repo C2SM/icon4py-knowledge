@@ -16,51 +16,77 @@ class DuplicateQuantity(ValueError):
     pass
 
 
-# a type-level tag, never instantiated: subclasses carry the CF metadata as
-# class attributes and name the locations (framework aliases below) the
-# quantity may live at; None means unrestricted. The same classes are meant to
-# become the phantom type argument of the field once gt4py can carry one.
+# A type-level tag, never instantiated:
+# subclasses carry the CF metadata as class attributes and grid locations
+# (aliases below) the quantity may live at; None means unrestricted. The same
+# classes are meant to become the phantom type argument of the field once GT4Py
+# implements it.
 class Quantity:
-    name: ClassVar[str]
     units: ClassVar[str]
-    cf_key: ClassVar[str | None]
+    standard_name: ClassVar[str | None]
+    long_name: ClassVar[str | None]
     parent: ClassVar[type[Quantity] | None]
     locations: ClassVar[tuple[Any, ...] | None]
 
     def __init_subclass__(
         cls,
         *,
-        name: str,
         units: str,
-        cf_key: str | None = None,
+        standard_name: str | None = None,
+        long_name: str | None = None,
         parent: type[Quantity] | None = None,
         locations: tuple[Any, ...] | None = None,
     ) -> None:
         super().__init_subclass__()
-        cls.name, cls.units, cls.cf_key, cls.parent, cls.locations = name, units, cf_key, parent, locations
-        if REGISTRY.setdefault(name, cls) is not cls:
-            raise DuplicateQuantity(name)
+        cls.units, cls.standard_name, cls.long_name, cls.parent, cls.locations = (
+            units,
+            standard_name,
+            long_name,
+            parent,
+            locations,
+        )
+        if REGISTRY.setdefault(cls.__name__, cls) is not cls:
+            raise DuplicateQuantity(cls.__name__)
 
     def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         raise TypeError(f"{cls.__name__} is a type-level tag, not a value")
 
 
+# the class name is the internal name (labels, registry, derived tags);
+# standard_name is the CF one (cfconventions.org) where the table has it, and
+# whichever exists is the key the output config uses
 REGISTRY: dict[str, type[Quantity]] = {}
 
 
-def _derived(prefix: str, q: type[Quantity], units: str) -> type[Quantity]:
-    name = f"{prefix}_{q.name}"
+class UnknownQuantity(KeyError):
+    pass
+
+
+def lookup(key: str) -> type[Quantity]:
+    for q in REGISTRY.values():
+        if key in (q.__name__, q.standard_name):
+            return q
+    raise UnknownQuantity(key)
+
+
+def _derived(prefix: str, q: type[Quantity], units: str, cf_prefix: str | None = None) -> type[Quantity]:
+    name = prefix + q.__name__
     if name not in REGISTRY:
-        types.new_class(name, (Quantity,), {"name": name, "units": units, "parent": q, "locations": q.locations})
+        standard_name = cf_prefix + q.standard_name if cf_prefix and q.standard_name else None
+        types.new_class(
+            name,
+            (Quantity,),
+            {"units": units, "standard_name": standard_name, "parent": q, "locations": q.locations},
+        )
     return REGISTRY[name]
 
 
 def tendency_of(q: type[Quantity]) -> type[Quantity]:
-    return _derived("tendency_of", q, f"{q.units} s-1")
+    return _derived("TendencyOf", q, f"{q.units} s-1", cf_prefix="tendency_of_")
 
 
 def increment_of(q: type[Quantity]) -> type[Quantity]:
-    return _derived("increment_of", q, q.units)
+    return _derived("IncrementOf", q, q.units)
 
 
 # locations: generic aliases that put a quantity tag on a field type; the alias
@@ -139,7 +165,7 @@ class Decl:
     @property
     def label(self) -> str:
         located = self.quantity.locations is not None and len(self.quantity.locations) > 1
-        return self.quantity.name + (f"@{location_name(self.location)}" if located else "")
+        return self.quantity.__name__ + (f"@{location_name(self.location)}" if located else "")
 
 
 # walks TypeAliasType, generic aliases of aliases and nested Annotated; a
@@ -183,7 +209,7 @@ def _decl(name: str, hint: Any, default: Any) -> Decl:
     if tag is Tag.INCREMENT:
         q = increment_of(q)
     if q.locations is not None and location not in q.locations:
-        raise InvalidLocation(f"{name}: {q.name} at {location_name(location)}")
+        raise InvalidLocation(f"{name}: {q.__name__} at {location_name(location)}")
     marker = default if isinstance(default, _MARKERS) else None
     return Decl(name, q, tag, location, base, marker)
 
@@ -342,10 +368,10 @@ def relocation[R: type[Recipe]](recipe: R) -> R:
     (out,) = outputs
     sources = [d for d in recipe.Input.declarations() if d.quantity is out.quantity and d.location is not out.location]
     if len(sources) != 1:
-        raise InconsistentRelocation(f"{recipe.__name__}: {out.quantity.name} at another location expected in Input")
+        raise InconsistentRelocation(f"{recipe.__name__}: {out.quantity.__name__} at another location expected in Input")
     key = (out.quantity, sources[0].location, out.location)
     if RELOCATIONS.setdefault(key, recipe) is not recipe:
-        raise InconsistentRelocation(f"{out.quantity.name}: {RELOCATIONS[key].__name__} vs {recipe.__name__}")
+        raise InconsistentRelocation(f"{out.quantity.__name__}: {RELOCATIONS[key].__name__} vs {recipe.__name__}")
     return recipe
 
 
@@ -533,7 +559,7 @@ def resolve(
             parent_key = (parent, d.location)
             if isinstance(d.marker, FromTendency):
                 if (tendency_of(parent), d.location) not in outputs:
-                    raise InconsistentUpdate(f"{label}.{d.name}: no tendency of {parent.name} in Output")
+                    raise InconsistentUpdate(f"{label}.{d.name}: no tendency of {parent.__name__} in Output")
                 consumed.add((tendency_of(parent), d.location))
             elif isinstance(d.marker, Derived):
                 recipe = d.marker.recipe
@@ -550,7 +576,7 @@ def resolve(
             if parent_key not in known:
                 raise UnappliedIncrement(d.label)
             increment_alias: Any = Increment
-            increments[f"{parent.name}__{location_name(d.location)}"] = (increment_alias[d.location[parent]], None)
+            increments[f"{parent.__name__}__{location_name(d.location)}"] = (increment_alias[d.location[parent]], None)
             incremented.add(parent_key)
         for d in child.Output.declarations():
             if d.tag is Tag.TENDENCY and d.key not in consumed:

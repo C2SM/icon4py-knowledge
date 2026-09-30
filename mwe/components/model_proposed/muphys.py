@@ -11,7 +11,7 @@ class MuphysComponent(fw.Process):
     class Output(fw.State):
         tend_temperature: fw.Tendency[qty.TemperatureField]
         tend_qv: fw.Tendency[qty.QvField]
-        pflx: qty.PrecipField
+        pflx: qty.PrecipitationFluxField
 
     class Update(fw.State):
         temperature: fw.Increment[qty.TemperatureField] = fw.from_tendency()

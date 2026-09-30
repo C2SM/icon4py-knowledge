@@ -143,7 +143,10 @@ Trimming rules:
    where the real code takes its config objects: `initialize_granules` builds
    the process list from `physics`, `IOMonitor(variables=...)` takes
    `output_variables`. `DEFAULT_OUTPUT_VARIABLES` is gone: an empty list means
-   no output, not the default set.
+   no output, not the default set. `output_variables` are CF standard names
+   (`air_temperature`), the proposed side's vocabulary; `run.py` translates
+   them to the dict keys `model_current`'s `IOMonitor` and
+   `DiagnosticsComputer` speak (`temperature`) and the dataset names back.
 
 ```
 model_current/
@@ -193,13 +196,14 @@ the dycore decides, from the same flags, whether to recompute the predictor.
 
 ## `model_proposed`
 
-### `common/framework.py` (the reusable part, 462 lines)
+### `common/framework.py` (the reusable part, 484 lines)
 
 ```python
 class Quantity:                                               # type-level tag, never instantiated; one subclass per quantity
-    name, units, cf_key, parent, locations: ClassVar         # class kwargs: name=, units=, cf_key=, locations=; registers in REGISTRY[name]
-def tendency_of(q) -> type[Quantity]                          # memoized derived tag; parent=q, units=f"{q.units} s-1", same locations
-def increment_of(q) -> type[Quantity]                         # memoized derived tag; parent=q, units=q.units
+    units, standard_name, long_name, parent, locations: ClassVar   # class kwargs; the class name is the internal name; registers in REGISTRY[__name__]
+def lookup(key) -> type[Quantity]                             # by class name or CF standard_name: the output config's vocabulary
+def tendency_of(q) -> type[Quantity]                          # memoized derived tag TendencyOf<Q>; parent=q, units=f"{q.units} s-1", standard_name tendency_of_<q's>, same locations
+def increment_of(q) -> type[Quantity]                         # memoized derived tag IncrementOf<Q>; parent=q, units=q.units
 type Cell[Q], CellK[Q], CellKHalf[Q], Edge[Q], EdgeK[Q], EdgeKHalf[Q] = Annotated[fa.<...>Field[wpfloat], Q]   # the locations
 type Scalar[T, Q] = Annotated[T, Q]
 
@@ -356,6 +360,16 @@ the class, `parent` and `locations` too, and the same classes are meant to
 become the phantom type argument of the field (`fa.CellKField[wpfloat,
 ThetaV]`) once gt4py's `Field` can carry one; until then the tag rides in
 `Annotated` metadata and `unwrap` is the one place that would change. The
+class name is the internal name: labels (`ThetaV@CellKHalf`), the registry,
+derived tags (`TendencyOfThetaV`). `standard_name` is the CF standard name
+where cfconventions.org has one; `Vn`, `ThetaV` and `MassFlux` have none
+(icon4py's `normal_velocity` and `virtual_potential_temperature` are not in
+the CF table), `long_name` is optional and shown on `U` only. The output
+config names a variable by `standard_name` or, failing that, by class name,
+and `lookup` resolves it; `run.py` translates that vocabulary to
+`model_current`'s dict keys. icon4py's `FieldMetaData` vocabulary
+(`standard_name` plus `icon_var_name`) was not copied: the type is the
+internal name and the CF name is the only other one. The
 location aliases live in the framework, `fw.CellKHalf[ThetaV]`, rather than
 as nested aliases on each tag (`ThetaV.CellKHalfField`), because pyright
 refuses a `type` alias inside a class body that names the class.
@@ -481,7 +495,7 @@ Module and class names follow `model_current` so the two trees read side by side
 
 ```
 common/quantities.py  10 quantity tags with their locations, 11 field aliases (theta_v at cells and at half levels), 7 scalar tags and aliases;
-                      names are the CF standard names of data.py; the family-level relocation option and the static caveat as a comment
+                      standard_name where the CF table has one (Vn, ThetaV, MassFlux have none), long_name on U; the family-level relocation option and the static caveat as a comment
 common/states.py      PrognosticState, TracerState, PrepAdvection, StepInfo
 recipes.py            Recipes TemperatureFromThetaExner, UFromVn, VnIncrementFromUTendency (Tendency[U] + dt -> Increment[Vn]), relocation ThetaVToHalfLevels; hook ExnerThetaFromTemperature, in_place exner, theta_v
 solve_nonhydro.py     SolveNonhydro: Input the five prognostics (the driver passes `now`), theta_v_ic = derived_by(ThetaVToHalfLevels), substep scalars; Output the five prognostics (`next`) + mass_flx_me
@@ -492,7 +506,7 @@ muphys.py             MuphysComponent(Process): Input temperature = derived_by(T
                       Update temperature, qv = from_tendency(); theta_v, exner = after_increments(ExnerThetaFromTemperature)
 tmx.py                TmxComponent(Process): Input temperature = derived_by(...), u = derived_by(UFromVn); Output Tendency[T], Tendency[U]
                       Update temperature = from_tendency(); vn = derived_by(VnIncrementFromUTendency); theta_v, exner = after_increments(...)
-io.py                 VARIABLES (name -> hint, derived_by); IOMonitor(variables): Input built by state_type from the config
+io.py                 DERIVED (quantity -> derived_by), noting it could live on the quantity; IOMonitor(variables): Input built by state_type from the config keys via fw.lookup at the first declared location
 physics_driver.py     PhysicsDriver(process_intervals, update="parallel"): processes and their output buffers from PROCESSES by config name, resolve(...) at init
                       Input the prognostics, qv, dtime, step_index; Output vn, exner, theta_v, qv, in_place all four
                       run: run_providers -> each process (call if active, then run_increment_recipes, accumulate) -> resolution.update(input, output, *produced)
@@ -545,5 +559,5 @@ providers.
 - One line added to the layout block of `AGENTS.md` naming `mwe/`.
 - Code is comment-free by request; names carry the meaning.
 - Size as built (non-blank lines): `model_current` 674 across 28 modules,
-  `model_proposed` 840 (of which `framework.py` 462, `recipes.py` 48),
-  `ops.py` 115 (with the call counter), `config.py` 10, `run.py` + tests 404.
+  `model_proposed` 865 (of which `framework.py` 484, `recipes.py` 48),
+  `ops.py` 115 (with the call counter), `config.py` 10, `run.py` + tests 421.
