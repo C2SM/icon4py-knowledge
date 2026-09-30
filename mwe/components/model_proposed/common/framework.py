@@ -131,9 +131,9 @@ type Tendency[F] = Annotated[F, Tag.TENDENCY]
 type Increment[F] = Annotated[F, Tag.INCREMENT]
 
 
-# a leaf default that says how the leaf is produced; the concrete markers are
-# defined with the components they name, the state only carries them
-class Marker:
+# a leaf default that says where the leaf's value comes from; the concrete
+# sources are defined with the components they name, the state only carries them
+class Source:
     pass
 
 
@@ -142,7 +142,7 @@ def location_name(location: Any) -> str:
 
 
 # one declaration read back from a leaf: name, quantity, tag, location, field
-# type, marker; (quantity, location) is the key everything resolves on
+# type, source; (quantity, location) is the key everything resolves on
 @dataclasses.dataclass(frozen=True)
 class Decl:
     name: str
@@ -150,7 +150,7 @@ class Decl:
     tag: Tag | None
     location: Any
     field_type: Any
-    marker: Marker | None
+    source: Source | None
 
     @property
     def key(self) -> tuple[type[Quantity], Any]:
@@ -212,14 +212,21 @@ def _decl(name: str, hint: Any, default: Any) -> Decl:
         q = increment_of(q)
     if q.locations is not None and location not in q.locations:
         raise InvalidLocation(f"{name}: {q.__name__} at {location_name(location)}")
-    marker = default if isinstance(default, Marker) else None
-    return Decl(name, q, tag, location, base, marker)
+    source = default if isinstance(default, Source) else None
+    return Decl(name, q, tag, location, base, source)
 
 
 _DECLARATIONS: dict[type, tuple[Decl, ...]] = {}
 
 
 # cached per class
+# can be used, e.g. with local_state being a State, as:
+# local_state.declarations()
+# to get all declarations, or
+# {d.name: d.quantity for d in local_state.declarations()}
+#
+# works on the class too:
+# SolveNonhydro.Input.declarations()
 def declarations(cls: type) -> tuple[Decl, ...]:
     if cls not in _DECLARATIONS:
         hints = typing.get_type_hints(cls, include_extras=True)
@@ -242,10 +249,10 @@ class State:
         dataclasses.dataclass(frozen=True, eq=False, kw_only=True)(cls)
 
     def __post_init__(self) -> None:
-        # raises UnresolvedInput if a marker is still in a leaf, so a
+        # raises UnresolvedInput if a source is still in a leaf, so a
         # hand-built State cannot smuggle a derived_by through
         for d, value in self.leaves():
-            if isinstance(value, Marker):
+            if isinstance(value, Source):
                 raise UnresolvedInput(f"{type(self).__name__}.{d.name}")
 
     @classmethod
@@ -439,12 +446,6 @@ class Component:
                 raise AliasedOutput(f"{type(self).__name__}.{d.name}")
         self.run(input, output)
 
-    def collect_inputs(self, *states: State) -> Any:
-        return collect(self.Input, *states)
-
-    def collect_output(self, *states: State) -> Any:
-        return collect(self.Output, *states)
-
 
 class Recipe(Component):
     pass
@@ -453,17 +454,17 @@ class Recipe(Component):
 # leaf defaults: derived_by on an Input leaf or an Update Increment leaf,
 # from_tendency and after_increments on Update leaves
 @dataclasses.dataclass(frozen=True)
-class Derived(Marker):
+class Derived(Source):
     recipe: type[Recipe]
 
 
 @dataclasses.dataclass(frozen=True)
-class FromTendency(Marker):
+class FromTendency(Source):
     pass
 
 
 @dataclasses.dataclass(frozen=True)
-class AfterIncrements(Marker):
+class AfterIncrements(Source):
     recipe: type[Component]
 
 
@@ -489,7 +490,7 @@ class Process(Component):
 
     # walk the process's Update increment leaves: from_tendency adds dt times
     # the matching Tendency leaf of output, derived_by adds the recipe output
-    # that run_increment_recipes computed
+    # that Plan.accumulate computed
     def accumulate(
         self, into: State, dt: float, output: State, *computed: State
     ) -> None:
@@ -499,57 +500,90 @@ class Process(Component):
         for d in self.Update.declarations():
             if d.tag is not Tag.INCREMENT or d.quantity.parent is None:
                 continue
-            if isinstance(d.marker, FromTendency):
+            if isinstance(d.source, FromTendency):
                 tendency = tendencies[(tendency_of(d.quantity.parent), d.location)]
                 np.asarray(targets[d.key].ndarray)[...] += dt * np.asarray(
                     tendency.ndarray
                 )
-            elif isinstance(d.marker, Derived):
+            elif isinstance(d.source, Derived):
                 np.asarray(targets[d.key].ndarray)[...] += np.asarray(
                     available[d.key].ndarray
                 )
 
 
+# Composition:
+# the wiring created by composition(); see composition() for the explanation.
+# Static: the providers with their buffers in dependency order, what each
+# child and hook needs of them, the increments state, the increment recipes
+# per process, the hooks.
 @dataclasses.dataclass(frozen=True)
-class Resolution:
-    providers: tuple[tuple[Recipe, State], ...]
+class Composition:
+    providers: dict[Recipe, State]
+    needs: dict[Component, tuple[Recipe, ...]]
     increments: State
     increment_recipes: dict[Process, tuple[tuple[Recipe, State], ...]]
     hooks: tuple[Component, ...]
 
-    # skips a provider whose whole output is already supplied
-    def run_providers(self, *supplied: State) -> tuple[State, ...]:
+    # one pass over the children with fixed inputs: zeroes the increments and
+    # returns the Plan; the composer begins a new one when the inputs change
+    # (per substep, per step, per physics call)
+    def begin(self) -> Plan:
+        zero(self.increments)
+        return Plan(self)
+
+
+# Plan:
+# one pass of a composite over its children. A provider runs at most once per
+# plan, at the first child that needs it, so the composer never looks at what
+# a child declares: plan.run(child, inputs, outputs) is the whole call.
+class Plan:
+    def __init__(self, composition: Composition) -> None:
+        self.composition = composition
+        self.produced: dict[Recipe, State] = {}
+
+    # runs the providers `component` needs, in order, skipping one that ran in
+    # this plan or whose whole output the composer supplies (supplied wins)
+    def _provide(self, component: Component, supplied: tuple[State, ...]) -> tuple[State, ...]:
         available = _available(supplied)
-        produced: list[State] = []
-        for provider, output in self.providers:
-            if all(d.key in available for d in provider.Output.declarations()):
+        for provider in self.composition.needs[component]:
+            if provider in self.produced or all(d.key in available for d in provider.Output.declarations()):
                 continue
-            provider(provider.collect_inputs(*supplied, *produced), output)
-            produced.append(output)
-        return tuple(produced)
+            output = self.composition.providers[provider]
+            provider(collect(provider.Input, *supplied, *self.produced.values()), output)
+            self.produced[provider] = output
+        return tuple(self.produced.values())
 
-    def run_increment_recipes(
-        self, process: Process, output: State, *supplied: State
-    ) -> tuple[State, ...]:
+    # the composer's one verb per child: provide, collect, call
+    def run(self, child: Component, inputs: tuple[State, ...], outputs: tuple[State, ...] = ()) -> None:
+        produced = self._provide(child, inputs)
+        child(collect(child.Input, *inputs, *produced), collect(child.Output, *outputs))
+
+    # the process's increment recipes on its output, then its accumulate
+    def accumulate(self, process: Process, output: State, dt: float, *supplied: State) -> None:
         computed: list[State] = []
-        for recipe, recipe_output in self.increment_recipes[process]:
-            recipe(recipe.collect_inputs(output, *supplied), recipe_output)
+        for recipe, recipe_output in self.composition.increment_recipes[process]:
+            recipe(collect(recipe.Input, output, *supplied), recipe_output)
             computed.append(recipe_output)
-        return tuple(computed)
+        process.accumulate(self.composition.increments, dt, output, *computed)
 
-    # output = input + increments, leaf by leaf: an output leaf without an
-    # increment is copied from input unless it is the same buffer; each
-    # Increments leaf is added onto its parent, found in output or in produced
-    # (a provider's buffer); a parent found nowhere is UnappliedIncrement; then
-    # the hooks, once, reading the updated state and writing into output
-    def update(self, input: State, output: State, *produced: State) -> None:
+    # output = input + increments, leaf by leaf: the hooks' providers first, so
+    # a hook never reads a stale buffer on a pass where no process needed it;
+    # an output leaf without an increment is copied from input unless it is
+    # the same buffer; each Increments leaf is added onto its parent, found in
+    # output or in a provider's buffer; a parent found nowhere is
+    # UnappliedIncrement; then the hooks, once, reading the updated state and
+    # writing into output
+    def update(self, input: State, output: State) -> None:
+        for hook in self.composition.hooks:
+            self._provide(hook, (input,))
+        produced = tuple(self.produced.values())
         inputs = _available((input, *produced))
         outputs = _available((output, *produced))
-        incremented = {_parent_key(d) for d in self.increments.declarations()}
+        incremented = {_parent_key(d) for d in self.composition.increments.declarations()}
         for d, value in output.leaves():
             if d.key not in incremented and value is not inputs[d.key]:
                 np.asarray(value.ndarray)[...] = np.asarray(inputs[d.key].ndarray)
-        for d, value in self.increments.leaves():
+        for d, value in self.composition.increments.leaves():
             parent = _parent_key(d)
             if parent not in outputs:
                 raise UnappliedIncrement(d.label)
@@ -558,13 +592,18 @@ class Resolution:
                 np.asarray(value.ndarray),
                 out=np.asarray(outputs[parent].ndarray),
             )
-        for hook in self.hooks:
-            hook(
-                hook.collect_inputs(output, *produced),
-                hook.collect_output(output, *produced),
-            )
+        for hook in self.composition.hooks:
+            hook(collect(hook.Input, output, *produced), collect(hook.Output, output, *produced))
 
 
+# composition:
+# runs once, at composite init. Reads the children's (Components) declarations,
+# checks them, allocates what they need, returns the Composition.
+# "Component declares, composite computes": composition is where declarations
+# turn into wiring. Errors are caught here, not at step time.
+# Always called by a composite, for all its children; it is empty for children
+# that declare no sources (e.g. derived_by).
+#
 # First pass: visit each child's Input for derived_by, recurse into recipe
 # Inputs, dedupe, order dependencies first. Second pass, per Process: hooks
 # must write the leaf they hang on, and one hook per quantity; from_tendency
@@ -572,15 +611,16 @@ class Resolution:
 # recipe instance per process, its inputs checked against the process Output
 # and the composite Input; every increment parent and hook target must be a
 # composite output or a provider output; every Tendency output must be consumed
-# by some leaf; every composite output is an input or incremented. Returns the
-# Resolution.
-def resolve(
+# by some leaf; every composite output is an input or incremented. Then the
+# needs: for each child and hook, the providers (transitively) whose output
+# keys its Input names.
+def composition(
     children: Iterable[Component],
     sizes: dict[gtx.Dimension, int],
     *,
     input: type[State],
     output: type[State],
-) -> Resolution:
+) -> Composition:
     children = tuple(children)
     input_keys = {d.key for d in input.declarations()}
     output_keys = {d.key for d in output.declarations()}
@@ -588,9 +628,9 @@ def resolve(
 
     def visit(cls: type[State]) -> None:
         for d in cls.declarations():
-            if not isinstance(d.marker, Derived):
+            if not isinstance(d.source, Derived):
                 continue
-            recipe = d.marker.recipe
+            recipe = d.source.recipe
             known_recipe = DERIVATIONS.setdefault(d.key, recipe)
             if known_recipe is not recipe:
                 raise InconsistentDerivation(
@@ -618,8 +658,8 @@ def resolve(
         computed: list[tuple[Recipe, State]] = []
         for d in child.Update.declarations() if isinstance(child, Process) else ():
             parent = d.quantity.parent
-            if isinstance(d.marker, AfterIncrements):
-                hook = d.marker.recipe
+            if isinstance(d.source, AfterIncrements):
+                hook = d.source.recipe
                 if d.key not in {h.key for h in hook.Output.declarations()}:
                     raise InconsistentUpdate(
                         f"{label}.{d.name}: {hook.__name__} does not write {d.label}"
@@ -639,14 +679,14 @@ def resolve(
             if d.tag is not Tag.INCREMENT or parent is None:
                 raise InconsistentUpdate(f"{label}.{d.name}")
             parent_key = (parent, d.location)
-            if isinstance(d.marker, FromTendency):
+            if isinstance(d.source, FromTendency):
                 if (tendency_of(parent), d.location) not in outputs:
                     raise InconsistentUpdate(
                         f"{label}.{d.name}: no tendency of {parent.__name__} in Output"
                     )
                 consumed.add((tendency_of(parent), d.location))
-            elif isinstance(d.marker, Derived):
-                recipe = d.marker.recipe
+            elif isinstance(d.source, Derived):
+                recipe = d.source.recipe
                 if d.key not in {o.key for o in recipe.Output.declarations()}:
                     raise InconsistentUpdate(
                         f"{label}.{d.name}: {recipe.__name__} does not produce {d.label}"
@@ -678,11 +718,25 @@ def resolve(
                 f"{output.__qualname__}.{d.name}: neither an input nor incremented"
             )
 
-    return Resolution(
-        providers=tuple((recipe(), allocate(recipe.Output, sizes)) for recipe in order),
+    providers = {recipe(): allocate(recipe.Output, sizes) for recipe in order}
+    by_key = {d.key: provider for provider in providers for d in provider.Output.declarations()}
+
+    def needs_of(cls: type[State]) -> tuple[Recipe, ...]:
+        found: list[Recipe] = []
+        for d in cls.declarations():
+            provider = by_key.get(d.key)
+            if provider is not None and provider not in found:
+                found.extend(n for n in needs_of(provider.Input) if n not in found)
+                found.append(provider)
+        return tuple(found)
+
+    hook_instances = tuple(hook() for hook in hook_order)
+    return Composition(
+        providers=providers,
+        needs={c: needs_of(c.Input) for c in (*children, *hook_instances)},
         increments=allocate(state_type("Increments", increments), sizes),
         increment_recipes=increment_recipes,
-        hooks=tuple(hook() for hook in hook_order),
+        hooks=hook_instances,
     )
 
 
@@ -691,12 +745,12 @@ def resolve(
 def dataflow(*components: Component) -> str:
     def text(d: Decl) -> str:
         out = d.label
-        if isinstance(d.marker, Derived):
-            out += f" <- {d.marker.recipe.__name__}"
-        elif isinstance(d.marker, FromTendency):
+        if isinstance(d.source, Derived):
+            out += f" <- {d.source.recipe.__name__}"
+        elif isinstance(d.source, FromTendency):
             out += " <- tendency"
-        elif isinstance(d.marker, AfterIncrements):
-            out += f" <- after increments {d.marker.recipe.__name__}"
+        elif isinstance(d.source, AfterIncrements):
+            out += f" <- after increments {d.source.recipe.__name__}"
         return out
 
     def names(decls: tuple[Decl, ...], in_place: frozenset[str] = frozenset()) -> str:

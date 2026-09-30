@@ -51,7 +51,7 @@ class PhysicsDriver(fw.Component):
         self.outputs: dict[str, fw.State] = {
             name: fw.allocate(PROCESSES[name].Output, ops.SIZES) for name in process_intervals
         }
-        self.resolution = fw.resolve(
+        self.composition = fw.composition(
             [process for process, _ in self.processes.values()],
             ops.SIZES,
             input=PhysicsDriver.Input,
@@ -59,12 +59,10 @@ class PhysicsDriver(fw.Component):
         )
 
     def run(self, input: Input, output: Output) -> None:
-        produced = self.resolution.run_providers(input)
-        fw.zero(self.resolution.increments)
+        plan = self.composition.begin()
         for name, (process, time_control) in self.processes.items():
             process_output = self.outputs[name]
             if time_control.is_active(input.step_index):
-                process(process.collect_inputs(input, *produced), process_output)
-            computed = self.resolution.run_increment_recipes(process, process_output, input)
-            process.accumulate(self.resolution.increments, input.dtime, process_output, *computed)
-        self.resolution.update(input, output, *produced)
+                plan.run(process, inputs=(input,), outputs=(process_output,))
+            plan.accumulate(process, process_output, input.dtime, input)
+        plan.update(input, output)

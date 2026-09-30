@@ -3,10 +3,10 @@ import pytest
 import run
 
 EXPECTED_PROPOSED_CALLS = {
-    "example": {"compute_temperature": 8, "edge_2_cell_vector_rbf_interpolation": 8, "interpolate_to_half_levels": 8},
-    "no_muphys": {"compute_temperature": 8, "edge_2_cell_vector_rbf_interpolation": 8, "interpolate_to_half_levels": 8},
+    "example": {"compute_temperature": 8, "edge_2_cell_vector_rbf_interpolation": 6, "interpolate_to_half_levels": 8},
+    "no_muphys": {"compute_temperature": 8, "edge_2_cell_vector_rbf_interpolation": 6, "interpolate_to_half_levels": 8},
     "no_physics": {"compute_temperature": 4, "edge_2_cell_vector_rbf_interpolation": 0, "interpolate_to_half_levels": 8},
-    "no_output": {"compute_temperature": 4, "edge_2_cell_vector_rbf_interpolation": 4, "interpolate_to_half_levels": 8},
+    "no_output": {"compute_temperature": 4, "edge_2_cell_vector_rbf_interpolation": 2, "interpolate_to_half_levels": 8},
 }
 
 

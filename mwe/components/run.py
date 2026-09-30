@@ -104,15 +104,15 @@ def print_dataflow(run_config: config.Config) -> None:
     p = d.physics
     print(
         fw.dataflow(
-            *[recipe for recipe, _ in d.dycore_resolution.providers],
+            *d.composition.needs[d.solve_nonhydro],
             d.solve_nonhydro,
             d.diffusion,
             d.tracer_advection,
-            *[recipe for recipe, _ in p.resolution.providers],
+            *p.composition.providers,
             *[process for process, _ in p.processes.values()],
-            *[recipe for recipes in p.resolution.increment_recipes.values() for recipe, _ in recipes],
-            *p.resolution.hooks,
-            *[recipe for recipe, _ in d.io_resolution.providers],
+            *[recipe for recipes in p.composition.increment_recipes.values() for recipe, _ in recipes],
+            *p.composition.hooks,
+            *d.composition.needs[d.io_monitor],
             d.io_monitor,
         )
     )

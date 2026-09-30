@@ -194,6 +194,9 @@ class HalfConsumer(fw.Component):
 
     Output = fw.Empty
 
+    def run(self, input: Input, output: fw.Empty) -> None:
+        pass
+
 
 def test_declarations_carry_quantity_tag_and_marker() -> None:
     by_name = {d.name: d for d in Producer.Input.declarations()}
@@ -205,27 +208,25 @@ def test_declarations_carry_quantity_tag_and_marker() -> None:
         "Pressure",
         "Pa s-1",
     )
-    assert {d.name: d.marker for d in Consumer.Input.declarations()} == {"density": fw.Derived(DensityFromSalt), "salt": None}
-    assert [type(d.marker) for d in Consumer.Update.declarations()] == [fw.FromTendency, fw.AfterIncrements]
+    assert {d.name: d.source for d in Consumer.Input.declarations()} == {"density": fw.Derived(DensityFromSalt), "salt": None}
+    assert [type(d.source) for d in Consumer.Update.declarations()] == [fw.FromTendency, fw.AfterIncrements]
 
 
 def test_collect_picks_leaves_by_quantity_from_several_states() -> None:
     owner = fw.allocate(Owner, ops.SIZES)
     other = fw.allocate(Producer.Output, ops.SIZES)
-    p = Producer()
-    got = p.collect_inputs(owner, other)
+    got = fw.collect(Producer.Input, owner, other)
     assert got.temperature is owner.temperature and got.salt is owner.salt
-    assert p.collect_output(other).ddt_temperature is other.ddt_temperature
+    assert fw.collect(Producer.Output, other).ddt_temperature is other.ddt_temperature
     view = fw.collect(Owner, owner)
     assert view is not owner and view.salt is owner.salt
 
 
 def test_collect_errors() -> None:
-    p = Producer()
     with pytest.raises(fw.MissingInput):
-        p.collect_inputs(fw.allocate(Producer.Output, ops.SIZES))
+        fw.collect(Producer.Input, fw.allocate(Producer.Output, ops.SIZES))
     with pytest.raises(fw.AmbiguousSource):
-        p.collect_inputs(fw.allocate(Owner, ops.SIZES), fw.allocate(Owner, ops.SIZES))
+        fw.collect(Producer.Input, fw.allocate(Owner, ops.SIZES), fw.allocate(Owner, ops.SIZES))
     with pytest.raises(fw.UnresolvedInput):
         Consumer.Input(salt=fw.allocate(Owner, ops.SIZES).salt)
 
@@ -233,14 +234,14 @@ def test_collect_errors() -> None:
 def test_call_refuses_undeclared_aliasing() -> None:
     owner = fw.allocate(Owner, ops.SIZES)
     ops.arr(owner.salt)[...] = 1.0
-    doubler = Doubler()
-    doubler(doubler.collect_inputs(owner), doubler.collect_output(owner))
+    doubler, strict = Doubler(), NotInPlaceDoubler()
+    plan = fw.composition([doubler, strict], ops.SIZES, input=Owner, output=Owner).begin()
+    plan.run(doubler, inputs=(owner,), outputs=(owner,))
     assert np.array_equal(ops.arr(owner.salt), np.full((4, 3), 2.0))
-    strict = NotInPlaceDoubler()
     with pytest.raises(fw.AliasedOutput, match="NotInPlaceDoubler.salt"):
-        strict(strict.collect_inputs(owner), strict.collect_output(owner))
+        plan.run(strict, inputs=(owner,), outputs=(owner,))
     other = fw.allocate(Owner, ops.SIZES)
-    strict(strict.collect_inputs(owner), strict.collect_output(other))
+    plan.run(strict, inputs=(owner,), outputs=(other,))
     assert np.array_equal(ops.arr(other.salt), np.full((4, 3), 4.0))
 
 
@@ -248,15 +249,16 @@ def test_accumulate_then_update_adds_dt_times_tendency_to_parent() -> None:
     owner = fw.allocate(Owner, ops.SIZES)
     p = Producer()
     output = fw.allocate(Producer.Output, ops.SIZES)
-    resolution = fw.resolve([p], ops.SIZES, input=Owner, output=Owner)
-    p(p.collect_inputs(owner), output)
-    p.accumulate(resolution.increments, 0.5, output)
-    resolution.update(owner, owner)
+    composition = fw.composition([p], ops.SIZES, input=Owner, output=Owner)
+    plan = composition.begin()
+    plan.run(p, inputs=(owner,), outputs=(output,))
+    plan.accumulate(p, output, 0.5)
+    plan.update(owner, owner)
     with pytest.raises(fw.UnappliedIncrement):
-        resolution.update(fw.Empty(), fw.Empty())
+        plan.update(fw.Empty(), fw.Empty())
     assert np.array_equal(ops.arr(owner.temperature), np.full((4, 3), 1.0))
-    fw.zero(resolution.increments)
-    assert not any(ops.arr(value).any() for _, value in resolution.increments.leaves())
+    composition.begin()
+    assert not any(ops.arr(value).any() for _, value in composition.increments.leaves())
 
 
 def test_update_into_a_separate_output_copies_what_has_no_increment() -> None:
@@ -264,73 +266,77 @@ def test_update_into_a_separate_output_copies_what_has_no_increment() -> None:
     target = fw.allocate(Owner, ops.SIZES)
     p = Producer()
     output = fw.allocate(Producer.Output, ops.SIZES)
-    resolution = fw.resolve([p], ops.SIZES, input=Owner, output=Owner)
-    p(p.collect_inputs(owner), output)
-    p.accumulate(resolution.increments, 1.0, output)
-    resolution.update(owner, target)
+    plan = fw.composition([p], ops.SIZES, input=Owner, output=Owner).begin()
+    plan.run(p, inputs=(owner,), outputs=(output,))
+    plan.accumulate(p, output, 1.0)
+    plan.update(owner, target)
     assert np.array_equal(ops.arr(target.salt), ops.arr(owner.salt))
     assert np.array_equal(ops.arr(target.temperature), ops.arr(owner.temperature) + 2.0)
 
 
-def test_resolve_builds_providers_increments_recipes_and_hooks() -> None:
+def test_composition_builds_providers_needs_increments_recipes_and_hooks() -> None:
     consumer = Consumer()
-    resolution = fw.resolve([consumer], ops.SIZES, input=Owner, output=Owner)
-    assert [type(p) for p, _ in resolution.providers] == [DensityFromSalt]
-    assert [d.quantity.__name__ for d in resolution.increments.declarations()] == ["IncrementOfDensity"]
-    assert resolution.increment_recipes == {consumer: ()}
-    assert [type(h) for h in resolution.hooks] == [SaltFromDensity]
+    composition = fw.composition([consumer], ops.SIZES, input=Owner, output=Owner)
+    (provider,) = composition.providers
+    assert type(provider) is DensityFromSalt and composition.needs[consumer] == (provider,)
+    assert [d.quantity.__name__ for d in composition.increments.declarations()] == ["IncrementOfDensity"]
+    assert composition.increment_recipes == {consumer: ()}
+    assert [type(h) for h in composition.hooks] == [SaltFromDensity]
+    assert composition.needs[composition.hooks[0]] == (provider,)
 
     owner = fw.allocate(Owner, ops.SIZES)
     ops.arr(owner.salt)[...] = 1.0
-    produced = resolution.run_providers(owner)
-    provided = resolution.providers[0][1]
-    density = ops.arr(getattr(provided, "density"))
-    assert produced == (provided,) and np.array_equal(density, np.full((4, 3), 2.0))
-    assert resolution.run_providers(owner, *produced) == ()
     output = fw.allocate(Consumer.Output, ops.SIZES)
-    consumer(consumer.collect_inputs(owner, *produced), output)
-    consumer.accumulate(resolution.increments, 1.0, output, *resolution.run_increment_recipes(consumer, output, owner))
-    resolution.update(owner, owner, *produced)
+    plan = composition.begin()
+    plan.run(consumer, inputs=(owner,), outputs=(output,))
+    provided = composition.providers[provider]
+    density = ops.arr(getattr(provided, "density"))
+    assert plan.produced == {provider: provided} and np.array_equal(density, np.full((4, 3), 2.0))
+    plan.accumulate(consumer, output, 1.0, owner)
+    plan.update(owner, owner)
     assert np.array_equal(density, np.full((4, 3), 4.0))
     assert np.array_equal(ops.arr(owner.salt), np.full((4, 3), 2.0))
+    ops.arr(owner.salt)[...] = 3.0
+    composition.begin().run(consumer, inputs=(owner, provided), outputs=(output,))
+    assert np.array_equal(density, np.full((4, 3), 4.0))
 
 
-def test_resolve_runs_declared_increment_recipes() -> None:
+def test_composition_runs_declared_increment_recipes() -> None:
     consumer = IncrementConsumer()
-    resolution = fw.resolve([consumer], ops.SIZES, input=Owner, output=Owner)
-    assert [type(r) for r, _ in resolution.increment_recipes[consumer]] == [SaltIncrementFromDensityTendency]
-    assert [d.quantity.__name__ for d in resolution.increments.declarations()] == ["IncrementOfSalt"]
+    composition = fw.composition([consumer], ops.SIZES, input=Owner, output=Owner)
+    assert [type(r) for r, _ in composition.increment_recipes[consumer]] == [SaltIncrementFromDensityTendency]
+    assert [d.quantity.__name__ for d in composition.increments.declarations()] == ["IncrementOfSalt"]
 
     owner = fw.allocate(Owner, ops.SIZES)
     ops.arr(owner.salt)[...] = 1.0
     output = fw.allocate(IncrementConsumer.Output, ops.SIZES)
-    consumer(consumer.collect_inputs(owner), output)
-    computed = resolution.run_increment_recipes(consumer, output, owner)
-    consumer.accumulate(resolution.increments, 1.0, output, *computed)
-    resolution.update(owner, owner)
+    plan = composition.begin()
+    plan.run(consumer, inputs=(owner,), outputs=(output,))
+    plan.accumulate(consumer, output, 1.0, owner)
+    plan.update(owner, owner)
     assert np.array_equal(ops.arr(owner.salt), np.full((4, 3), 16.0))
 
 
-def test_resolve_errors() -> None:
+def test_composition_errors() -> None:
     consumer = Consumer()
     with pytest.raises(fw.InconsistentDerivation):
-        fw.resolve([consumer, OtherConsumer()], ops.SIZES, input=Owner, output=Owner)
+        fw.composition([consumer, OtherConsumer()], ops.SIZES, input=Owner, output=Owner)
     fw.DERIVATIONS.clear()
-    fw.resolve([consumer], ops.SIZES, input=Owner, output=Owner)
+    fw.composition([consumer], ops.SIZES, input=Owner, output=Owner)
     with pytest.raises(fw.InconsistentDerivation, match="DensityFromSalt vs DensityFromNothing"):
-        fw.resolve([OtherConsumer()], ops.SIZES, input=fw.Empty, output=fw.Empty)
+        fw.composition([OtherConsumer()], ops.SIZES, input=fw.Empty, output=fw.Empty)
     with pytest.raises(fw.UnappliedIncrement):
-        fw.resolve([Producer()], ops.SIZES, input=fw.Empty, output=fw.Empty)
+        fw.composition([Producer()], ops.SIZES, input=fw.Empty, output=fw.Empty)
     with pytest.raises(fw.UnappliedTendency):
-        fw.resolve([Forgetful()], ops.SIZES, input=Owner, output=Owner)
+        fw.composition([Forgetful()], ops.SIZES, input=Owner, output=Owner)
     with pytest.raises(fw.UnappliedTendency):
-        fw.resolve([ForgetfulProcess()], ops.SIZES, input=Owner, output=Owner)
+        fw.composition([ForgetfulProcess()], ops.SIZES, input=Owner, output=Owner)
     with pytest.raises(fw.InconsistentUpdate):
-        fw.resolve([WrongHook()], ops.SIZES, input=Owner, output=Owner)
+        fw.composition([WrongHook()], ops.SIZES, input=Owner, output=Owner)
     with pytest.raises(fw.InconsistentUpdate):
-        fw.resolve([WrongTendency()], ops.SIZES, input=Owner, output=Owner)
+        fw.composition([WrongTendency()], ops.SIZES, input=Owner, output=Owner)
     with pytest.raises(fw.InconsistentUpdate, match="neither an input nor incremented"):
-        fw.resolve([], ops.SIZES, input=fw.Empty, output=Owner)
+        fw.composition([], ops.SIZES, input=fw.Empty, output=Owner)
 
 
 def test_location_is_part_of_the_key() -> None:
@@ -373,17 +379,18 @@ def test_relocation_registers_one_recipe_per_edge() -> None:
     with pytest.raises(fw.InconsistentRelocation, match="another location expected"):
         fw.relocation(DensityFromSalt)
     consumer = HalfConsumer()
-    resolution = fw.resolve([consumer], ops.SIZES, input=Owner, output=fw.Empty)
+    composition = fw.composition([consumer], ops.SIZES, input=Owner, output=fw.Empty)
     owner = fw.allocate(Owner, ops.SIZES)
     ops.arr(owner.salt)[...] = [[1.0, 3.0, 5.0]] * 4
-    (produced,) = resolution.run_providers(owner)
-    assert np.array_equal(ops.arr(consumer.collect_inputs(owner, produced).salt_ic), [[1.0, 2.0, 4.0, 5.0]] * 4)
+    composition.begin().run(consumer, inputs=(owner,))
+    (provided,) = composition.providers.values()
+    assert np.array_equal(ops.arr(getattr(provided, "salt_ic")), [[1.0, 2.0, 4.0, 5.0]] * 4)
     assert "Salt@CellKHalf <- SaltToHalfLevels" in fw.dataflow(consumer)
 
 
 def test_state_type_builds_a_declared_state() -> None:
     cls = fw.state_type("Dynamic", {"salt": (SField, None), "density": (DField, fw.derived_by(DensityFromSalt))})
-    assert [(d.name, d.quantity.__name__, d.marker) for d in cls.declarations()] == [
+    assert [(d.name, d.quantity.__name__, d.source) for d in cls.declarations()] == [
         ("salt", "Salt", None),
         ("density", "Density", fw.Derived(DensityFromSalt)),
     ]
