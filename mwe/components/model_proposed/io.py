@@ -6,10 +6,11 @@ from model_proposed import recipes
 from model_proposed.common import framework as fw, quantities as qty
 import ops
 
-# The recipes for derived output variables sit here so that IO declares its
-# Input like every other component does. They could as well live on the
-# quantity as its default source, `class U(fw.Quantity, ...,
-# derived_by=recipes.UFromVn)`, and IO would then only name quantities.
+# The recipes for derived output variables are written  here so that IO
+# declares its Input like every other component does. They could as well live
+# on the quantity definition in quantities.py as its default source:
+# `class U(fw.Quantity, ..., derived_by=recipes.UFromVn)`, and IO would then
+# only select them based on the config.
 DERIVED: dict[type[fw.Quantity], fw.Derived] = {
     qty.U: fw.derived_by(recipes.UFromVn),
     qty.Temperature: fw.derived_by(recipes.TemperatureFromThetaExner),
