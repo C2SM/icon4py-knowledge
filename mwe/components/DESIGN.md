@@ -200,7 +200,7 @@ the dycore decides, from the same flags, whether to recompute the predictor.
 
 ```python
 class Quantity:                                               # type-level tag, never instantiated; one subclass per quantity
-    units, standard_name, long_name, parent, locations: ClassVar   # class kwargs; the class name is the internal name; registers in REGISTRY[__name__]
+    locations, standard_name, units, long_name, parent: ClassVar   # class kwargs; the class name is the internal name; registers in REGISTRY[__name__]
 def lookup(key) -> type[Quantity]                             # by class name or CF standard_name: the output config's vocabulary
 def tendency_of(q) -> type[Quantity]                          # memoized derived tag TendencyOf<Q>; parent=q, units=f"{q.units} s-1", standard_name tendency_of_<q's>, same locations
 def increment_of(q) -> type[Quantity]                         # memoized derived tag IncrementOf<Q>; parent=q, units=q.units

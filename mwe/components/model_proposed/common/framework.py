@@ -22,28 +22,28 @@ class DuplicateQuantity(ValueError):
 # classes are meant to become the phantom type argument of the field once GT4Py
 # implements it.
 class Quantity:
-    units: ClassVar[str]
+    locations: ClassVar[tuple[Any, ...] | None]
     standard_name: ClassVar[str | None]
+    units: ClassVar[str]
     long_name: ClassVar[str | None]
     parent: ClassVar[type[Quantity] | None]
-    locations: ClassVar[tuple[Any, ...] | None]
 
     def __init_subclass__(
         cls,
         *,
-        units: str,
+        locations: tuple[Any, ...] | None = None,
         standard_name: str | None = None,
+        units: str,
         long_name: str | None = None,
         parent: type[Quantity] | None = None,
-        locations: tuple[Any, ...] | None = None,
     ) -> None:
         super().__init_subclass__()
-        cls.units, cls.standard_name, cls.long_name, cls.parent, cls.locations = (
-            units,
+        cls.locations, cls.standard_name, cls.units, cls.long_name, cls.parent = (
+            locations,
             standard_name,
+            units,
             long_name,
             parent,
-            locations,
         )
         if REGISTRY.setdefault(cls.__name__, cls) is not cls:
             raise DuplicateQuantity(cls.__name__)
@@ -76,7 +76,7 @@ def _derived(prefix: str, q: type[Quantity], units: str, cf_prefix: str | None =
         types.new_class(
             name,
             (Quantity,),
-            {"units": units, "standard_name": standard_name, "parent": q, "locations": q.locations},
+            {"locations": q.locations, "standard_name": standard_name, "units": units, "parent": q},
         )
     return REGISTRY[name]
 
