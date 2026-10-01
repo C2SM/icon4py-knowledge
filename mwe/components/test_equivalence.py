@@ -15,11 +15,13 @@ EXPECTED_PROPOSED_CALLS = {
     "no_output": {"compute_temperature": 4, "edge_2_cell_vector_rbf_interpolation": 4, "interpolate_to_half_levels": 8},
     "prognostics": {"compute_temperature": 4, "edge_2_cell_vector_rbf_interpolation": 0, "interpolate_to_half_levels": 8},
 }
+EXPECTED_PROPOSED_CALLS["dt03"] = EXPECTED_PROPOSED_CALLS["example"]
 
 
-@pytest.mark.parametrize("label", list(run.CONFIGS))
+@pytest.mark.parametrize("label", list(run.RUNS))
 def test_current_and_proposed_agree(label: str) -> None:
-    a, b = run.run_current(run.CONFIGS[label]), run.run_proposed(run.CONFIGS[label])
+    run_config, dtime = run.RUNS[label]
+    a, b = run.run_current(run_config, dtime), run.run_proposed(run_config, dtime)
     assert run.compare(a, b) == []
     assert a["calls"] == EXPECTED_CALLS
     assert b["calls"] == EXPECTED_PROPOSED_CALLS[label]

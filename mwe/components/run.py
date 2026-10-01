@@ -10,7 +10,6 @@ from model_proposed import (
     diffusion,
     driver as proposed,
     physics_driver,
-    recipes,
     solve_nonhydro,
     tracer_advection,
 )
@@ -40,11 +39,19 @@ ICON_KEY: dict[str, str] = {
 STANDARD_NAME: dict[str, str] = {key: name for name, key in ICON_KEY.items()}
 
 
+# the matrix: every config at dt = 1, and the example at dt = 0.3, where the
+# order of a sum and a product shows
+RUNS: dict[str, tuple[config.Config, float]] = {label: (cfg, 1.0) for label, cfg in CONFIGS.items()} | {
+    "dt03": (CONFIGS["example"], 0.3)
+}
+
+
 def _calls() -> dict[str, int]:
     return {name: ops.CALLS[name] for name in COUNTED}
 
 
-def run_current(run_config: config.Config) -> dict[str, Any]:
+def run_current(run_config: config.Config, dtime: float = 1.0) -> dict[str, Any]:
+    ops.DTIME = dtime
     ops.CALLS.clear()
     legacy_config = dataclasses.replace(
         run_config, output_variables=tuple(ICON_KEY[name] for name in run_config.output_variables)
@@ -69,7 +76,8 @@ def run_current(run_config: config.Config) -> dict[str, Any]:
     return result
 
 
-def run_proposed(run_config: config.Config) -> dict[str, Any]:
+def run_proposed(run_config: config.Config, dtime: float = 1.0) -> dict[str, Any]:
+    ops.DTIME = dtime
     ops.CALLS.clear()
     icon4py_driver = proposed.Icon4pyDriver(run_config)
     icon4py_driver.time_integration(ops.N_STEPS)
@@ -89,7 +97,7 @@ def run_proposed(run_config: config.Config) -> dict[str, Any]:
         "calls": _calls(),
     }
     if "muphys" in run_config.physics:
-        result["pflx"] = ops.arr(getattr(icon4py_driver.physics.outputs["muphys"], "pflx").data)
+        result["pflx"] = ops.arr(getattr(icon4py_driver.physics.outputs["muphys"][0], "pflx").data)
     return result
 
 
@@ -104,8 +112,8 @@ def print_dataflow(run_config: config.Config) -> None:
             tracer_advection.Advection,
             *icon4py_driver.physics.resolution.providers,
             *[physics_driver.PROCESSES[name] for name in run_config.physics],
-            recipes.VnTendencyFromUTendency,
-            recipes.ExnerThetaFromTemperature,
+            *[r for rs in icon4py_driver.physics.updates.tendency_recipes.values() for r in rs],
+            *icon4py_driver.physics.updates.hooks,
             physics_driver.PhysicsDriver,
             *icon4py_driver.io_resolution.providers,
             icon4py_driver.io_monitor,
@@ -133,8 +141,8 @@ if __name__ == "__main__":
     print_dataflow(CONFIGS["example"])
     failed = False
     print(f"\n{'config':<11} {'side':<8} " + " ".join(f"{name:>{len(name)}}" for name in COUNTED))
-    for label, run_config in CONFIGS.items():
-        a, b = run_current(run_config), run_proposed(run_config)
+    for label, (run_config, dtime) in RUNS.items():
+        a, b = run_current(run_config, dtime), run_proposed(run_config, dtime)
         mismatches = compare(a, b)
         failed |= bool(mismatches)
         for side, result in (("current", a), ("proposed", b)):
