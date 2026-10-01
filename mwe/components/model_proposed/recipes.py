@@ -44,10 +44,10 @@ class ThetaVToHalfLevels(fw.Recipe):
 
 class VnTendencyFromUTendency(fw.Recipe):
     class Input(fw.State):
-        tend_u: qty.TendencyOfU.CellK
+        tend_u: fw.Tendency[qty.U, fw.CellK]
 
     class Output(fw.State):
-        ddt_vn: qty.TendencyOfVn.EdgeK
+        ddt_vn: fw.Tendency[qty.Vn, fw.EdgeK]
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)
