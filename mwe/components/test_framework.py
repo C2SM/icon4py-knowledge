@@ -146,6 +146,21 @@ def test_recipe_is_a_component_that_owns_its_result() -> None:
     assert np.all(np.asarray(density.data.ndarray) == 6.0)
 
 
+def test_dataflow_lists_reads_and_produces_by_label() -> None:
+    class Flux(fw.Component):
+        class Input(fw.State):
+            pressure: Pressure.CellK
+            column: Pressure.Cell
+            tend: fw.Tendency[Salt, fw.Cell]
+
+        Output = fw.Empty
+
+    assert fw.dataflow(Halve, Flux) == (
+        "Halve | reads: Pressure@CellK | produces: Pressure@CellK\n"
+        "Flux | reads: Pressure@CellK, Pressure@Cell, TendencyOfSalt | produces: -"
+    )
+
+
 # what mypy and pyright check: a quantity or a place mismatch is a type error.
 # Each ignore below is required (both checkers report an unused one), so the
 # suite type-checking is the test.
