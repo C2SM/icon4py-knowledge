@@ -15,6 +15,9 @@ class Pressure(fw.Quantity, dims=(dims.CellDim, dims.KDim), standard_name="air_p
 class Salt(fw.Quantity, dims=(dims.CellDim,), units="1"): ...
 
 
+class Density(fw.Quantity, dims=(dims.CellDim, dims.KDim), standard_name="air_density", units="kg m-3"): ...
+
+
 class Column(fw.State):
     pressure: fw.Field[Pressure]
     salt: fw.Field[Salt]
@@ -95,3 +98,24 @@ def static_checks(pressure: fw.Field[Pressure], salt: fw.Field[Salt]) -> None:
     Halve.Input(pressure=salt)  # type: ignore[arg-type]
     Halve.Input(pressure=pressure)
     del wrong
+
+
+def test_recipe_is_a_component_that_owns_its_result() -> None:
+    class DensityFromPressure(fw.Recipe):
+        class Input(fw.State):
+            pressure: fw.Field[Pressure]
+
+        class Output(fw.State):
+            density: fw.Field[Density]
+
+        def run(self, input: Input, out: Output | None = None) -> Output:
+            out = self.buffers(out)
+            np.asarray(out.density.data.ndarray)[...] = 2.0 * np.asarray(input.pressure.data.ndarray)
+            return out
+
+    pressure = fw.zeros(Pressure, SIZES)
+    np.asarray(pressure.data.ndarray)[...] = 3.0
+    recipe = DensityFromPressure(SIZES)
+    density = recipe.run(DensityFromPressure.Input(pressure=pressure)).density
+    assert density is recipe.output.density and density.quantity is Density
+    assert np.all(np.asarray(density.data.ndarray) == 6.0)

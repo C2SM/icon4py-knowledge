@@ -1,7 +1,7 @@
 from datetime import timedelta
 
-from model_proposed import diffusion, io, physics_driver, solve_nonhydro, tracer_advection
-from model_proposed.common import framework as fw, quantities as qty, states
+from model_proposed import diffusion, io, physics_driver, recipes, solve_nonhydro, tracer_advection
+from model_proposed.common import framework as fw, states
 import config
 import ops
 
@@ -21,9 +21,11 @@ class Icon4pyDriver:
         self.tracer_advection = tracer_advection.Advection(sizes)
         self.physics = physics_driver.PhysicsDriver(sizes, run_config.physics)
         self.io_monitor = io.IOMonitor(sizes, run_config.output_variables)
-        # the diagnostics for output, derived here before each store
-        self.temperature = fw.zeros(qty.TemperatureOnCellK, sizes)
-        self.u = fw.zeros(qty.UOnCellK, sizes)
+        # the recipes the driver runs: theta_v on half levels for the dycore,
+        # the diagnostics for output
+        self.theta_v_to_half_levels = recipes.ThetaVToHalfLevels(sizes)
+        self.temperature_from_theta_exner = recipes.TemperatureFromThetaExner(sizes)
+        self.u_from_vn = recipes.UFromVn(sizes)
 
     def time_integration(self, n_time_steps: int) -> None:
         for time_step in range(n_time_steps):
@@ -39,8 +41,10 @@ class Icon4pyDriver:
 
     def _store_output(self, info: states.StepInfo) -> None:
         now = self.prognostic_states.now
-        ops.compute_temperature(now.theta_v.data, now.exner.data, self.temperature.data)
-        ops.edge_2_cell_vector_rbf_interpolation(now.vn.data, self.u.data)
+        temperature = self.temperature_from_theta_exner.run(
+            recipes.TemperatureFromThetaExner.Input(theta_v=now.theta_v, exner=now.exner)
+        ).temperature
+        u = self.u_from_vn.run(recipes.UFromVn.Input(vn=now.vn)).u
         self.io_monitor.run(
             io.IOMonitor.Input(
                 rho=now.rho,
@@ -48,8 +52,8 @@ class Icon4pyDriver:
                 vn=now.vn,
                 exner=now.exner,
                 theta_v=now.theta_v,
-                temperature=self.temperature,
-                u=self.u,
+                temperature=temperature,
+                u=u,
                 simulation_time=info.simulation_time,
             )
         )
@@ -86,6 +90,9 @@ class Icon4pyDriver:
     def _do_dyn_substepping(self, info: states.StepInfo) -> None:
         for dyn_substep in range(info.ndyn_substeps):
             now, next = self.prognostic_states.now, self.prognostic_states.next
+            theta_v_ic = self.theta_v_to_half_levels.run(
+                recipes.ThetaVToHalfLevels.Input(theta_v=now.theta_v)
+            ).theta_v_ic
             self.solve_nonhydro.run(
                 solve_nonhydro.SolveNonhydro.Input(
                     vn=now.vn,
@@ -93,6 +100,7 @@ class Icon4pyDriver:
                     rho=now.rho,
                     exner=now.exner,
                     theta_v=now.theta_v,
+                    theta_v_ic=theta_v_ic,
                     mass_flx_me=self.prep_advection.mass_flx_me,
                     substep_dtime=info.substep_dtime,
                     ndyn_substeps=info.ndyn_substeps,
