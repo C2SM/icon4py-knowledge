@@ -148,12 +148,24 @@ def tendency_of(quantity: type[Quantity]) -> type[TendencyOf[Any]]:
 # ------------------------------------------------------------------------------
 # State: a frozen dataclass of typed leaves
 # ------------------------------------------------------------------------------
-# one Field leaf read back from a State class: its name, quantity and place
+# where a leaf's value comes from when the composer does not supply it; the
+# state band only carries one on the Decl, the component band defines them
+class Source:
+    pass
+
+
+class UnresolvedInput(ValueError):
+    pass
+
+
+# one Field leaf read back from a State class: its name, quantity, place and
+# source
 @dataclasses.dataclass(frozen=True)
 class Decl:
     name: str
     quantity: type[Quantity]
     dims: type[Dims]
+    source: Source | None
 
     @property
     def key(self) -> tuple[type[Quantity], type[Dims]]:
@@ -176,6 +188,12 @@ class State:
         super().__init_subclass__()
         dataclasses.dataclass(frozen=True, eq=False, kw_only=True)(cls)
         cls.declarations()  # read now: an undeclared place is refused where the class is defined
+
+    # a hand-built State cannot smuggle a source through: every leaf is a value
+    def __post_init__(self) -> None:
+        for d, value in self.leaves():
+            if isinstance(value, Source):
+                raise UnresolvedInput(f"{type(self).__qualname__}.{d.name}")
 
     # the Field leaves, in declaration order; plain leaves (floats, ints,
     # datetimes) are ordinary dataclass fields and not listed
@@ -216,7 +234,8 @@ def _declarations(cls: type[State]) -> tuple[Decl, ...]:
                     quantity = tendency_of(typing.get_args(quantity)[0])
                 if dims not in quantity.places():
                     raise InvalidDims(f"{cls.__qualname__}.{field.name}: {quantity.__name__} at {dims.__name__}")
-                found.append(Decl(field.name, quantity, dims))
+                source = field.default if isinstance(field.default, Source) else None
+                found.append(Decl(field.name, quantity, dims, source))
         _DECLARATIONS[cls] = tuple(found)
     return _DECLARATIONS[cls]
 
@@ -225,11 +244,12 @@ class Empty(State):
     pass
 
 
-# builds a State class at runtime, one leaf per (name, type); for a view
-# whose leaves come from the config, like IO's
-def state_type(name: str, leaves: Mapping[str, Any]) -> type[State]:
+# builds a State class at runtime, one leaf per (name, type), with a source
+# where given; for a view whose leaves come from the config, like IO's
+def state_type(name: str, leaves: Mapping[str, Any], sources: Mapping[str, Source] = {}) -> type[State]:
     def body(namespace: dict[str, Any]) -> None:
         namespace["__annotations__"] = dict(leaves)
+        namespace.update(sources)
 
     return typing.cast(type[State], types.new_class(name, (State,), exec_body=body))
 
@@ -354,14 +374,89 @@ class Recipe(Component):
     pass
 
 
+class InconsistentDerivation(ValueError):
+    pass
+
+
+@dataclasses.dataclass(frozen=True)
+class Derived(Source):
+    recipe: type[Recipe]
+
+
+# leaf default: `temperature: Temperature.CellK = derived_by(TemperatureFromThetaExner)`
+# says which recipe provides the leaf when the composer does not supply it
+def derived_by(recipe: type[Recipe]) -> Any:
+    return Derived(recipe)
+
+
+# the recipes the children's derived_by leaves name, one instance each,
+# ordered so that a recipe reading another's output runs after it
+@dataclasses.dataclass(frozen=True)
+class Resolution:
+    providers: tuple[Recipe, ...]
+
+    # runs every provider on the supplied states and what was produced before
+    # it, returns the produced states; one pass, the composer collects from both
+    def provide(self, *supplied: State) -> tuple[State, ...]:
+        produced: list[State] = []
+        for recipe in self.providers:
+            produced.append(recipe.run(collect(recipe.Input, *supplied, *produced)))
+        return tuple(produced)
+
+
+# one recipe per (quantity, dims) across the children and the recipes
+# themselves; a recipe must produce the leaf it is named on
+def resolve(children: Iterable[type[Component] | Component], sizes: Mapping[gtx.Dimension, int]) -> Resolution:
+    by_key: dict[tuple[type[Quantity], type[Dims]], type[Recipe]] = {}
+    queue: list[type[Component] | Component] = list(children)
+    seen: list[type[Component] | Component] = []
+    while queue:
+        child = queue.pop(0)
+        seen.append(child)
+        for d in child.Input.declarations():
+            if not isinstance(d.source, Derived):
+                continue
+            recipe = d.source.recipe
+            if d.key not in {o.key for o in recipe.Output.declarations()}:
+                raise InconsistentDerivation(f"{child.Input.__qualname__}.{d.name}: {recipe.__name__} does not produce {d.label}")
+            if by_key.setdefault(d.key, recipe) is not recipe:
+                raise InconsistentDerivation(f"{d.label}: {by_key[d.key].__name__} vs {recipe.__name__}")
+            if recipe not in queue and recipe not in seen:
+                queue.append(recipe)
+    recipes = list(dict.fromkeys(by_key.values()))
+    produced_by = {o.key: r for r in recipes for o in r.Output.declarations()}
+    ordered: list[type[Recipe]] = []
+    visiting: list[type[Recipe]] = []
+
+    def visit(recipe: type[Recipe]) -> None:
+        if recipe in ordered:
+            return
+        if recipe in visiting:
+            raise InconsistentDerivation("cycle: " + " -> ".join(r.__name__ for r in (*visiting, recipe)))
+        visiting.append(recipe)
+        for d in recipe.Input.declarations():
+            if d.key in produced_by and produced_by[d.key] is not recipe:
+                visit(produced_by[d.key])
+        visiting.pop()
+        ordered.append(recipe)
+
+    for recipe in recipes:
+        visit(recipe)
+    return Resolution(tuple(recipe(sizes) for recipe in ordered))
+
+
 # ------------------------------------------------------------------------------
 # Reports
 # ------------------------------------------------------------------------------
-# what each component reads and produces, from its declarations alone; an
-# instance for a component whose Input is built per instance
+# what each component reads and produces, from its declarations alone, with
+# `<- Recipe` on a derived leaf; an instance for a component whose Input is
+# built per instance
 def dataflow(*components: type[Component] | Component) -> str:
+    def text(d: Decl) -> str:
+        return d.label + (f" <- {d.source.recipe.__name__}" if isinstance(d.source, Derived) else "")
+
     def names(decls: tuple[Decl, ...]) -> str:
-        return ", ".join(d.label for d in decls) or "-"
+        return ", ".join(text(d) for d in decls) or "-"
 
     def name(c: type[Component] | Component) -> str:
         return c.__name__ if isinstance(c, type) else type(c).__name__

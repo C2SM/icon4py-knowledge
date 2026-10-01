@@ -55,9 +55,9 @@ class PhysicsDriver(fw.Component):
             PhysicsProcess(name, PROCESSES[name](sizes), ProcessTimeControl(interval))
             for name, interval in process_intervals.items()
         ]
-        # the recipes for the diagnostics the processes read, run here each step
-        self.temperature_from_theta_exner = recipes.TemperatureFromThetaExner(sizes)
-        self.u_from_vn = recipes.UFromVn(sizes)
+        # the recipes the processes declare for their derived inputs, run once
+        # per step before them
+        self.resolution = fw.resolve([process.component for process in self.processes], sizes)
         # one accumulator per tendency the processes emit, keyed by what it is a
         # tendency of and where, made when first seen (TendencyAccumulators in
         # icon4py keys them by output name)
@@ -70,36 +70,37 @@ class PhysicsDriver(fw.Component):
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)
-        temperature = self.temperature_from_theta_exner.run(fw.collect(recipes.TemperatureFromThetaExner.Input, input))
-        u = self.u_from_vn.run(fw.collect(recipes.UFromVn.Input, input))
+        produced = self.resolution.provide(input)
         for acc in self.accumulators.values():
             ops.arr(acc.data)[...] = 0.0
         for process in self.processes:
             if process.time_control.is_active(input.step_index) or process.name not in self.outputs:
                 component = process.component
-                self.outputs[process.name] = component.run(fw.collect(component.Input, input, temperature, u))
+                self.outputs[process.name] = component.run(fw.collect(component.Input, input, *produced))
             for d, value in self.outputs[process.name].leaves():
                 if issubclass(d.quantity, fw.TendencyOf):
                     key = (d.quantity.parent, d.dims)
                     if key not in self.accumulators:
                         self.accumulators[key] = fw.zeros(d.quantity, d.dims, self.sizes)
                     ops.arr(self.accumulators[key].data)[...] += ops.arr(value.data)
-        self._apply(input, temperature.temperature, out)
+        self._apply(input, produced, out)
         return out
 
     # the summed tendencies into the prognostics, once; `out` may alias `input`
-    def _apply(self, input: Input, temperature: qty.Temperature.CellK, out: Output) -> None:
+    def _apply(self, input: Input, produced: tuple[fw.State, ...], out: Output) -> None:
         acc, dt = self.accumulators, input.dtime
         _carry(input.vn, out.vn)
         _carry(input.qv, out.qv)
         if (qty.Qv, fw.CellK) in acc:
             ops.arr(out.qv.data)[...] = ops.arr(input.qv.data) + dt * ops.arr(acc[qty.Qv, fw.CellK].data)
         if (qty.Temperature, fw.CellK) in acc:
-            ops.arr(self._new_te.data)[...] = ops.arr(temperature.data) + dt * ops.arr(
+            # the EOS reads the temperature the processes derived, incremented
+            eos_input = fw.collect(recipes.ExnerThetaFromTemperature.Input, input, *produced)
+            ops.arr(self._new_te.data)[...] = ops.arr(eos_input.temperature.data) + dt * ops.arr(
                 acc[qty.Temperature, fw.CellK].data
             )
             self.exner_theta_from_temperature.run(
-                recipes.ExnerThetaFromTemperature.Input(temperature=self._new_te, exner=input.exner, theta_v=input.theta_v),
+                dataclasses.replace(eos_input, temperature=self._new_te),
                 out=fw.collect(recipes.ExnerThetaFromTemperature.Output, out),
             )
         else:

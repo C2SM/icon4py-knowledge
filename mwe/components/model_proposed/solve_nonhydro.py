@@ -2,6 +2,7 @@ from collections.abc import Mapping
 
 import gt4py.next as gtx
 
+from model_proposed import recipes
 from model_proposed.common import framework as fw, quantities as qty
 import ops
 
@@ -17,7 +18,7 @@ class SolveNonhydro(fw.Component):
         rho: qty.Rho.CellK
         exner: qty.Exner.CellK
         theta_v: qty.ThetaV.CellK
-        theta_v_ic: qty.ThetaV.CellKHalf
+        theta_v_ic: qty.ThetaV.CellKHalf = fw.derived_by(recipes.ThetaVToHalfLevels)
         mass_flx_me: qty.MassFlux.EdgeK
         substep_dtime: float
         ndyn_substeps: int
