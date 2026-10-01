@@ -224,3 +224,34 @@ class body; nothing else is automated.
 **Checks.** As 02, plus `test_quantity_is_a_tag_with_metadata_and_places`,
 `test_a_place_the_quantity_does_not_declare_is_refused`, and the place
 mismatch line in `static_checks`.
+
+## 04 Tendencies
+
+**Problem.** A tendency is a quantity declared by hand: four tags with their
+units typed in (`TendencyOfTemperature`, `K s-1`) and nothing linking
+`TendencyOfTemperature` to `Temperature`. The physics driver sums tendencies
+by output name, so muphys's `tend_temperature` and tmx's `tend_temperature`
+add up because both authors typed the same name, and `ApplyToPrognostic`
+knows by name which prognostic each sum lands on. icon4py's `tendency_of(...)`
+in `states/data.py` derives the metadata, but the link is gone once the dict
+is built.
+
+**Adds.** `TendencyOf[Q]`, a quantity derived from its parent:
+`fw.Tendency[qty.Temperature, fw.CellK]` names it in a type,
+`tendency_of(qty.Temperature)` is the one class behind it at runtime,
+memoized, with the parent's places, its units per second, the CF
+`tendency_of_` name where the parent has one, and `parent`. `declarations()`
+resolves the alias to that class. The physics driver keys its accumulators by
+`(parent, dims)` instead of output name, and `_apply` reads the sum for
+`(Qv, CellK)`: two processes' temperature tendencies add up because both are
+tendencies of `Temperature` at `CellK`. Still by hand: where each sum lands
+is written in `_apply`.
+
+**Costs.** Framework 212 lines (+37). `quantities.py` 25 (-13): the four
+hand-written tendency tags and the marker base are gone. A tendency leaf is
+`fw.Tendency[qty.U, fw.CellK]`, one subscription longer than `qty.U.CellK`.
+Counts unchanged, 8/8/8.
+
+**Checks.** As 03, plus `test_tendency_of_derives_one_class_per_parent`,
+`test_a_tendency_leaf_declares_the_derived_quantity`, and two tendency lines
+in `static_checks`.
