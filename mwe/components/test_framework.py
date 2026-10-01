@@ -18,7 +18,7 @@ class Salt(fw.Quantity, units="1"):
     type Cell = fw.Field[Salt, fw.Cell]
 
 
-class Density(fw.Quantity, standard_name="air_density", units="kg m-3"):
+class Density(fw.Quantity, standard_name="sea_water_density", units="kg m-3"):
     type CellK = fw.Field[Density, fw.CellK]
 
 
@@ -166,6 +166,27 @@ def test_collect_picks_leaves_by_quantity_and_place() -> None:
         fw.collect(View, fields, dtime=2.0)
     with pytest.raises(fw.AmbiguousSource, match="Pressure@CellK"):
         fw.collect(View, fields, salted, fw.allocate(Halve.Input, SIZES), dtime=2.0)
+
+
+def test_lookup_by_standard_name_or_class_name() -> None:
+    assert fw.lookup("air_pressure") is Pressure and fw.lookup("Pressure") is Pressure
+    assert fw.lookup("Salt") is Salt
+    with pytest.raises(fw.UnknownQuantity, match="pepper"):
+        fw.lookup("pepper")
+    with pytest.raises(fw.UnknownQuantity, match="TendencyOf"):
+        fw.lookup("TendencyOf")
+    with pytest.raises(fw.DuplicateQuantity, match="Salt"):
+        type("Salt", (fw.Quantity,), {}, units="1")
+    with pytest.raises(fw.DuplicateQuantity, match="air_pressure is taken"):
+        type("Pressure2", (fw.Quantity,), {}, standard_name="air_pressure", units="Pa")
+
+
+def test_state_type_builds_a_collectable_state() -> None:
+    View = fw.state_type("View", {"air_pressure": Pressure.CellK, "when": float})
+    fields = fw.allocate(Halve.Input, SIZES)
+    view = fw.collect(View, fields, when=1.0)
+    assert [d.label for d in View.declarations()] == ["Pressure@CellK"]
+    assert getattr(view, "air_pressure") is fields.pressure and getattr(view, "when") == 1.0
 
 
 def test_dataflow_lists_reads_and_produces_by_label() -> None:
