@@ -166,3 +166,35 @@ matrix as pytest, with the call counts); `test_framework.py` (6 unit tests and
 both checkers must flag: mypy strict reports an unused ignore, pyright with
 `reportUnnecessaryTypeIgnoreComment` likewise); `mypy --strict` on 61 files;
 pyright 0 errors; `ruff check`.
+
+## 02 Recipes
+
+**Problem.** A derived quantity is computed wherever someone needs it:
+`temperature` and `u` in `EntryState.diagnose_from` for physics and again in
+`DiagnosticsComputer` for output, `theta_v_ic` inside the dycore, `ddt_vn` from
+`tend_u` inside `ApplyToPrognostic`. Each site allocates its own buffer and
+names the stencil; what is derived from what is in the argument order of an
+`ops` call. A new consumer of `u` has to know the stencil's name and allocate.
+
+**Adds.** `Recipe`, an empty subclass of `Component`: a derivation declared
+like any component, `Input`, `Output`, `run`, owning its result. `recipes.py`
+(56 lines): `TemperatureFromThetaExner`, `UFromVn`, `ThetaVToHalfLevels`,
+`VnTendencyFromUTendency`, and `ExnerThetaFromTemperature`, a plain
+`Component`: its outputs are among its inputs, it updates rather than derives.
+`Recipe` is a name only, nothing reads it until a later layer. One module for
+the whole model: a consumer picks a recipe and reads `.temperature` off the
+result instead of writing a stencil call and a buffer. The drivers still
+decide when. `PhysicsDriver._diagnose` runs the two diagnostics recipes and
+the driver's `Diagnostics` state is gone, the recipes own the buffers;
+`Icon4pyDriver` runs `ThetaVToHalfLevels` before each dycore substep and the
+two diagnostics before each output; the dycore's `Input` names `theta_v_ic`
+instead of computing it.
+
+**Costs.** `model_proposed` 643 (+67: `recipes.py` 56, the `Recipe` base 8,
+a recipe call is longer than the `ops` call it replaces, the `Diagnostics`
+state and its allocation gone). `temperature`
+is still computed twice per step, since physics reads it before its update
+and output after; counts unchanged, 8/8/8. Nothing checks that two consumers
+derive a quantity the same way; later layer.
+
+**Checks.** As 01, plus `test_recipe_is_a_component_that_owns_its_result`.

@@ -1,13 +1,6 @@
 from model_proposed.common import framework as fw, quantities as qty
 
 
-# What the physics driver derives from the prognostics each step, in buffers
-# it owns (the `DiagnosticState` of icon4py's `EntryState`).
-class Diagnostics(fw.State):
-    temperature: fw.Field[qty.TemperatureOnCellK]
-    u: fw.Field[qty.UOnCellK]
-
-
 # What the physics driver offers its processes each step: the prognostics it
 # received plus the diagnostics it derived from them. Each process picks its
 # Input from here by hand (`collect_input` next to the process), as

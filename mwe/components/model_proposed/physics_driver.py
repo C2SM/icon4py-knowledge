@@ -4,7 +4,7 @@ from typing import Any
 
 import gt4py.next as gtx
 
-from model_proposed import muphys, physics_state, tmx
+from model_proposed import muphys, physics_state, recipes, tmx
 from model_proposed.common import framework as fw, quantities as qty
 import ops
 
@@ -67,15 +67,17 @@ class PhysicsDriver(fw.Component):
             PhysicsProcess(name, PROCESSES[name](sizes), ProcessTimeControl(interval))
             for name, interval in process_intervals.items()
         ]
-        # the diagnostics the processes read, derived here each step
-        self.diagnostics = fw.allocate(physics_state.Diagnostics, sizes)
+        # the recipes for the diagnostics the processes read, run here each step
+        self.temperature_from_theta_exner = recipes.TemperatureFromThetaExner(sizes)
+        self.u_from_vn = recipes.UFromVn(sizes)
         # one accumulator per tendency the processes emit, by output name, made
         # when first seen (TendencyAccumulators in icon4py)
         self.accumulators: dict[str, fw.Field[Any]] = {}
         # the last output of each process, reused on the steps it is not active
         self.outputs: dict[str, fw.State] = {}
         self._new_te = fw.zeros(qty.TemperatureOnCellK, sizes)
-        self._ddt_vn = fw.zeros(qty.TendencyOfVnOnEdgeK, sizes)
+        self.vn_tendency_from_u_tendency = recipes.VnTendencyFromUTendency(sizes)
+        self.exner_theta_from_temperature = recipes.ExnerThetaFromTemperature(sizes)
 
     # the five steps of icon4py's PhysicsDriver.run, as methods
     def run(self, input: Input, out: Output | None = None) -> Output:
@@ -89,19 +91,15 @@ class PhysicsDriver(fw.Component):
         self._apply(entry, input.dtime, out)
         return out
 
-    # one EntryState over the prognostics as given and the diagnostics derived
-    # from them into the driver's buffers (EntryState.diagnose_from)
+    # one EntryState over the prognostics as given and the diagnostics the
+    # recipes derive from them, in their buffers (EntryState.diagnose_from)
     def _diagnose(self, input: Input) -> physics_state.EntryState:
-        diagnostics = self.diagnostics
-        ops.compute_temperature(input.theta_v.data, input.exner.data, diagnostics.temperature.data)
-        ops.edge_2_cell_vector_rbf_interpolation(input.vn.data, diagnostics.u.data)
+        temperature = self.temperature_from_theta_exner.run(
+            recipes.TemperatureFromThetaExner.Input(theta_v=input.theta_v, exner=input.exner)
+        ).temperature
+        u = self.u_from_vn.run(recipes.UFromVn.Input(vn=input.vn)).u
         return physics_state.EntryState(
-            vn=input.vn,
-            exner=input.exner,
-            theta_v=input.theta_v,
-            qv=input.qv,
-            temperature=diagnostics.temperature,
-            u=diagnostics.u,
+            vn=input.vn, exner=input.exner, theta_v=input.theta_v, qv=input.qv, temperature=temperature, u=u
         )
 
     def _zero_accumulators(self) -> None:
@@ -127,12 +125,15 @@ class PhysicsDriver(fw.Component):
             ops.arr(out.qv.data)[...] = ops.arr(entry.qv.data) + dt * ops.arr(acc["tend_qv"].data)
         if "tend_temperature" in acc:
             ops.arr(self._new_te.data)[...] = ops.arr(entry.temperature.data) + dt * ops.arr(acc["tend_temperature"].data)
-            ops.update_exner_and_theta_v(
-                self._new_te.data, entry.exner.data, entry.theta_v.data, out.exner.data, out.theta_v.data
+            self.exner_theta_from_temperature.run(
+                recipes.ExnerThetaFromTemperature.Input(temperature=self._new_te, exner=entry.exner, theta_v=entry.theta_v),
+                out=recipes.ExnerThetaFromTemperature.Output(exner=out.exner, theta_v=out.theta_v),
             )
         else:
             _carry(entry.exner, out.exner)
             _carry(entry.theta_v, out.theta_v)
         if "tend_u" in acc:
-            ops.compute_vn_from_uv(acc["tend_u"].data, self._ddt_vn.data)
-            ops.arr(out.vn.data)[...] = ops.arr(entry.vn.data) + dt * ops.arr(self._ddt_vn.data)
+            ddt_vn = self.vn_tendency_from_u_tendency.run(
+                recipes.VnTendencyFromUTendency.Input(tend_u=acc["tend_u"])
+            ).ddt_vn
+            ops.arr(out.vn.data)[...] = ops.arr(entry.vn.data) + dt * ops.arr(ddt_vn.data)
