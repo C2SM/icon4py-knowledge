@@ -7,7 +7,7 @@ import ops
 
 
 class AdvectiveTendencies(fw.State):
-    normal_wind: qty.TendencyOfVn.EdgeK
+    normal_wind: fw.Tendency[qty.Vn, fw.EdgeK]
 
 
 class SolveNonhydro(fw.Component):

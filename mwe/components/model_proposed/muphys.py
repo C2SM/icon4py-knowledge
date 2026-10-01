@@ -9,8 +9,8 @@ class MuphysComponent(fw.Component):
         qv: qty.Qv.CellK
 
     class Output(fw.State):
-        tend_temperature: qty.TendencyOfTemperature.CellK
-        tend_qv: qty.TendencyOfQv.CellK
+        tend_temperature: fw.Tendency[qty.Temperature, fw.CellK]
+        tend_qv: fw.Tendency[qty.Qv, fw.CellK]
         pflx: qty.PrecipitationFlux.Cell
 
     def run(self, input: Input, out: Output | None = None) -> Output:
