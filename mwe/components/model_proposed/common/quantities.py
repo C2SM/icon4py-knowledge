@@ -2,7 +2,7 @@ from datetime import datetime
 
 from model_proposed.common import framework as fw
 
-
+# Quantities as phantom types
 class Vn(fw.Quantity, locations=(fw.EdgeK,), units="m s-1"): ...
 class W(fw.Quantity, locations=(fw.CellK,), standard_name="upward_air_velocity", units="m s-1"): ...
 class Rho(fw.Quantity, locations=(fw.CellK,), standard_name="air_density", units="kg m-3"): ...
@@ -14,6 +14,8 @@ class Temperature(fw.Quantity, locations=(fw.CellK,), standard_name="air_tempera
 class U(fw.Quantity, locations=(fw.CellK,), standard_name="eastward_wind", units="m s-1", long_name="eastward wind component"): ...
 class PrecipitationFlux(fw.Quantity, locations=(fw.Cell,), standard_name="precipitation_flux", units="kg m-2 s-1"): ...
 
+# Quantities at a grid location cannot yet be phantom types because of the
+# GT4Py static caveat explained below
 type VnField = fw.EdgeK[Vn]
 type WField = fw.CellK[W]
 type RhoField = fw.CellK[Rho]
@@ -34,10 +36,11 @@ type PrecipitationFluxField = fw.Cell[PrecipitationFlux]
 # location nobody supplies and with no `derived_by` is served by the recipe
 # `fw.RELOCATIONS[(quantity, supplied location, wanted location)]`; direct
 # edges only, error when two supplied locations both have one, `derived_by`
-# still overrides. Static caveat: to mypy and pyright `fw.CellKHalf[ThetaV]` is
+# still overrides.
+# Static caveat: to mypy and pyright `fw.CellKHalf[ThetaV]` is
 # `Field[Dims[Unknown, Unknown], wpfloat]` (dims are runtime objects), so a
-# location mismatch is caught by the framework at init, not by the checker;
-# an undeclared location (`locations=`) is caught at import.
+# location mismatch is caught by the framework at init, not by the checker; an
+# undeclared location (`locations=`) is caught at import.
 
 
 class TimeStep(fw.Quantity, units="s"): ...
