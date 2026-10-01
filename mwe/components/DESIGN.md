@@ -459,7 +459,61 @@ seniors: this puts the update declaration on the process; the alternative is
 v4's `apply` method on the component. Same declarations either way, different
 owner of the schedule.
 
-**Checks.** As 08, plus `test_updates_reads_the_processes_update_blocks`,
-`test_accumulate_then_update_applies_dt_once_and_runs_the_hooks_once`,
-`test_updates_refuses_inconsistent_declarations`, the `updates:` column in
-the dataflow test, and the `dt03` row of `run.py` and `test_equivalence.py`.
+**Checks.** As 08, plus `test_increment_of_derives_one_class_per_parent`,
+`test_updates_reads_the_processes_update_blocks`,
+`test_accumulate_then_update_adds_the_increments_and_runs_the_hooks_once`,
+`test_updates_refuses_inconsistent_declarations`, and the `updates:` column
+in the dataflow test.
+
+## 10 Composition and Plan
+
+**Problem.** The composer calls three things per child: provide, collect,
+run. Providers run eagerly once per pass whether or not the child that needs
+them runs: `u` is derived for tmx on steps tmx is inactive. Two composites
+deriving one quantity by different recipes go unnoticed. Nothing refuses an
+aliased `out` on a component that cannot run in place (the dycore). The
+relocation of `theta_v` to half levels is a recipe like any other, with
+nothing recording that it moves a quantity between two of its places.
+
+**Adds.** `composition(children, sizes, input=, output=) -> Composition`:
+`resolve` and `updates` in one call, plus `needs`, what each child and hook
+needs of the providers, transitively, dependencies first. `Composition.begin()
+-> Plan`: one pass with fixed inputs, a new plan per substep, step or output.
+`Plan.run(child, inputs=(...), outputs=(...), **plain)` is the composer's one
+verb: provide the providers the child needs, if not yet run in this plan,
+skipping any whose output the child's own states carry (supplied wins,
+whether or not the provider ran for another child); collect from the supplied
+states and those; refuse an undeclared alias; run. A provider runs at most
+once per plan, at the first child that needs it, and not at all when no child
+that runs needs it. A child that writes into a supplied state through `out=`
+drops the providers reading it from the plan's cache. `Plan.accumulate(process,
+output, *supplied)` provides for the tendency recipes before running them;
+`Plan.update(input, output, dt)` provides for the hooks, applies the sums and
+runs the hooks through the same alias check. `Component.in_place`: the Output leaves that may share the
+same-quantity Input leaf's buffer (diffusion, the physics update, the
+dycore's running mass flux sum); any other alias is `AliasedOutput`.
+`DERIVATIONS`, one recipe per quantity at a place across composites (the
+second composite's init fails); process-wide, one model per interpreter, and
+filled only once a `resolve` succeeds. `RELOCATIONS` and `@relocation` on
+`ThetaVToHalfLevels`: one recipe per (quantity, from, to), the table a
+family-level lookup could read later.
+
+The drivers now read as a schedule: `plan.run(self.diffusion, inputs=(next,),
+outputs=(next,), dtime=info.dtime)`; one `composition` over the five children
+in `Icon4pyDriver`, one over the processes in `PhysicsDriver`.
+
+**Costs.** Framework 671 lines (+145). `model_proposed` 1080 (+140):
+`physics_driver.py` 57 (was 67), `driver.py` 74. Counts: `u` is now derived
+only on the two steps tmx runs, 8/6/8 for the example and tmx-only, 4/2/8
+without output, the rest unchanged; `temperature` stays at 8 because the EOS
+hook reads it on every physics pass. The memo scope is the plan, not the
+composition: "is this buffer current" is a runtime question tied to one pass
+with fixed inputs, which is why `begin()` exists.
+
+**Checks.** As 09, plus
+`test_composition_runs_a_provider_once_per_plan_and_only_when_needed`,
+`test_plan_run_refuses_an_undeclared_alias`,
+`test_relocation_registers_one_recipe_per_edge`,
+`test_derivations_are_checked_across_composites`, the lazy counts in
+`test_equivalence.py`; an autouse fixture snapshots and restores the two
+registries around each test.

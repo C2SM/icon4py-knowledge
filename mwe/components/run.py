@@ -97,26 +97,27 @@ def run_proposed(run_config: config.Config, dtime: float = 1.0) -> dict[str, Any
         "calls": _calls(),
     }
     if "muphys" in run_config.physics:
-        result["pflx"] = ops.arr(getattr(icon4py_driver.physics.outputs["muphys"][0], "pflx").data)
+        result["pflx"] = ops.arr(getattr(icon4py_driver.physics.outputs["muphys"], "pflx").data)
     return result
 
 
 # the declared dataflow of the proposed model, in the order the driver runs it
 def print_dataflow(run_config: config.Config) -> None:
     icon4py_driver = proposed.Icon4pyDriver(run_config)
+    d, p = icon4py_driver, icon4py_driver.physics
     print(
         fw.dataflow(
-            *icon4py_driver.dycore_resolution.providers,
+            *d.composition.needs[d.solve_nonhydro],
             solve_nonhydro.SolveNonhydro,
             diffusion.Diffusion,
             tracer_advection.Advection,
-            *icon4py_driver.physics.resolution.providers,
+            *p.composition.providers,
             *[physics_driver.PROCESSES[name] for name in run_config.physics],
-            *[r for rs in icon4py_driver.physics.updates.tendency_recipes.values() for r in rs],
-            *icon4py_driver.physics.updates.hooks,
+            *[r for rs in p.composition.updates.tendency_recipes.values() for r in rs],
+            *p.composition.updates.hooks,
             physics_driver.PhysicsDriver,
-            *icon4py_driver.io_resolution.providers,
-            icon4py_driver.io_monitor,
+            *d.composition.needs[d.io_monitor],
+            d.io_monitor,
         )
     )
 
