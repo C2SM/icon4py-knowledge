@@ -78,7 +78,9 @@ REGISTRY: dict[str, type[Quantity]] = {}
 
 # locations:
 # generic aliases that put a quantity tag on a field type; the alias object is
-# the location in every key
+# the location in every key.
+# these are planned to become phantom type parameters when GT4Py implements
+# dims for static checkers.
 type Cell[Q] = Annotated[fa.CellField[ta.wpfloat], Q]
 type CellK[Q] = Annotated[fa.CellKField[ta.wpfloat], Q]
 type CellKHalf[Q] = Annotated[fa.CellKHalfField[ta.wpfloat], Q]
