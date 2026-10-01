@@ -15,7 +15,9 @@ class U(fw.Quantity, locations=(fw.CellK,), standard_name="eastward_wind", units
 class PrecipitationFlux(fw.Quantity, locations=(fw.Cell,), standard_name="precipitation_flux", units="kg m-2 s-1"): ...
 
 # Quantities at a grid location cannot yet be phantom types because of the
-# GT4Py static caveat explained below
+# GT4Py static caveat explained below.
+# Used as Decl.key = (quantity, location) at framework.py:159. Everything
+# resolves on it, never on quantity alone
 type VnField = fw.EdgeK[Vn]
 type WField = fw.CellK[W]
 type RhoField = fw.CellK[Rho]
