@@ -6,7 +6,18 @@ import numpy as np
 
 from model_current.common.states import data as state_data
 from model_current.driver import driver as current
-from model_proposed import driver as proposed
+from model_proposed import (
+    diffusion,
+    driver as proposed,
+    io,
+    muphys,
+    physics_driver,
+    recipes,
+    solve_nonhydro,
+    tmx,
+    tracer_advection,
+)
+from model_proposed.common import framework as fw
 import config
 import ops
 
@@ -85,6 +96,28 @@ def run_proposed(run_config: config.Config) -> dict[str, Any]:
     return result
 
 
+PROCESS_COMPONENTS: dict[str, type[fw.Component]] = {"muphys": muphys.MuphysComponent, "tmx": tmx.TmxComponent}
+
+
+# the declared dataflow of the proposed model, one line per component
+def print_dataflow(run_config: config.Config) -> None:
+    print(
+        fw.dataflow(
+            recipes.ThetaVToHalfLevels,
+            solve_nonhydro.SolveNonhydro,
+            diffusion.Diffusion,
+            tracer_advection.Advection,
+            recipes.TemperatureFromThetaExner,
+            recipes.UFromVn,
+            *[PROCESS_COMPONENTS[name] for name in run_config.physics],
+            recipes.VnTendencyFromUTendency,
+            recipes.ExnerThetaFromTemperature,
+            physics_driver.PhysicsDriver,
+            io.IOMonitor,
+        )
+    )
+
+
 def _records_agree(x: tuple[Any, ...], y: tuple[Any, ...]) -> bool:
     return x[:2] == y[:2] and bool(np.array_equal(x[2], y[2]))
 
@@ -102,8 +135,9 @@ def compare(a: dict[str, Any], b: dict[str, Any]) -> list[str]:
 
 
 if __name__ == "__main__":
+    print_dataflow(CONFIGS["example"])
     failed = False
-    print(f"{'config':<11} {'side':<8} " + " ".join(f"{name:>{len(name)}}" for name in COUNTED))
+    print(f"\n{'config':<11} {'side':<8} " + " ".join(f"{name:>{len(name)}}" for name in COUNTED))
     for label, run_config in CONFIGS.items():
         a, b = run_current(run_config), run_proposed(run_config)
         mismatches = compare(a, b)

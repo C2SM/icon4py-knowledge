@@ -18,7 +18,7 @@ solves, what it adds, what it costs. The tip of the stack is the full design.
     /path/to/icon4py/.venv/bin/python -m pytest -q
     /path/to/icon4py/.venv/bin/python -m mypy model_current model_proposed run.py test_framework.py test_equivalence.py config.py ops.py
 
-`run.py` runs both models on five configs (the example, tmx only, no physics,
+`run.py` prints the proposed model's declared dataflow for `example.yaml`, then runs both models on five configs (the example, tmx only, no physics,
 no output, two prognostics out) and prints one row per side with `OK` and how many times each side
 computed `temperature`, `u` and `theta_v` on half levels. All comparisons are
 bit-exact.

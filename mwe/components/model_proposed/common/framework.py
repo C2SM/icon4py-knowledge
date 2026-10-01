@@ -129,6 +129,12 @@ class Decl:
     quantity: type[Quantity]
     dims: type[Dims]
 
+    # the quantity, and the place when the quantity lives at more than one
+    @property
+    def label(self) -> str:
+        located = len(self.quantity.places()) > 1
+        return self.quantity.__name__ + (f"@{self.dims.__name__}" if located else "")
+
 
 class InvalidDims(TypeError):
     pass
@@ -270,3 +276,17 @@ class Component:
 # the name, nothing reads it yet; the composer decides when to run it.
 class Recipe(Component):
     pass
+
+
+# ------------------------------------------------------------------------------
+# Reports
+# ------------------------------------------------------------------------------
+# what each component reads and produces, from its declarations alone
+def dataflow(*components: type[Component]) -> str:
+    def names(decls: tuple[Decl, ...]) -> str:
+        return ", ".join(d.label for d in decls) or "-"
+
+    return "\n".join(
+        f"{c.__name__} | reads: {names(c.Input.declarations())} | produces: {names(c.Output.declarations())}"
+        for c in components
+    )
