@@ -4,11 +4,11 @@ import ops
 
 class TemperatureFromThetaExner(fw.Recipe):
     class Input(fw.State):
-        theta_v: fw.Field[qty.ThetaVOnCellK]
-        exner: fw.Field[qty.ExnerOnCellK]
+        theta_v: qty.ThetaV.CellK
+        exner: qty.Exner.CellK
 
     class Output(fw.State):
-        temperature: fw.Field[qty.TemperatureOnCellK]
+        temperature: qty.Temperature.CellK
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)
@@ -18,10 +18,10 @@ class TemperatureFromThetaExner(fw.Recipe):
 
 class UFromVn(fw.Recipe):
     class Input(fw.State):
-        vn: fw.Field[qty.VnOnEdgeK]
+        vn: qty.Vn.EdgeK
 
     class Output(fw.State):
-        u: fw.Field[qty.UOnCellK]
+        u: qty.U.CellK
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)
@@ -31,10 +31,10 @@ class UFromVn(fw.Recipe):
 
 class ThetaVToHalfLevels(fw.Recipe):
     class Input(fw.State):
-        theta_v: fw.Field[qty.ThetaVOnCellK]
+        theta_v: qty.ThetaV.CellK
 
     class Output(fw.State):
-        theta_v_ic: fw.Field[qty.ThetaVOnCellKHalf]
+        theta_v_ic: qty.ThetaV.CellKHalf
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)
@@ -44,10 +44,10 @@ class ThetaVToHalfLevels(fw.Recipe):
 
 class VnTendencyFromUTendency(fw.Recipe):
     class Input(fw.State):
-        tend_u: fw.Field[qty.TendencyOfUOnCellK]
+        tend_u: qty.TendencyOfU.CellK
 
     class Output(fw.State):
-        ddt_vn: fw.Field[qty.TendencyOfVnOnEdgeK]
+        ddt_vn: qty.TendencyOfVn.EdgeK
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)
@@ -60,13 +60,13 @@ class VnTendencyFromUTendency(fw.Recipe):
 # ApplyToPrognostic), and out may alias the input
 class ExnerThetaFromTemperature(fw.Component):
     class Input(fw.State):
-        temperature: fw.Field[qty.TemperatureOnCellK]
-        exner: fw.Field[qty.ExnerOnCellK]
-        theta_v: fw.Field[qty.ThetaVOnCellK]
+        temperature: qty.Temperature.CellK
+        exner: qty.Exner.CellK
+        theta_v: qty.ThetaV.CellK
 
     class Output(fw.State):
-        exner: fw.Field[qty.ExnerOnCellK]
-        theta_v: fw.Field[qty.ThetaVOnCellK]
+        exner: qty.Exner.CellK
+        theta_v: qty.ThetaV.CellK
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)
