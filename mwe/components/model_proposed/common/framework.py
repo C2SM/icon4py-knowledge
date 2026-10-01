@@ -344,12 +344,14 @@ def collect[S: State](cls: type[S], *states: State, **plain: Any) -> S:
 # `run` is the only method a component implements. `out = component.run(input)`
 # writes into the component's own buffers, allocated once on first use;
 # `component.run(input, out=view)` writes where the caller says, numpy `out=`
-# style. Either way `run` returns the output. Whether the view may alias the
-# input is the component's business (diffusion and the physics update tolerate
-# it, the dycore needs distinct now/next); nothing checks it in this layer.
+# style. Either way `run` returns the output. The aliasing a component
+# tolerates is declared in `in_place`; `Plan.run` refuses any other.
 class Component:
     Input: type[State]
     Output: type[State]
+    # the Output leaves that may share the buffer of the same-quantity Input
+    # leaf (pointwise stencils); Plan.run refuses any other aliasing
+    in_place: ClassVar[frozenset[str]] = frozenset()
 
     def __init__(self, sizes: Mapping[gtx.Dimension, int]) -> None:
         self.sizes = sizes
@@ -378,6 +380,41 @@ class Recipe(Component):
 
 class InconsistentDerivation(ValueError):
     pass
+
+
+class InconsistentRelocation(ValueError):
+    pass
+
+
+class AliasedOutput(ValueError):
+    pass
+
+
+type Key = tuple[type[Quantity], type[Dims]]
+
+# one recipe per quantity at a place across the whole model, filled once a
+# resolve succeeds: two composites deriving the same key by different recipes
+# fail at the second init. Process-wide, so one interpreter holds one model.
+DERIVATIONS: dict[Key, type[Recipe]] = {}
+# the recipes that move a quantity between two of its places, (quantity,
+# from, to); the table a family-level lookup could read later
+RELOCATIONS: dict[tuple[type[Quantity], type[Dims], type[Dims]], type[Recipe]] = {}
+
+
+# registers a recipe that moves one quantity from one of its places to
+# another: one Output leaf, an Input leaf of the same quantity elsewhere
+def relocation[R: type[Recipe]](recipe: R) -> R:
+    outputs = recipe.Output.declarations()
+    if len(outputs) != 1:
+        raise InconsistentRelocation(f"{recipe.__name__}: one output leaf expected")
+    (out,) = outputs
+    sources = [d for d in recipe.Input.declarations() if d.quantity is out.quantity and d.dims is not out.dims]
+    if len(sources) != 1:
+        raise InconsistentRelocation(f"{recipe.__name__}: {out.quantity.__name__} at another place expected in Input")
+    key = (out.quantity, sources[0].dims, out.dims)
+    if RELOCATIONS.setdefault(key, recipe) is not recipe:
+        raise InconsistentRelocation(f"{out.quantity.__name__}: {RELOCATIONS[key].__name__} vs {recipe.__name__}")
+    return recipe
 
 
 @dataclasses.dataclass(frozen=True)
@@ -444,6 +481,10 @@ def resolve(children: Iterable[type[Component] | Component], sizes: Mapping[gtx.
 
     for recipe in recipes:
         visit(recipe)
+    for key, recipe in by_key.items():
+        if DERIVATIONS.get(key, recipe) is not recipe:
+            raise InconsistentDerivation(f"{recipe.__name__}: {DERIVATIONS[key].__name__} derives the same key in another composite")
+    DERIVATIONS.update(by_key)
     return Resolution(tuple(recipe(sizes) for recipe in ordered))
 
 
@@ -524,7 +565,14 @@ class Updates:
     # output = input + dt * summed tendency, leaf by leaf (in place where the
     # composer aliased; in a provider's buffer for a quantity the composite
     # does not output), the other output leaves carried; then the hooks, once
-    def update(self, input: State, output: State, dt: float, *produced: State) -> None:
+    def update(
+        self,
+        input: State,
+        output: State,
+        dt: float,
+        *produced: State,
+        guard: Callable[[Component, State, State], None] | None = None,
+    ) -> None:
         inputs = _available((input, *produced))
         outputs = _available((output, *produced))
         updated = {_parent_key(d) for d in self.tendencies.declarations()}
@@ -537,7 +585,10 @@ class Updates:
                 value.data.ndarray
             )
         for hook in self.hooks:
-            hook.run(collect(hook.Input, output, *produced), out=collect(hook.Output, output, *produced))
+            hook_input, hook_out = collect(hook.Input, output, *produced), collect(hook.Output, output, *produced)
+            if guard is not None:
+                guard(hook, hook_input, hook_out)
+            hook.run(hook_input, out=hook_out)
 
 
 # Reads the processes' Update blocks once, at composite init: every tendency a
@@ -626,6 +677,124 @@ def updates(
         tendency_recipes=tendency_recipes,
         hooks=tuple(hook(sizes) for hook in hook_order),
         hook_written=frozenset(written),
+    )
+
+
+# ------------------------------------------------------------------------------
+# Composition and Plan: the composer's one verb
+# ------------------------------------------------------------------------------
+# The wiring of a composite, made once at its init by composition(): the
+# providers (resolve) with what each child and hook needs of them,
+# transitively, and the updates (updates). A pass over the children begins a
+# Plan.
+@dataclasses.dataclass(frozen=True)
+class Composition:
+    providers: tuple[Recipe, ...]
+    needs: dict[Component, tuple[Recipe, ...]]
+    updates: Updates
+
+    def begin(self) -> "Plan":
+        self.updates.begin()
+        return Plan(self)
+
+
+# refuses an Output leaf sharing the buffer of the same-quantity Input leaf
+# unless the component declares it in_place
+def _check_alias(component: Component, input: State, out: State) -> None:
+    given = {d.key: value for d, value in input.leaves()}
+    for d, value in out.leaves():
+        if value is given.get(d.key) and d.name not in component.in_place:
+            raise AliasedOutput(f"{type(component).__name__}.{d.name}: {d.label}")
+
+
+# One pass over a composite's children with fixed inputs. A provider runs at
+# most once per plan, at the first child that needs it, and not at all when
+# the composer supplied its output or no child that needs it runs: a new plan
+# per substep, step or physics call is what makes "once" mean once. A child
+# that writes into a supplied state through `out=` drops the providers that
+# read it from the plan's cache.
+class Plan:
+    def __init__(self, composition: Composition) -> None:
+        self.composition = composition
+        self.produced: dict[Recipe, State] = {}
+
+    # the outputs of the providers this component needs, run if not yet in
+    # this plan; a provider whose output the supplied states carry is skipped
+    def _provide(self, component: Component, supplied: tuple[State, ...]) -> tuple[State, ...]:
+        available = _available(supplied)
+        states: list[State] = []
+        for provider in self.composition.needs[component]:
+            if all(d.key in available for d in provider.Output.declarations()):
+                continue
+            if provider not in self.produced:
+                upstream = self._provide(provider, supplied)
+                self.produced[provider] = provider.run(collect(provider.Input, *supplied, *upstream))
+            states.append(self.produced[provider])
+        return tuple(states)
+
+    # provide, collect the child's views from the supplied and provided
+    # states, refuse an undeclared alias, run; plain leaves by keyword
+    def run(self, child: Component, inputs: tuple[State, ...], outputs: tuple[State, ...] = (), **plain: Any) -> State:
+        provided = self._provide(child, inputs)
+        input = collect(child.Input, *inputs, *provided, **plain)
+        out = collect(child.Output, *outputs) if outputs else None
+        if out is not None:
+            _check_alias(child, input, out)
+        result: State = child.run(input, out)
+        if out is not None:
+            written = {d.key for d in child.Output.declarations()}
+            self.produced = {
+                p: s for p, s in self.produced.items() if not written & {d.key for d in p.Input.declarations()}
+            }
+        return result
+
+    # the process's tendency recipes on its output (their providers first),
+    # then its accumulate
+    def accumulate(self, process: Process, output: State, *supplied: State) -> None:
+        computed = tuple(
+            recipe.run(collect(recipe.Input, output, *supplied, *self._provide(recipe, supplied)))
+            for recipe in self.composition.updates.tendency_recipes[process]
+        )
+        process.accumulate(self.composition.updates.tendencies, output, *computed)
+
+    # the hooks' providers first, then output = input + dt * sums, then the
+    # hooks, through the alias check
+    def update(self, input: State, output: State, dt: float) -> None:
+        for hook in self.composition.updates.hooks:
+            self._provide(hook, (input,))
+        self.composition.updates.update(input, output, dt, *self.produced.values(), guard=_check_alias)
+
+
+# once, at composite init, for all its children: resolve, updates, and what
+# each child and hook needs of the providers (the providers whose output keys
+# its Input names, and theirs, dependencies first)
+def composition(
+    children: Iterable[Component],
+    sizes: Mapping[gtx.Dimension, int],
+    *,
+    input: type[State],
+    output: type[State],
+) -> Composition:
+    children = tuple(children)
+    resolution = resolve(children, sizes)
+    processes = [c for c in children if isinstance(c, Process)]
+    updates_ = updates(processes, sizes, input=input, output=output, provided=resolution.providers)
+    by_key = {d.key: provider for provider in resolution.providers for d in provider.Output.declarations()}
+
+    def needs_of(cls: type[State]) -> tuple[Recipe, ...]:
+        found: list[Recipe] = []
+        for d in cls.declarations():
+            provider = by_key.get(d.key)
+            if provider is not None and provider not in found:
+                found.extend(n for n in needs_of(provider.Input) if n not in found)
+                found.append(provider)
+        return tuple(found)
+
+    recipes = [r for rs in updates_.tendency_recipes.values() for r in rs]
+    return Composition(
+        providers=resolution.providers,
+        needs={c: needs_of(c.Input) for c in (*children, *updates_.hooks, *resolution.providers, *recipes)},
+        updates=updates_,
     )
 
 
