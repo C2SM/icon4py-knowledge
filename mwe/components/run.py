@@ -17,7 +17,7 @@ CONFIGS: dict[str, config.Config] = {
     "no_muphys": config.Config(output_variables=("air_temperature", "eastward_wind"), physics={"tmx": 2}),
     "no_physics": config.Config(output_variables=("air_temperature",), physics={}),
     "no_output": config.Config(output_variables=(), physics={"muphys": 1, "tmx": 2}),
-    "prognostics": config.Config(output_variables=("VnOnEdgeK", "air_density"), physics={"muphys": 1}),
+    "prognostics": config.Config(output_variables=("Vn", "air_density"), physics={"muphys": 1}),
 }
 
 
@@ -28,7 +28,7 @@ ICON_KEY: dict[str, str] = {
     meta.standard_name: key
     for table in (state_data.PROGNOSTIC_CF_ATTRIBUTES, state_data.DIAGNOSTIC_CF_ATTRIBUTES)
     for key, meta in table.items()
-} | {"VnOnEdgeK": "normal_velocity", "ThetaVOnCellK": "virtual_potential_temperature"}
+} | {"Vn": "normal_velocity", "ThetaV": "virtual_potential_temperature"}
 STANDARD_NAME: dict[str, str] = {key: name for name, key in ICON_KEY.items()}
 
 

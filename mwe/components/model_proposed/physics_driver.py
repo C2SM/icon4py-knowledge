@@ -41,25 +41,25 @@ class PhysicsProcess:
     time_control: ProcessTimeControl
 
 
-def _carry[Q: fw.Quantity](src: fw.Field[Q], dst: fw.Field[Q]) -> None:
+def _carry[Q: fw.Quantity, D: fw.Dims](src: fw.Field[Q, D], dst: fw.Field[Q, D]) -> None:
     if dst is not src:
         ops.arr(dst.data)[...] = ops.arr(src.data)
 
 
 class PhysicsDriver(fw.Component):
     class Input(fw.State):
-        vn: fw.Field[qty.VnOnEdgeK]
-        exner: fw.Field[qty.ExnerOnCellK]
-        theta_v: fw.Field[qty.ThetaVOnCellK]
-        qv: fw.Field[qty.QvOnCellK]
+        vn: qty.Vn.EdgeK
+        exner: qty.Exner.CellK
+        theta_v: qty.ThetaV.CellK
+        qv: qty.Qv.CellK
         dtime: float
         step_index: int
 
     class Output(fw.State):
-        vn: fw.Field[qty.VnOnEdgeK]
-        exner: fw.Field[qty.ExnerOnCellK]
-        theta_v: fw.Field[qty.ThetaVOnCellK]
-        qv: fw.Field[qty.QvOnCellK]
+        vn: qty.Vn.EdgeK
+        exner: qty.Exner.CellK
+        theta_v: qty.ThetaV.CellK
+        qv: qty.Qv.CellK
 
     def __init__(self, sizes: Sizes, process_intervals: Mapping[str, int]) -> None:
         super().__init__(sizes)
@@ -72,10 +72,10 @@ class PhysicsDriver(fw.Component):
         self.u_from_vn = recipes.UFromVn(sizes)
         # one accumulator per tendency the processes emit, by output name, made
         # when first seen (TendencyAccumulators in icon4py)
-        self.accumulators: dict[str, fw.Field[Any]] = {}
+        self.accumulators: dict[str, fw.Field[Any, Any]] = {}
         # the last output of each process, reused on the steps it is not active
         self.outputs: dict[str, fw.State] = {}
-        self._new_te = fw.zeros(qty.TemperatureOnCellK, sizes)
+        self._new_te = fw.zeros(qty.Temperature, fw.CellK, sizes)
         self.vn_tendency_from_u_tendency = recipes.VnTendencyFromUTendency(sizes)
         self.exner_theta_from_temperature = recipes.ExnerThetaFromTemperature(sizes)
 
@@ -112,7 +112,7 @@ class PhysicsDriver(fw.Component):
         for d, value in output.leaves():
             if issubclass(d.quantity, qty.Tendency):
                 if d.name not in self.accumulators:
-                    self.accumulators[d.name] = fw.zeros(d.quantity, self.sizes)
+                    self.accumulators[d.name] = fw.zeros(d.quantity, d.dims, self.sizes)
                 ops.arr(self.accumulators[d.name].data)[...] += ops.arr(value.data)
 
     # the summed tendencies into the prognostics, once (ApplyToPrognostic);

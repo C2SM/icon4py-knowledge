@@ -6,9 +6,9 @@ from model_proposed.common import framework as fw, quantities as qty
 # Input from here by hand (`collect_input` next to the process), as
 # `as_component_input` does in icon4py.
 class EntryState(fw.State):
-    vn: fw.Field[qty.VnOnEdgeK]
-    exner: fw.Field[qty.ExnerOnCellK]
-    theta_v: fw.Field[qty.ThetaVOnCellK]
-    qv: fw.Field[qty.QvOnCellK]
-    temperature: fw.Field[qty.TemperatureOnCellK]
-    u: fw.Field[qty.UOnCellK]
+    vn: qty.Vn.EdgeK
+    exner: qty.Exner.CellK
+    theta_v: qty.ThetaV.CellK
+    qv: qty.Qv.CellK
+    temperature: qty.Temperature.CellK
+    u: qty.U.CellK

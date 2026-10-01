@@ -198,3 +198,39 @@ and output after; counts unchanged, 8/8/8. Nothing checks that two consumers
 derive a quantity the same way; later layer.
 
 **Checks.** As 01, plus `test_recipe_is_a_component_that_owns_its_result`.
+
+## 03 Dims
+
+**Problem.** With one tag per quantity and place, `ThetaVOnCellK` and
+`ThetaVOnCellKHalf` are two unrelated quantities: a CF name is written twice
+or left off one, a tendency would exist per place, the config names the place
+in the name (`VnOnEdgeK`), and the place is checked nowhere: gt4py's
+`CellKField` and `CellKHalfField` are one type to mypy and pyright, because
+dims are runtime objects.
+
+**Adds.** `Dims`, a second kind of tag: a place on the grid with its gt4py
+dimensions, six of them (`Cell`, `CellK`, `CellKHalf`, `Edge`, `EdgeK`,
+`EdgeKHalf`). `Field[Q, D]` takes both tags. A quantity declares the places
+it lives at as nested aliases,
+
+```python
+class ThetaV(fw.Quantity, units="K"):
+    type CellK = fw.Field[ThetaV, fw.CellK]
+    type CellKHalf = fw.Field[ThetaV, fw.CellKHalf]
+```
+
+and a component writes `theta_v: qty.ThetaV.CellK`. `Decl` carries `dims`.
+A place the quantity does not declare is refused where the `State` class is
+defined (`InvalidDims`; to the checkers `fw.Field[ThetaV, fw.EdgeK]` is a
+valid type). `zeros(quantity, dims, sizes)`. A place mismatch between two
+declared places is a type error (`static_checks`), which gt4py cannot give
+today. The config says `Vn`, not `VnOnEdgeK`.
+
+**Costs.** Framework 175 lines (+28). `model_proposed` 681 (+38). `quantities.py` 38 (+9): a tag is two
+lines, the alias line per place is its declaration of where it lives.
+`Field` takes three arguments. Counts unchanged, 8/8/8. `places()` reads the
+class body; nothing else is automated.
+
+**Checks.** As 02, plus `test_quantity_is_a_tag_with_metadata_and_places`,
+`test_a_place_the_quantity_does_not_declare_is_refused`, and the place
+mismatch line in `static_checks`.
