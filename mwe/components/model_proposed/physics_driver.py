@@ -1,28 +1,16 @@
 import dataclasses
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from typing import Any
 
 import gt4py.next as gtx
 
-from model_proposed import muphys, physics_state, recipes, tmx
+from model_proposed import muphys, recipes, tmx
 from model_proposed.common import framework as fw, quantities as qty
 import ops
 
-type Sizes = Mapping[gtx.Dimension, int]
-type Step = Callable[[physics_state.EntryState], fw.State]
-
-
-# ties a component's run to the collect_input written for it; the pairing is
-# checked here (tmx.collect_input with muphys's run is a type error)
-def bind[I: fw.State, O: fw.State](
-    run: Callable[[I], O], collect_input: Callable[[physics_state.EntryState], I]
-) -> Callable[[physics_state.EntryState], O]:
-    return lambda entry: run(collect_input(entry))
-
-
-PROCESSES: dict[str, Callable[[Sizes], Step]] = {
-    "muphys": lambda sizes: bind(muphys.MuphysComponent(sizes).run, muphys.collect_input),
-    "tmx": lambda sizes: bind(tmx.TmxComponent(sizes).run, tmx.collect_input),
+PROCESSES: dict[str, type[fw.Component]] = {
+    "muphys": muphys.MuphysComponent,
+    "tmx": tmx.TmxComponent,
 }
 
 
@@ -37,7 +25,7 @@ class ProcessTimeControl:
 @dataclasses.dataclass(frozen=True)
 class PhysicsProcess:
     name: str
-    step: Step
+    component: fw.Component
     time_control: ProcessTimeControl
 
 
@@ -61,7 +49,7 @@ class PhysicsDriver(fw.Component):
         theta_v: qty.ThetaV.CellK
         qv: qty.Qv.CellK
 
-    def __init__(self, sizes: Sizes, process_intervals: Mapping[str, int]) -> None:
+    def __init__(self, sizes: Mapping[gtx.Dimension, int], process_intervals: Mapping[str, int]) -> None:
         super().__init__(sizes)
         self.processes = [
             PhysicsProcess(name, PROCESSES[name](sizes), ProcessTimeControl(interval))
@@ -82,25 +70,21 @@ class PhysicsDriver(fw.Component):
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)
-        temperature = self.temperature_from_theta_exner.run(
-            recipes.TemperatureFromThetaExner.Input(theta_v=input.theta_v, exner=input.exner)
-        ).temperature
-        u = self.u_from_vn.run(recipes.UFromVn.Input(vn=input.vn)).u
-        entry = physics_state.EntryState(
-            vn=input.vn, exner=input.exner, theta_v=input.theta_v, qv=input.qv, temperature=temperature, u=u
-        )
+        temperature = self.temperature_from_theta_exner.run(fw.collect(recipes.TemperatureFromThetaExner.Input, input))
+        u = self.u_from_vn.run(fw.collect(recipes.UFromVn.Input, input))
         for acc in self.accumulators.values():
             ops.arr(acc.data)[...] = 0.0
         for process in self.processes:
             if process.time_control.is_active(input.step_index) or process.name not in self.outputs:
-                self.outputs[process.name] = process.step(entry)
+                component = process.component
+                self.outputs[process.name] = component.run(fw.collect(component.Input, input, temperature, u))
             for d, value in self.outputs[process.name].leaves():
                 if issubclass(d.quantity, fw.TendencyOf):
                     key = (d.quantity.parent, d.dims)
                     if key not in self.accumulators:
                         self.accumulators[key] = fw.zeros(d.quantity, d.dims, self.sizes)
                     ops.arr(self.accumulators[key].data)[...] += ops.arr(value.data)
-        self._apply(input, temperature, out)
+        self._apply(input, temperature.temperature, out)
         return out
 
     # the summed tendencies into the prognostics, once; `out` may alias `input`
@@ -116,7 +100,7 @@ class PhysicsDriver(fw.Component):
             )
             self.exner_theta_from_temperature.run(
                 recipes.ExnerThetaFromTemperature.Input(temperature=self._new_te, exner=input.exner, theta_v=input.theta_v),
-                out=recipes.ExnerThetaFromTemperature.Output(exner=out.exner, theta_v=out.theta_v),
+                out=fw.collect(recipes.ExnerThetaFromTemperature.Output, out),
             )
         else:
             _carry(input.exner, out.exner)

@@ -280,3 +280,48 @@ IOMonitor | reads: Rho, W, Vn, Exner, ThetaV@CellK, Temperature, U | produces: -
 mechanism.
 
 **Checks.** As 04, plus `test_dataflow_lists_reads_and_produces_by_label`.
+
+## 06 Collect
+
+**Problem.** Every view is spelled out by keyword at the call site: seven
+field lines for the dycore's `Input` in the driver, a `collect_input` function per
+physics process plus `bind` to pair it with the right component, and an
+`EntryState` whose only job is to hold the pool the processes pick from. A
+leaf renamed in a `State` means editing every call site, and the same wiring
+is written once per consumer.
+
+**Adds.** `collect(cls, *states, **plain)`: one leaf per `Field` declaration
+of `cls`, picked from the given states by `(quantity, dims)`; plain leaves by
+keyword, and a field given by keyword wins over the pool. Pointer selection
+only, never computes. `MissingInput` names the
+leaf and the quantity; `AmbiguousSource` fires when two different buffers of
+one quantity at one place are in the pool (the same buffer twice is fine).
+Composers now pass states, not leaves:
+
+```python
+self.solve_nonhydro.run(
+    fw.collect(SolveNonhydro.Input, now, theta_v_ic, self.prep_advection, substep_dtime=..., ...),
+    out=fw.collect(SolveNonhydro.Output, next, self.prep_advection),
+)
+```
+
+and the physics driver runs each process on
+`fw.collect(component.Input, input, temperature, u)`. `EntryState`,
+`collect_input` and `bind` are gone; the process/collect pairing they had to
+check by hand no longer exists. This is the first mechanism that builds a
+component's view by quantity identity: a quantity at a place is found
+wherever it is, by what it is, not by the name of the attribute that holds it.
+
+**Costs.** Framework 258 lines (+30). `model_proposed` 679 (-34): `driver.py`
+78 (was 112), `physics_driver.py` 96 (was 108), `physics_state.py` gone. A
+pool with two buffers of one quantity at one place cannot be collected from,
+by design: the driver keeps `now` and `next` in separate calls, and a view
+over a bare field (the incremented temperature in `_apply`) is still built by
+keyword. Wiring errors at a composer call site move from mypy to runtime
+(`MissingInput`, the dataclass's `TypeError` for a plain leaf). Scalars stay
+plain leaves, passed by keyword, rather than tagged quantities; the aliasing
+guard once planned for this layer comes with the composer verb in 10. Counts
+unchanged, 8/8/8.
+
+**Checks.** As 05, plus `test_collect_picks_leaves_by_quantity_and_place`
+(pick from two states, `MissingInput`, `AmbiguousSource`).
