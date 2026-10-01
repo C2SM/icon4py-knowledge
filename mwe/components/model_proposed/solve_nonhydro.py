@@ -17,6 +17,7 @@ class SolveNonhydro(fw.Component):
         rho: fw.Field[qty.RhoOnCellK]
         exner: fw.Field[qty.ExnerOnCellK]
         theta_v: fw.Field[qty.ThetaVOnCellK]
+        theta_v_ic: fw.Field[qty.ThetaVOnCellKHalf]
         mass_flx_me: fw.Field[qty.MassFluxOnEdgeK]
         substep_dtime: float
         ndyn_substeps: int
@@ -35,7 +36,6 @@ class SolveNonhydro(fw.Component):
         self.normal_wind_advective_tendency = fw.PredictorCorrectorPair(
             fw.allocate(AdvectiveTendencies, sizes), fw.allocate(AdvectiveTendencies, sizes)
         )
-        self.theta_v_ic = fw.zeros(qty.ThetaVOnCellKHalf, sizes)
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)
@@ -48,14 +48,13 @@ class SolveNonhydro(fw.Component):
             ops.compute_advection_in_horizontal_momentum(input.vn.data, ddt_vn_apc.predictor.normal_wind.data)
         else:
             ddt_vn_apc.swap()
-        ops.interpolate_to_half_levels(input.theta_v.data, self.theta_v_ic.data)
         ops.dycore_step(
             vn_now=input.vn.data,
             w_now=input.w.data,
             rho_now=input.rho.data,
             exner_now=input.exner.data,
             theta_v_now=input.theta_v.data,
-            theta_v_ic=self.theta_v_ic.data,
+            theta_v_ic=input.theta_v_ic.data,
             vn_new=out.vn.data,
             w_new=out.w.data,
             rho_new=out.rho.data,
