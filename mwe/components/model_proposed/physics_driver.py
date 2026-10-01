@@ -55,9 +55,9 @@ class PhysicsDriver(fw.Component):
             PhysicsProcess(name, PROCESSES[name](sizes), ProcessTimeControl(interval))
             for name, interval in process_intervals.items()
         ]
-        # the recipes for the diagnostics the processes read, run here each step
-        self.temperature_from_theta_exner = recipes.TemperatureFromThetaExner(sizes)
-        self.u_from_vn = recipes.UFromVn(sizes)
+        # the recipes the processes declare for their derived inputs, run once
+        # per step before them
+        self.resolution = fw.resolve([process.component for process in self.processes], sizes)
         # one accumulator per tendency the processes emit, keyed by what it is a
         # tendency of and where, made when first seen (TendencyAccumulators in
         # icon4py keys them by output name)
@@ -68,10 +68,11 @@ class PhysicsDriver(fw.Component):
         self.vn_tendency_from_u_tendency = recipes.VnTendencyFromUTendency(sizes)
         self.exner_theta_from_temperature = recipes.ExnerThetaFromTemperature(sizes)
 
-    # the five steps of icon4py's PhysicsDriver.run, as methods
+    # icon4py's PhysicsDriver.run: the resolution provides what diagnose_from
+    # derived, the other steps as methods
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)
-        produced = self._diagnose(input)
+        produced = self.resolution.provide(input)
         self._zero_accumulators()
         for process in self.processes:
             if process.time_control.is_active(input.step_index) or process.name not in self.outputs:
@@ -80,15 +81,6 @@ class PhysicsDriver(fw.Component):
             self._accumulate(self.outputs[process.name])
         self._apply(input, produced, out)
         return out
-
-    # the diagnostics the processes and _apply read, one state per recipe; a
-    # process collects its Input from them and the driver's Input
-    # (EntryState.diagnose_from, without the EntryState)
-    def _diagnose(self, input: Input) -> tuple[fw.State, ...]:
-        return (
-            self.temperature_from_theta_exner.run(fw.collect(recipes.TemperatureFromThetaExner.Input, input)),
-            self.u_from_vn.run(fw.collect(recipes.UFromVn.Input, input)),
-        )
 
     def _zero_accumulators(self) -> None:
         for acc in self.accumulators.values():

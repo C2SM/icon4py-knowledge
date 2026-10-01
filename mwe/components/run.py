@@ -98,16 +98,16 @@ def print_dataflow(run_config: config.Config) -> None:
     icon4py_driver = proposed.Icon4pyDriver(run_config)
     print(
         fw.dataflow(
-            recipes.ThetaVToHalfLevels,
+            *icon4py_driver.dycore_resolution.providers,
             solve_nonhydro.SolveNonhydro,
             diffusion.Diffusion,
             tracer_advection.Advection,
-            recipes.TemperatureFromThetaExner,
-            recipes.UFromVn,
+            *icon4py_driver.physics.resolution.providers,
             *[physics_driver.PROCESSES[name] for name in run_config.physics],
             recipes.VnTendencyFromUTendency,
             recipes.ExnerThetaFromTemperature,
             physics_driver.PhysicsDriver,
+            *icon4py_driver.io_resolution.providers,
             icon4py_driver.io_monitor,
         )
     )

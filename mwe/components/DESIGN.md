@@ -364,3 +364,42 @@ every output step whether or not the config asks; counts unchanged, 8/8/8.
 
 **Checks.** As 06, plus `test_lookup_by_standard_name_or_class_name` (with
 `DuplicateQuantity`) and `test_state_type_builds_a_collectable_state`.
+
+## 08 Derived inputs
+
+**Problem.** The composer knows which recipes its children need and calls
+them by hand: the physics driver instantiates `TemperatureFromThetaExner` and
+`UFromVn` whether or not a configured process reads them, the driver does the
+same for IO whether or not the config asks for `temperature` or `u`, and a
+process that starts reading a new diagnostic needs a matching line in its
+composer. Who needs what is written in two places.
+
+**Adds.** `Source`, a leaf default that says where a value comes from when
+the composer does not supply it, and `derived_by(Recipe)`:
+`temperature: qty.Temperature.CellK = fw.derived_by(recipes.TemperatureFromThetaExner)`
+on muphys and tmx, `u` on tmx, `theta_v_ic` on the dycore, IO's config leaves
+through its `DERIVED` table. `Decl.source`; a hand-built `State` cannot carry
+a source (`UnresolvedInput`). `resolve(children, sizes) -> Resolution`: the
+recipes the children name, one instance each, dependency-ordered, one recipe
+per quantity at a place (`InconsistentDerivation` for two recipes on one key,
+or a recipe named on a leaf it does not produce). `Resolution.provide(*supplied)`
+runs them all once, eagerly, and the composer collects its children from the
+supplied and the produced states. Three resolutions: dycore, physics, IO. In
+this layer a derived leaf is always derived: supplying it as well is
+`AmbiguousSource`; "supplied wins" comes with the plan in 10. A cycle of
+recipes is `InconsistentDerivation`. `dataflow` prints
+`Temperature <- TemperatureFromThetaExner`.
+
+**Costs.** Framework 363 lines (+76). The composers lose their recipe
+instances and `PhysicsDriver` its `_diagnose` (`physics_driver.py` 106,
+`driver.py` 75). Providers run once per pass whatever the children's cadence:
+`u` is derived for tmx on every physics step, active or not. Counts now
+depend on the config: 8/8/8 for the example
+and tmx-only, 4/0/8 without physics (IO's temperature only), 4/4/8 without
+output, 4/0/8 for the prognostics config; `model_current` computes 8/8/8 in
+every row.
+
+**Checks.** As 07, plus `test_derived_by_is_a_source_on_the_declaration_only`,
+`test_resolve_orders_the_providers_and_provide_runs_them`,
+`test_resolve_refuses_an_inconsistent_derivation`, the `<- SaltFromDensity`
+line in the dataflow test, and the per-config counts in `test_equivalence.py`.
