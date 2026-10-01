@@ -2,7 +2,7 @@ import dataclasses
 import functools
 import types
 import typing
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from typing import Any, ClassVar, dataclass_transform
 
 import gt4py.next as gtx
@@ -129,6 +129,10 @@ class Decl:
     quantity: type[Quantity]
     dims: type[Dims]
 
+    @property
+    def key(self) -> tuple[type[Quantity], type[Dims]]:
+        return (self.quantity, self.dims)
+
     # the quantity, and the place when the quantity lives at more than one
     @property
     def label(self) -> str:
@@ -238,6 +242,43 @@ class PredictorCorrectorPair[S: State](Pair[S]):
     @property
     def corrector(self) -> S:
         return self.second
+
+
+# ------------------------------------------------------------------------------
+# Collecting a view from states
+# ------------------------------------------------------------------------------
+class MissingInput(KeyError):
+    pass
+
+
+class AmbiguousSource(ValueError):
+    pass
+
+
+# flattens states to {(quantity, dims): field}; two different buffers for one
+# key is AmbiguousSource, the same buffer twice is fine
+def _available(states: Iterable[State]) -> dict[tuple[type[Quantity], type[Dims]], Field[Any, Any]]:
+    available: dict[tuple[type[Quantity], type[Dims]], Field[Any, Any]] = {}
+    for state in states:
+        for d, value in state.leaves():
+            if available.setdefault(d.key, value) is not value:
+                raise AmbiguousSource(d.label)
+    return available
+
+
+# one leaf per Field declaration of cls, picked from the given states by
+# (quantity, dims); plain leaves by keyword, and a Field leaf given by keyword
+# wins over the pool. Pointer selection only, never computes.
+def collect[S: State](cls: type[S], *states: State, **plain: Any) -> S:
+    available = _available(states)
+    values: dict[str, Any] = dict(plain)
+    for d in cls.declarations():
+        if d.name in plain:
+            continue
+        if d.key not in available:
+            raise MissingInput(f"{cls.__qualname__}.{d.name}: {d.label}")
+        values[d.name] = available[d.key]
+    return cls(**values)
 
 
 # ------------------------------------------------------------------------------

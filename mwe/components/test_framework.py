@@ -146,6 +146,28 @@ def test_recipe_is_a_component_that_owns_its_result() -> None:
     assert np.all(np.asarray(density.data.ndarray) == 6.0)
 
 
+def test_collect_picks_leaves_by_quantity_and_place() -> None:
+    class Fields(fw.State):
+        pressure: Pressure.CellK
+        column: Pressure.Cell
+
+    class View(fw.State):
+        column: Pressure.Cell
+        salt: Salt.Cell
+        dtime: float
+
+    fields = fw.allocate(Fields, SIZES)
+    salted = Column(pressure=fields.pressure, salt=fw.zeros(Salt, fw.Cell, SIZES), dtime=0.0)
+    view = fw.collect(View, fields, salted, dtime=2.0)
+    assert view.column is fields.column and view.salt is salted.salt and view.dtime == 2.0
+    other = fw.zeros(Pressure, fw.Cell, SIZES)
+    assert fw.collect(View, fields, salted, column=other, dtime=2.0).column is other
+    with pytest.raises(fw.MissingInput, match="View.salt: Salt"):
+        fw.collect(View, fields, dtime=2.0)
+    with pytest.raises(fw.AmbiguousSource, match="Pressure@CellK"):
+        fw.collect(View, fields, salted, fw.allocate(Halve.Input, SIZES), dtime=2.0)
+
+
 def test_dataflow_lists_reads_and_produces_by_label() -> None:
     class Flux(fw.Component):
         class Input(fw.State):

@@ -10,11 +10,9 @@ from model_proposed import (
     diffusion,
     driver as proposed,
     io,
-    muphys,
     physics_driver,
     recipes,
     solve_nonhydro,
-    tmx,
     tracer_advection,
 )
 from model_proposed.common import framework as fw
@@ -96,10 +94,7 @@ def run_proposed(run_config: config.Config) -> dict[str, Any]:
     return result
 
 
-PROCESS_COMPONENTS: dict[str, type[fw.Component]] = {"muphys": muphys.MuphysComponent, "tmx": tmx.TmxComponent}
-
-
-# the declared dataflow of the proposed model, one line per component
+# the declared dataflow of the proposed model, in the order the driver runs it
 def print_dataflow(run_config: config.Config) -> None:
     print(
         fw.dataflow(
@@ -109,7 +104,7 @@ def print_dataflow(run_config: config.Config) -> None:
             tracer_advection.Advection,
             recipes.TemperatureFromThetaExner,
             recipes.UFromVn,
-            *[PROCESS_COMPONENTS[name] for name in run_config.physics],
+            *[physics_driver.PROCESSES[name] for name in run_config.physics],
             recipes.VnTendencyFromUTendency,
             recipes.ExnerThetaFromTemperature,
             physics_driver.PhysicsDriver,
