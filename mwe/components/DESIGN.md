@@ -265,3 +265,28 @@ Counts unchanged, 8/8/8.
 **Checks.** As 03, plus `test_tendency_of_derives_one_class_per_parent`,
 `test_a_tendency_leaf_declares_the_derived_quantity`, and two tendency lines
 in `static_checks`.
+
+## 05 Dataflow
+
+**Problem.** What a component reads and writes is in its code. icon4py's
+physics processes carry `inputs_properties`/`outputs_properties` dicts; the
+dycore, diffusion, advection and IO carry nothing, and no view lists them
+together.
+
+**Adds.** `Decl.label` (the quantity, plus the place when the quantity lives
+at more than one) and `dataflow(*component classes) -> str`, one line per
+component from its declarations alone. `run.py` prints it for `example.yaml`
+before the table:
+
+```
+ThetaVToHalfLevels | reads: ThetaV@CellK | produces: ThetaV@CellKHalf
+SolveNonhydro | reads: Vn, W, Rho, Exner, ThetaV@CellK, ThetaV@CellKHalf, MassFlux | produces: Vn, W, Rho, Exner, ThetaV@CellK, MassFlux
+...
+MuphysComponent | reads: Temperature, Qv | produces: TendencyOfTemperature, TendencyOfQv, PrecipitationFlux
+IOMonitor | reads: Rho, W, Vn, Exner, ThetaV@CellK, Temperature, U | produces: -
+```
+
+**Costs.** Framework 228 lines (+16). Nothing else changes: a report, not a
+mechanism.
+
+**Checks.** As 04, plus `test_dataflow_lists_reads_and_produces_by_label`.
