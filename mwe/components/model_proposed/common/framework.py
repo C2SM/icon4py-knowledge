@@ -50,6 +50,10 @@ class Quantity:
         for name, value in (("standard_name", standard_name), ("units", units), ("long_name", long_name)):
             if value is not None:
                 setattr(cls, name, value)
+        if REGISTRY.setdefault(cls.__name__, cls) is not cls:
+            raise DuplicateQuantity(cls.__name__)
+        if cls.standard_name and any(q.standard_name == cls.standard_name for q in REGISTRY.values() if q is not cls):
+            raise DuplicateQuantity(f"{cls.__name__}: standard_name {cls.standard_name} is taken")
 
     def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         raise TypeError(f"{cls.__name__} is a type-level tag, not a value")
@@ -88,6 +92,28 @@ def zeros[Q: Quantity, D: Dims](
     quantity: type[Q], dims: type[D], sizes: Mapping[gtx.Dimension, int]
 ) -> Field[Q, D]:
     return Field(quantity, dims, gtx.zeros({dim: sizes[dim] for dim in dims.dims}, dtype=ta.wpfloat))
+
+
+class DuplicateQuantity(ValueError):
+    pass
+
+
+class UnknownQuantity(KeyError):
+    pass
+
+
+# every quantity tag by class name, class names and CF standard_names both
+# unique; the output config names a quantity by either
+REGISTRY: dict[str, type[Quantity]] = {}
+
+
+# a quantity that lives somewhere (a marker base or a generic like TendencyOf
+# is not one)
+def lookup(key: str) -> type[Quantity]:
+    for quantity in REGISTRY.values():
+        if key in (quantity.standard_name, quantity.__name__) and quantity.places():
+            return quantity
+    raise UnknownQuantity(key)
 
 
 # A tendency is a quantity derived from its parent. `TendencyOf[Temperature]`
@@ -197,6 +223,15 @@ def _declarations(cls: type[State]) -> tuple[Decl, ...]:
 
 class Empty(State):
     pass
+
+
+# builds a State class at runtime, one leaf per (name, type); for a view
+# whose leaves come from the config, like IO's
+def state_type(name: str, leaves: Mapping[str, Any]) -> type[State]:
+    def body(namespace: dict[str, Any]) -> None:
+        namespace["__annotations__"] = dict(leaves)
+
+    return typing.cast(type[State], types.new_class(name, (State,), exec_body=body))
 
 
 def allocate[S: State](
@@ -322,12 +357,16 @@ class Recipe(Component):
 # ------------------------------------------------------------------------------
 # Reports
 # ------------------------------------------------------------------------------
-# what each component reads and produces, from its declarations alone
-def dataflow(*components: type[Component]) -> str:
+# what each component reads and produces, from its declarations alone; an
+# instance for a component whose Input is built per instance
+def dataflow(*components: type[Component] | Component) -> str:
     def names(decls: tuple[Decl, ...]) -> str:
         return ", ".join(d.label for d in decls) or "-"
 
+    def name(c: type[Component] | Component) -> str:
+        return c.__name__ if isinstance(c, type) else type(c).__name__
+
     return "\n".join(
-        f"{c.__name__} | reads: {names(c.Input.declarations())} | produces: {names(c.Output.declarations())}"
+        f"{name(c)} | reads: {names(c.Input.declarations())} | produces: {names(c.Output.declarations())}"
         for c in components
     )

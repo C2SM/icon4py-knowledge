@@ -9,7 +9,6 @@ from model_current.driver import driver as current
 from model_proposed import (
     diffusion,
     driver as proposed,
-    io,
     physics_driver,
     recipes,
     solve_nonhydro,
@@ -96,6 +95,7 @@ def run_proposed(run_config: config.Config) -> dict[str, Any]:
 
 # the declared dataflow of the proposed model, in the order the driver runs it
 def print_dataflow(run_config: config.Config) -> None:
+    icon4py_driver = proposed.Icon4pyDriver(run_config)
     print(
         fw.dataflow(
             recipes.ThetaVToHalfLevels,
@@ -108,7 +108,7 @@ def print_dataflow(run_config: config.Config) -> None:
             recipes.VnTendencyFromUTendency,
             recipes.ExnerThetaFromTemperature,
             physics_driver.PhysicsDriver,
-            io.IOMonitor,
+            icon4py_driver.io_monitor,
         )
     )
 
