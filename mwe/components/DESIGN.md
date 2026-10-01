@@ -336,3 +336,31 @@ composer verb in 10. Counts unchanged, 8/8/8.
 
 **Checks.** As 05, plus `test_collect_picks_leaves_by_quantity_and_place`
 (pick from two states, `MissingInput`, `AmbiguousSource`).
+
+## 07 IO from the config
+
+**Problem.** IO declares a fixed `Input` of everything it could write and the
+config filters it: adding an output variable means editing IO's `Input`, and
+IO reads seven leaves to write two. The config vocabulary (CF names, class
+names) is resolved by scanning that `Input`.
+
+**Adds.** `REGISTRY`: every quantity tag registers when defined; a repeated
+class name or a repeated CF `standard_name` is `DuplicateQuantity`.
+`lookup(key)` by either name, among the quantities that live somewhere
+(`UnknownQuantity` at init for a typo in the config). `state_type(name,
+leaves)` builds a `State` class at runtime. IO's `Input` is built per instance
+from the config, one leaf per requested variable at the quantity's first
+declared place, plus the time: `IOMonitor | reads: Temperature, U` for
+`example.yaml`. The driver collects it like any other view; `dataflow`
+accepts an instance for it, so `run.py` builds the driver to print the line.
+
+**Costs.** Framework 287 lines (+27). `io.py` 28 (was 30). A per-instance
+`Input` is opaque to mypy: the driver passes `self.io_monitor.Input` and IO
+reads its leaves with `getattr`; the class-level `IOMonitor.Input` is `Empty`.
+A configured variable that `lookup` knows but no state the driver passes
+carries (`specific_humidity`) fails at the first output step with
+`MissingInput`, as `model_current` fails late too; 06 failed at init. `temperature` and `u` are still derived at
+every output step whether or not the config asks; counts unchanged, 8/8/8.
+
+**Checks.** As 06, plus `test_lookup_by_standard_name_or_class_name` (with
+`DuplicateQuantity`) and `test_state_type_builds_a_collectable_state`.

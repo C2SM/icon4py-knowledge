@@ -43,7 +43,7 @@ class Icon4pyDriver:
         now = self.prognostic_states.now
         temperature = self.temperature_from_theta_exner.run(fw.collect(recipes.TemperatureFromThetaExner.Input, now))
         u = self.u_from_vn.run(fw.collect(recipes.UFromVn.Input, now))
-        self.io_monitor.run(fw.collect(io.IOMonitor.Input, now, temperature, u, simulation_time=info.simulation_time))
+        self.io_monitor.run(fw.collect(self.io_monitor.Input, now, temperature, u, simulation_time=info.simulation_time))
 
     def _integrate_one_time_step(self, info: states.StepInfo) -> None:
         self._do_dyn_substepping(info)
