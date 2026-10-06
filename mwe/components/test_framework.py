@@ -507,6 +507,23 @@ def test_derivations_are_checked_across_composites() -> None:
         fw.composition([Second(SIZES)], SIZES, input=fw.Empty, output=fw.Empty)
 
 
+def test_dataflow_lists_reads_and_produces_by_label() -> None:
+    class Flux(fw.Component):
+        class Input(fw.State):
+            pressure: Pressure.CellK
+            column: Pressure.Cell
+            tend: fw.Tendency[Salt, fw.Cell]
+
+        Output = fw.Empty
+
+    assert fw.dataflow(Halve, Flux, Consumer, Salter) == (
+        "Halve | reads: Pressure@CellK | produces: Pressure@CellK\n"
+        "Flux | reads: Pressure@CellK, Pressure@Cell, TendencyOfSalt | produces: -\n"
+        "Consumer | reads: Salt <- SaltFromDensity, Pressure@CellK | produces: -\n"
+        "Salter | reads: Pressure@CellK | produces: TendencyOfPressure@CellK | updates: Salt += SaltTendencyFromPressureTendency"
+    )
+
+
 # what mypy and pyright check: a quantity or a place mismatch is a type error.
 # Each ignore below is required (both checkers report an unused one), so the
 # suite type-checking is the test.
