@@ -87,6 +87,28 @@ def test_pairs_swap() -> None:
     assert pair.now is b and pair.next is a
 
 
+def test_collect_picks_leaves_by_quantity() -> None:
+    class Fields(fw.State):
+        pressure: fw.Field[Pressure]
+        salt: fw.Field[Salt]
+
+    class View(fw.State):
+        salt: fw.Field[Salt]
+        dtime: float
+
+    fields = fw.allocate(Fields, SIZES)
+    view = fw.collect(View, fields, dtime=2.0)
+    assert view.salt is fields.salt and view.dtime == 2.0
+    same_buffers_twice = Column(pressure=fields.pressure, salt=fields.salt, dtime=0.0)
+    assert fw.collect(View, fields, same_buffers_twice, dtime=2.0).salt is fields.salt
+    other = fw.zeros(Salt, SIZES)
+    assert fw.collect(View, fields, salt=other, dtime=2.0).salt is other
+    with pytest.raises(fw.MissingInput, match="View.salt: Salt"):
+        fw.collect(View, Halve.Output(pressure=fields.pressure), dtime=2.0)
+    with pytest.raises(fw.AmbiguousSource, match="Pressure"):
+        fw.collect(View, fields, fw.allocate(Halve.Input, SIZES), dtime=2.0)
+
+
 # what mypy and pyright check: a quantity mismatch is a type error. Each
 # ignore below is required (strict mode reports an unused one), so the suite
 # type-checking is the test.
