@@ -4,12 +4,12 @@ import ops
 
 class TmxComponent(fw.Component):
     class Input(fw.State):
-        temperature: fw.Field[qty.TemperatureOnCellK]
-        u: fw.Field[qty.UOnCellK]
+        temperature: qty.Temperature.CellK
+        u: qty.U.CellK
 
     class Output(fw.State):
-        tend_temperature: fw.Field[qty.TendencyOfTemperatureOnCellK]
-        tend_u: fw.Field[qty.TendencyOfUOnCellK]
+        tend_temperature: qty.TendencyOfTemperature.CellK
+        tend_u: qty.TendencyOfU.CellK
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)

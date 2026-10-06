@@ -9,24 +9,27 @@ from model_proposed.common import framework as fw
 SIZES = {dims.CellDim: 3, dims.KDim: 2}
 
 
-class Pressure(fw.Quantity, dims=(dims.CellDim, dims.KDim), standard_name="air_pressure", units="Pa"): ...
+class Pressure(fw.Quantity, standard_name="air_pressure", units="Pa"):
+    type CellK = fw.Field[Pressure, fw.CellK]
+    type Cell = fw.Field[Pressure, fw.Cell]
 
 
-class Salt(fw.Quantity, dims=(dims.CellDim,), units="1"): ...
+class Salt(fw.Quantity, units="1"):
+    type Cell = fw.Field[Salt, fw.Cell]
 
 
 class Column(fw.State):
-    pressure: fw.Field[Pressure]
-    salt: fw.Field[Salt]
+    pressure: Pressure.CellK
+    salt: Salt.Cell
     dtime: float
 
 
 class Halve(fw.Component):
     class Input(fw.State):
-        pressure: fw.Field[Pressure]
+        pressure: Pressure.CellK
 
     class Output(fw.State):
-        pressure: fw.Field[Pressure]
+        pressure: Pressure.CellK
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)
@@ -34,33 +37,46 @@ class Halve(fw.Component):
         return out
 
 
-def test_quantity_is_a_tag_with_metadata() -> None:
-    assert Pressure.dims == (dims.CellDim, dims.KDim)
+def test_quantity_is_a_tag_with_metadata_and_places() -> None:
     assert Pressure.standard_name == "air_pressure"
     assert Pressure.units == "Pa"
-    assert Salt.standard_name is None
+    assert Pressure.places() == (fw.CellK, fw.Cell)
+    assert Salt.standard_name is None and Salt.places() == (fw.Cell,)
+    assert fw.CellK.dims == (dims.CellDim, dims.KDim)
     with pytest.raises(TypeError):
         Pressure()
+    with pytest.raises(TypeError):
+        fw.CellK()
 
 
-def test_field_keeps_its_quantity() -> None:
-    p = fw.zeros(Pressure, SIZES)
-    assert p.quantity is Pressure
+def test_field_keeps_its_quantity_and_place() -> None:
+    p = fw.zeros(Pressure, fw.CellK, SIZES)
+    assert p.quantity is Pressure and p.dims is fw.CellK
     assert p.data.ndarray.shape == (3, 2)
 
 
 def test_state_declarations_list_the_field_leaves_only() -> None:
-    assert [(d.name, d.quantity) for d in Column.declarations()] == [("pressure", Pressure), ("salt", Salt)]
-    column = Column(pressure=fw.zeros(Pressure, SIZES), salt=fw.zeros(Salt, SIZES), dtime=1.0)
+    assert [(d.name, d.quantity, d.dims) for d in Column.declarations()] == [
+        ("pressure", Pressure, fw.CellK),
+        ("salt", Salt, fw.Cell),
+    ]
+    column = Column(pressure=fw.zeros(Pressure, fw.CellK, SIZES), salt=fw.zeros(Salt, fw.Cell, SIZES), dtime=1.0)
     assert [d.name for d, _ in column.leaves()] == ["pressure", "salt"]
     with pytest.raises(dataclasses.FrozenInstanceError):
         column.dtime = 2.0  # type: ignore[misc]
 
 
-def test_allocate_follows_the_declared_dims() -> None:
+def test_a_place_the_quantity_does_not_declare_is_refused() -> None:
+    with pytest.raises(fw.InvalidDims, match="Salt at CellK"):
+
+        class Wrong(fw.State):
+            salt: fw.Field[Salt, fw.CellK]
+
+
+def test_allocate_follows_the_declared_place() -> None:
     class Fields(fw.State):
-        pressure: fw.Field[Pressure]
-        salt: fw.Field[Salt]
+        pressure: Pressure.CellK
+        salt: Salt.Cell
 
     fields = fw.allocate(Fields, SIZES, fill=lambda name, shape: float(len(name)))
     assert fields.pressure.data.ndarray.shape == (3, 2)
@@ -70,7 +86,7 @@ def test_allocate_follows_the_declared_dims() -> None:
 
 def test_component_writes_its_own_buffers_or_the_callers() -> None:
     halve = Halve(SIZES)
-    pressure = fw.zeros(Pressure, SIZES)
+    pressure = fw.zeros(Pressure, fw.CellK, SIZES)
     np.asarray(pressure.data.ndarray)[...] = 8.0
     own = halve.run(Halve.Input(pressure=pressure))
     assert own is halve.output and own is halve.run(Halve.Input(pressure=pressure))
@@ -87,33 +103,34 @@ def test_pairs_swap() -> None:
     assert pair.now is b and pair.next is a
 
 
-def test_collect_picks_leaves_by_quantity() -> None:
+def test_collect_picks_leaves_by_quantity_and_place() -> None:
     class Fields(fw.State):
-        pressure: fw.Field[Pressure]
-        salt: fw.Field[Salt]
+        pressure: Pressure.CellK
+        column: Pressure.Cell
 
     class View(fw.State):
-        salt: fw.Field[Salt]
+        column: Pressure.Cell
+        salt: Salt.Cell
         dtime: float
 
     fields = fw.allocate(Fields, SIZES)
-    view = fw.collect(View, fields, dtime=2.0)
-    assert view.salt is fields.salt and view.dtime == 2.0
-    same_buffers_twice = Column(pressure=fields.pressure, salt=fields.salt, dtime=0.0)
-    assert fw.collect(View, fields, same_buffers_twice, dtime=2.0).salt is fields.salt
-    other = fw.zeros(Salt, SIZES)
-    assert fw.collect(View, fields, salt=other, dtime=2.0).salt is other
+    salted = Column(pressure=fields.pressure, salt=fw.zeros(Salt, fw.Cell, SIZES), dtime=0.0)
+    view = fw.collect(View, fields, salted, dtime=2.0)
+    assert view.column is fields.column and view.salt is salted.salt and view.dtime == 2.0
+    other = fw.zeros(Pressure, fw.Cell, SIZES)
+    assert fw.collect(View, fields, salted, column=other, dtime=2.0).column is other
     with pytest.raises(fw.MissingInput, match="View.salt: Salt"):
-        fw.collect(View, Halve.Output(pressure=fields.pressure), dtime=2.0)
-    with pytest.raises(fw.AmbiguousSource, match="Pressure"):
-        fw.collect(View, fields, fw.allocate(Halve.Input, SIZES), dtime=2.0)
+        fw.collect(View, fields, dtime=2.0)
+    with pytest.raises(fw.AmbiguousSource, match="Pressure@CellK"):
+        fw.collect(View, fields, salted, fw.allocate(Halve.Input, SIZES), dtime=2.0)
 
 
-# what mypy and pyright check: a quantity mismatch is a type error. Each
-# ignore below is required (strict mode reports an unused one), so the suite
-# type-checking is the test.
-def static_checks(pressure: fw.Field[Pressure], salt: fw.Field[Salt]) -> None:
-    wrong: fw.Field[Pressure] = salt  # type: ignore[assignment]
-    Halve.Input(pressure=salt)  # type: ignore[arg-type]
+# what mypy and pyright check: a quantity or a place mismatch is a type error.
+# Each ignore below is required (both checkers report an unused one), so the
+# suite type-checking is the test.
+def static_checks(pressure: Pressure.CellK, column: Pressure.Cell, salt: Salt.Cell) -> None:
+    wrong_quantity: Pressure.Cell = salt  # type: ignore[assignment]
+    wrong_place: Pressure.CellK = column  # type: ignore[assignment]
+    Halve.Input(pressure=column)  # type: ignore[arg-type]
     Halve.Input(pressure=pressure)
-    del wrong
+    del wrong_quantity, wrong_place

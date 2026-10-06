@@ -4,13 +4,13 @@ import ops
 
 class MuphysComponent(fw.Component):
     class Input(fw.State):
-        temperature: fw.Field[qty.TemperatureOnCellK]
-        qv: fw.Field[qty.QvOnCellK]
+        temperature: qty.Temperature.CellK
+        qv: qty.Qv.CellK
 
     class Output(fw.State):
-        tend_temperature: fw.Field[qty.TendencyOfTemperatureOnCellK]
-        tend_qv: fw.Field[qty.TendencyOfQvOnCellK]
-        pflx: fw.Field[qty.PrecipitationFluxOnCell]
+        tend_temperature: qty.TendencyOfTemperature.CellK
+        tend_qv: qty.TendencyOfQv.CellK
+        pflx: qty.PrecipitationFlux.Cell
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)

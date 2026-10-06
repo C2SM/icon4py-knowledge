@@ -1,5 +1,6 @@
 from collections.abc import Mapping, Sequence
 from datetime import datetime
+from typing import Any
 
 import gt4py.next as gtx
 
@@ -11,13 +12,13 @@ class IOMonitor(fw.Component):
     # everything IO can write; the config picks by CF standard_name, or by the
     # quantity's class name where the CF table has none
     class Input(fw.State):
-        rho: fw.Field[qty.RhoOnCellK]
-        w: fw.Field[qty.WOnCellK]
-        vn: fw.Field[qty.VnOnEdgeK]
-        exner: fw.Field[qty.ExnerOnCellK]
-        theta_v: fw.Field[qty.ThetaVOnCellK]
-        temperature: fw.Field[qty.TemperatureOnCellK]
-        u: fw.Field[qty.UOnCellK]
+        rho: qty.Rho.CellK
+        w: qty.W.CellK
+        vn: qty.Vn.EdgeK
+        exner: qty.Exner.CellK
+        theta_v: qty.ThetaV.CellK
+        temperature: qty.Temperature.CellK
+        u: qty.U.CellK
         simulation_time: datetime
 
     Output = fw.Empty
@@ -31,6 +32,6 @@ class IOMonitor(fw.Component):
 
     def run(self, input: Input, out: fw.Empty | None = None) -> fw.Empty:
         for name, leaf in self.selected.items():
-            field: fw.Field[fw.Quantity] = getattr(input, leaf)
+            field: fw.Field[Any, Any] = getattr(input, leaf)
             self.dataset.append((input.simulation_time, name, ops.arr(field.data).copy()))
         return self.buffers(out)

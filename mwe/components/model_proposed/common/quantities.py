@@ -1,27 +1,48 @@
-from icon4py.model.common import dimension as dims
-
 from model_proposed.common import framework as fw
 
-CELL = (dims.CellDim,)
-CELL_K = (dims.CellDim, dims.KDim)
-CELL_KHALF = (dims.CellDim, dims.KHalfDim)
-EDGE_K = (dims.EdgeDim, dims.KDim)
+
+# One tag per quantity; the places it lives at are its nested aliases, so a
+# component declares `theta_v: qty.ThetaV.CellK` or `qty.ThetaV.CellKHalf`.
+# `standard_name` where the CF table has one (Vn, ThetaV, MassFlux have none).
+class Vn(fw.Quantity, units="m s-1"):
+    type EdgeK = fw.Field[Vn, fw.EdgeK]
 
 
-# One tag per quantity at one place on the grid, as icon4py names them today
-# (`theta_v_at_cells_on_half_levels`). `standard_name` where the CF table has
-# one (Vn, ThetaV, MassFlux have none).
-class VnOnEdgeK(fw.Quantity, dims=EDGE_K, units="m s-1"): ...
-class WOnCellK(fw.Quantity, dims=CELL_K, standard_name="upward_air_velocity", units="m s-1"): ...
-class RhoOnCellK(fw.Quantity, dims=CELL_K, standard_name="air_density", units="kg m-3"): ...
-class ExnerOnCellK(fw.Quantity, dims=CELL_K, standard_name="dimensionless_exner_function", units="1"): ...
-class ThetaVOnCellK(fw.Quantity, dims=CELL_K, units="K"): ...
-class ThetaVOnCellKHalf(fw.Quantity, dims=CELL_KHALF, units="K"): ...
-class QvOnCellK(fw.Quantity, dims=CELL_K, standard_name="specific_humidity", units="1"): ...
-class MassFluxOnEdgeK(fw.Quantity, dims=EDGE_K, units="kg m-2 s-1"): ...
-class TemperatureOnCellK(fw.Quantity, dims=CELL_K, standard_name="air_temperature", units="K"): ...
-class UOnCellK(fw.Quantity, dims=CELL_K, standard_name="eastward_wind", units="m s-1", long_name="eastward wind component"): ...
-class PrecipitationFluxOnCell(fw.Quantity, dims=CELL, standard_name="precipitation_flux", units="kg m-2 s-1"): ...
+class W(fw.Quantity, standard_name="upward_air_velocity", units="m s-1"):
+    type CellK = fw.Field[W, fw.CellK]
+
+
+class Rho(fw.Quantity, standard_name="air_density", units="kg m-3"):
+    type CellK = fw.Field[Rho, fw.CellK]
+
+
+class Exner(fw.Quantity, standard_name="dimensionless_exner_function", units="1"):
+    type CellK = fw.Field[Exner, fw.CellK]
+
+
+class ThetaV(fw.Quantity, units="K"):
+    type CellK = fw.Field[ThetaV, fw.CellK]
+    type CellKHalf = fw.Field[ThetaV, fw.CellKHalf]
+
+
+class Qv(fw.Quantity, standard_name="specific_humidity", units="1"):
+    type CellK = fw.Field[Qv, fw.CellK]
+
+
+class MassFlux(fw.Quantity, units="kg m-2 s-1"):
+    type EdgeK = fw.Field[MassFlux, fw.EdgeK]
+
+
+class Temperature(fw.Quantity, standard_name="air_temperature", units="K"):
+    type CellK = fw.Field[Temperature, fw.CellK]
+
+
+class U(fw.Quantity, standard_name="eastward_wind", units="m s-1", long_name="eastward wind component"):
+    type CellK = fw.Field[U, fw.CellK]
+
+
+class PrecipitationFlux(fw.Quantity, standard_name="precipitation_flux", units="kg m-2 s-1"):
+    type Cell = fw.Field[PrecipitationFlux, fw.Cell]
 
 
 # Tendencies are quantities of their own, declared by hand with their own
@@ -29,7 +50,19 @@ class PrecipitationFluxOnCell(fw.Quantity, dims=CELL, standard_name="precipitati
 # base is what `FieldKind.TENDENCY` is there: the physics driver accumulates
 # every output leaf whose quantity is a Tendency.
 class Tendency(fw.Quantity): ...
-class TendencyOfTemperatureOnCellK(Tendency, dims=CELL_K, standard_name="tendency_of_air_temperature", units="K s-1"): ...
-class TendencyOfQvOnCellK(Tendency, dims=CELL_K, standard_name="tendency_of_specific_humidity", units="s-1"): ...
-class TendencyOfUOnCellK(Tendency, dims=CELL_K, standard_name="tendency_of_eastward_wind", units="m s-2"): ...
-class TendencyOfVnOnEdgeK(Tendency, dims=EDGE_K, units="m s-2"): ...
+
+
+class TendencyOfTemperature(Tendency, standard_name="tendency_of_air_temperature", units="K s-1"):
+    type CellK = fw.Field[TendencyOfTemperature, fw.CellK]
+
+
+class TendencyOfQv(Tendency, standard_name="tendency_of_specific_humidity", units="s-1"):
+    type CellK = fw.Field[TendencyOfQv, fw.CellK]
+
+
+class TendencyOfU(Tendency, standard_name="tendency_of_eastward_wind", units="m s-2"):
+    type CellK = fw.Field[TendencyOfU, fw.CellK]
+
+
+class TendencyOfVn(Tendency, units="m s-2"):
+    type EdgeK = fw.Field[TendencyOfVn, fw.EdgeK]

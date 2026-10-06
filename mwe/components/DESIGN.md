@@ -230,3 +230,45 @@ composer verb in 09. Counts unchanged, 8/8/8.
 **Checks.** As 01, plus `test_collect_picks_leaves_by_quantity` (pick from two
 states, the same buffer twice, keyword wins, `MissingInput`,
 `AmbiguousSource`).
+
+## 03 Dims
+
+**Problem.** With one tag per quantity and place, `ThetaVOnCellK` and
+`ThetaVOnCellKHalf` are two unrelated quantities: a CF name is written twice
+or left off one, a tendency would exist per place, the config names the place
+in the name (`VnOnEdgeK`), and the place is checked nowhere: gt4py's
+`CellKField` and `CellKHalfField` are one type to mypy and pyright, because
+dims are runtime objects.
+
+**Adds.** `Dims`, a second kind of tag: a place on the grid with its gt4py
+dimensions, six of them (`Cell`, `CellK`, `CellKHalf`, `Edge`, `EdgeK`,
+`EdgeKHalf`). `Field[Q, D]` takes both tags. A quantity declares the places it
+lives at as nested aliases,
+
+```python
+class ThetaV(fw.Quantity, units="K"):
+    type CellK = fw.Field[ThetaV, fw.CellK]
+    type CellKHalf = fw.Field[ThetaV, fw.CellKHalf]
+```
+
+and a component writes `theta_v: qty.ThetaV.CellK`. `Decl` carries `dims`. A
+place the quantity does not declare is refused where the `State` class is
+defined (`InvalidDims`; to the checkers `fw.Field[ThetaV, fw.EdgeK]` is a
+valid type). `zeros(quantity, dims, sizes)`. A place mismatch between two
+declared places is a type error (`static_checks`), which gt4py cannot give
+today. The config says `Vn`, not `VnOnEdgeK`. `collect` keys its pool by
+`(quantity, dims)` (`Decl.key`) and names a leaf by its quantity, with the
+place appended where the quantity lives at more than one (`ThetaV@CellK`).
+
+**Costs.** Framework 210 lines (+35). `model_proposed` 599 (+45).
+`quantities.py` 38 (+9): a tag is two lines, the alias line per place is its
+declaration of where it lives. `Field` takes three arguments. Counts
+unchanged, 8/8/8. `places()` reads the class body; nothing else is automated.
+
+**Checks.** As 02, with four tests renamed for the place
+(`test_quantity_is_a_tag_with_metadata_and_places`,
+`test_field_keeps_its_quantity_and_place`,
+`test_allocate_follows_the_declared_place`,
+`test_collect_picks_leaves_by_quantity_and_place`, the last now picking by
+place too), plus `test_a_place_the_quantity_does_not_declare_is_refused` and
+the place mismatch line in `static_checks`.
