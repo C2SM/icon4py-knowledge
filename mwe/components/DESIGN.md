@@ -415,3 +415,60 @@ subscription longer than `qty.U.CellK`. Counts unchanged from 06.
 **Checks.** As 06, plus `test_tendency_of_derives_one_class_per_parent`,
 `test_a_tendency_leaf_declares_the_derived_quantity`, and two tendency lines
 in `static_checks`.
+
+## 08 Updates declared on the process
+
+**Problem.** A process emits tendencies and the composer knows what to do with
+them: `_apply` says by hand that the qv sum lands on qv, that the temperature
+sum lands on the derived temperature and is followed by the exner/theta_v
+update, that the u sum becomes a vn tendency. Reading muphys tells you what it
+computes, not what it changes; adding a process with a new tendency means a
+new branch in the composer, as in icon4py's `ApplyToPrognostic`. The
+accumulators are a dict the composer keys by hand.
+
+**Adds.** `Process`, a `Component` with an `Update` block declaring where its
+tendencies land, each leaf a leaf of the quantity itself: `temperature:
+qty.Temperature.CellK = fw.from_tendency()`, temperature gets dt times the
+process's own tendency of it; `from_tendency(Recipe)`, dt times the tendency a
+recipe derives from the process's outputs (tmx's u tendency becomes a vn
+tendency through `VnTendencyFromUTendency`); `after_increments(Hook)`, the
+component that rewrites the leaf once all tendencies are applied
+(`ExnerThetaFromTemperature` on `theta_v` and `exner`).
+`Process.accumulate(into, output, *computed)` sums the raw tendencies, the one
+thing a process may override. `updates(processes, sizes, input=, output=,
+provided=)` reads the blocks once at composite init and checks them: every
+tendency lands somewhere (`UnappliedTendency`); a recipe produces the tendency
+it is named for and reads only what is there; a hook writes the leaf it hangs
+on, one hook per leaf; a quantity a tendency lands on comes in as a composite
+input or a provider output, and when it is not a composite output some hook
+must read it, or the update would be lost (`UnappliedIncrement`); every
+composite output is an input, updated or hook-written. It returns the summed
+tendencies, one leaf per quantity at a place, the tendency recipes per process
+and the hooks, once each. `Updates.update(input, output, dt, *produced)` is
+`out = in + dt * sum` leaf by leaf, dt applied once as `ApplyToPrognostic`
+does, in place where the composer aliased, in the provider's buffer for a
+quantity the composite does not output (temperature), the rest carried; then
+the hooks, once. `_zero_accumulators`, `_accumulate` and `_apply` are gone
+from the physics driver, the last of the four methods 01 named.
+
+Parallel update is the composer's schedule: tendencies summed over processes,
+applied once, hooks once (`theta_v, exner <- EOS(T + dt sum(tend_T))`, as
+`ApplyToPrognostic` does; the EOS is nonlinear, so per-process application
+would differ). A sequential schedule would apply and hook per process with the
+same declarations; not built. For vn the sum is of the derived tendencies, `dt
+sum(P(tend_u))`, where `ApplyToPrognostic` computes `dt P(sum(tend_u))`: the
+same for one process, equal up to rounding for more, since `P` is linear.
+
+**Costs.** Framework 508 lines (+155), the largest layer: the checks are most
+of it. `model_proposed` 921 (+129): `physics_driver.py` 67 (was 106; the three
+methods, the accumulators dict and the driver's own recipe instances are
+gone), muphys and tmx each gain a five-line `Update` block. Counts unchanged
+from 07. A sixth row of the matrix, the example at dt = 0.3, guards the order
+of sum and product. Open with the seniors: this puts the update declaration on
+the process; the alternative is v4's `apply` method on the component. Same
+declarations either way, different owner of the schedule.
+
+**Checks.** As 07, plus `test_updates_reads_the_processes_update_blocks`,
+`test_accumulate_then_update_applies_dt_once_and_runs_the_hooks_once`,
+`test_updates_refuses_inconsistent_declarations`, and the `dt03` row in
+`test_equivalence.py`.
