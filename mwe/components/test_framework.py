@@ -18,6 +18,10 @@ class Salt(fw.Quantity, units="1"):
     type Cell = fw.Field[Salt, fw.Cell]
 
 
+class Density(fw.Quantity, standard_name="sea_water_density", units="kg m-3"):
+    type CellK = fw.Field[Density, fw.CellK]
+
+
 class Column(fw.State):
     pressure: Pressure.CellK
     salt: Salt.Cell
@@ -123,6 +127,27 @@ def test_collect_picks_leaves_by_quantity_and_place() -> None:
         fw.collect(View, fields, dtime=2.0)
     with pytest.raises(fw.AmbiguousSource, match="Pressure@CellK"):
         fw.collect(View, fields, salted, fw.allocate(Halve.Input, SIZES), dtime=2.0)
+
+
+def test_recipe_is_a_component_that_owns_its_result() -> None:
+    class DensityFromPressure(fw.Recipe):
+        class Input(fw.State):
+            pressure: Pressure.CellK
+
+        class Output(fw.State):
+            density: Density.CellK
+
+        def run(self, input: Input, out: Output | None = None) -> Output:
+            out = self.buffers(out)
+            np.asarray(out.density.data.ndarray)[...] = 2.0 * np.asarray(input.pressure.data.ndarray)
+            return out
+
+    pressure = fw.zeros(Pressure, fw.CellK, SIZES)
+    np.asarray(pressure.data.ndarray)[...] = 3.0
+    recipe = DensityFromPressure(SIZES)
+    density = recipe.run(DensityFromPressure.Input(pressure=pressure)).density
+    assert density is recipe.output.density and density.quantity is Density
+    assert np.all(np.asarray(density.data.ndarray) == 6.0)
 
 
 # what mypy and pyright check: a quantity or a place mismatch is a type error.
