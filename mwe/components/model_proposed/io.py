@@ -8,32 +8,38 @@ from model_proposed import recipes
 from model_proposed.common import framework as fw, quantities as qty
 import ops
 
+# The recipes for the derived output variables, by quantity: a leaf built from
+# the config cannot carry a `derived_by` default. They could as well live on
+# the quantity, `class U(fw.Quantity, ..., derived_by=recipes.UFromVn)`, and IO
+# would only select by config.
+DERIVED: dict[type[fw.Quantity], fw.Source] = {
+    qty.U: fw.derived_by(recipes.UFromVn),
+    qty.Temperature: fw.derived_by(recipes.TemperatureFromThetaExner),
+}
+
 
 class IOMonitor(fw.Component):
-    # everything IO can write; the config picks by CF standard_name, or by the
-    # quantity's class name where the CF table has none; the two diagnostics
-    # say which recipe derives them when nobody supplies them
-    class Input(fw.State):
-        rho: qty.Rho.CellK
-        w: qty.W.CellK
-        vn: qty.Vn.EdgeK
-        exner: qty.Exner.CellK
-        theta_v: qty.ThetaV.CellK
-        temperature: qty.Temperature.CellK = fw.derived_by(recipes.TemperatureFromThetaExner)
-        u: qty.U.CellK = fw.derived_by(recipes.UFromVn)
-        simulation_time: datetime
-
+    # the instance's Input is the real one, built in __init__; the class-level
+    # one is a placeholder
+    Input: type[fw.State] = fw.Empty
     Output = fw.Empty
 
+    # Input is built from the config: one leaf per requested variable, named
+    # by its CF standard_name or class name, at the quantity's first declared
+    # place, derived where DERIVED says so; plus the time
     def __init__(self, sizes: Mapping[gtx.Dimension, int], variables: Sequence[str]) -> None:
         super().__init__(sizes)
-        keys = {d.quantity.standard_name or d.quantity.__name__: d.name for d in IOMonitor.Input.declarations()}
-        assert len(keys) == len(IOMonitor.Input.declarations()), "two IO leaves with one name"
-        self.selected = {name: keys[name] for name in variables}
+        self.variables = tuple(variables)
+        quantities = {key: fw.lookup(key) for key in self.variables}
+        field: Any = fw.Field
+        leaves: dict[str, Any] = {key: field[q, q.places()[0]] for key, q in quantities.items()}
+        sources = {key: DERIVED[q] for key, q in quantities.items() if q in DERIVED}
+        self.Input = fw.state_type("Input", leaves | {"simulation_time": datetime}, sources)
         self.dataset: list[tuple[datetime, str, ops.Array]] = []
 
-    def run(self, input: Input, out: fw.Empty | None = None) -> fw.Empty:
-        for name, leaf in self.selected.items():
-            field: fw.Field[Any, Any] = getattr(input, leaf)
-            self.dataset.append((input.simulation_time, name, ops.arr(field.data).copy()))
+    def run(self, input: fw.State, out: fw.Empty | None = None) -> fw.Empty:
+        time: datetime = getattr(input, "simulation_time")
+        for key in self.variables:
+            field: fw.Field[Any, Any] = getattr(input, key)
+            self.dataset.append((time, key, ops.arr(field.data).copy()))
         return self.buffers(out)
