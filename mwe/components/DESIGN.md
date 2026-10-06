@@ -384,3 +384,34 @@ prognostics config, 8/8/8 for the example and tmx-only.
 **Checks.** As 05, plus `test_lookup_by_standard_name_or_class_name` (with
 `DuplicateQuantity`), `test_state_type_builds_a_collectable_state` (with a
 source too), and the new per-config counts in `test_equivalence.py`.
+
+## 07 Tendencies
+
+**Problem.** A tendency is a quantity declared by hand: four tags with their
+units typed in (`TendencyOfTemperature`, `K s-1`) and nothing linking
+`TendencyOfTemperature` to `Temperature`. The physics driver sums tendencies
+by output name, so muphys's `tend_temperature` and tmx's `tend_temperature`
+add up because both authors typed the same name, and `_apply` knows by name
+which prognostic each sum lands on, as `ApplyToPrognostic` does. icon4py's
+`tendency_of(...)` in `states/data.py` derives the metadata, but the link is
+gone once the dict is built.
+
+**Adds.** `TendencyOf[Q]`, a quantity derived from its parent:
+`fw.Tendency[qty.Temperature, fw.CellK]` names it in a type,
+`tendency_of(qty.Temperature)` is the one class behind it at runtime,
+memoized, with the parent's places, its units per second, the CF
+`tendency_of_` name where the parent has one, and `parent`. `declarations()`
+resolves the alias to that class. `_accumulate` keys the accumulators by
+`(parent, dims)` instead of output name, and `_apply` reads the sum for `(Qv,
+CellK)`: two processes' temperature tendencies add up because both are
+tendencies of `Temperature` at `CellK`. Still by hand: where each sum lands is
+written in `_apply`.
+
+**Costs.** Framework 353 lines (+36). `model_proposed` 792 (+25),
+`quantities.py` 25 (-13): the four hand-written tendency tags and the marker
+base are gone. A tendency leaf is `fw.Tendency[qty.U, fw.CellK]`, one
+subscription longer than `qty.U.CellK`. Counts unchanged from 06.
+
+**Checks.** As 06, plus `test_tendency_of_derives_one_class_per_parent`,
+`test_a_tendency_leaf_declares_the_derived_quantity`, and two tendency lines
+in `static_checks`.

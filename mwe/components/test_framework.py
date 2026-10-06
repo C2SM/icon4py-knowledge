@@ -100,6 +100,24 @@ def test_component_writes_its_own_buffers_or_the_callers() -> None:
     assert np.all(np.asarray(pressure.data.ndarray) == 4.0)
 
 
+def test_tendency_of_derives_one_class_per_parent() -> None:
+    t = fw.tendency_of(Pressure)
+    assert t is fw.tendency_of(Pressure) and issubclass(t, fw.TendencyOf)
+    assert t.__name__ == "TendencyOfPressure" and t.parent is Pressure
+    assert t.units == "Pa s-1" and t.standard_name == "tendency_of_air_pressure"
+    assert t.places() == Pressure.places()
+    assert fw.tendency_of(Salt).units == "s-1" and fw.tendency_of(Salt).standard_name is None
+
+
+def test_a_tendency_leaf_declares_the_derived_quantity() -> None:
+    class Tendencies(fw.State):
+        tend_pressure: fw.Tendency[Pressure, fw.CellK]
+
+    (d,) = Tendencies.declarations()
+    assert d.quantity is fw.tendency_of(Pressure) and d.dims is fw.CellK
+    assert fw.allocate(Tendencies, SIZES).tend_pressure.data.ndarray.shape == (3, 2)
+
+
 def test_pairs_swap() -> None:
     a, b = fw.allocate(Halve.Output, SIZES), fw.allocate(Halve.Output, SIZES)
     pair = fw.TimeStepPair(a, b)
@@ -143,8 +161,8 @@ def test_lookup_by_standard_name_or_class_name() -> None:
     assert fw.lookup("Salt") is Salt
     with pytest.raises(fw.UnknownQuantity, match="pepper"):
         fw.lookup("pepper")
-    with pytest.raises(fw.UnknownQuantity, match="Tendency"):
-        fw.lookup("Tendency")
+    with pytest.raises(fw.UnknownQuantity, match="TendencyOf"):
+        fw.lookup("TendencyOf")
     with pytest.raises(fw.DuplicateQuantity, match="Salt"):
         type("Salt", (fw.Quantity,), {}, units="1")
     with pytest.raises(fw.DuplicateQuantity, match="air_pressure is taken"):
@@ -268,9 +286,13 @@ def test_resolve_refuses_a_cycle() -> None:
 # what mypy and pyright check: a quantity or a place mismatch is a type error.
 # Each ignore below is required (both checkers report an unused one), so the
 # suite type-checking is the test.
-def static_checks(pressure: Pressure.CellK, column: Pressure.Cell, salt: Salt.Cell) -> None:
+def static_checks(
+    pressure: Pressure.CellK, column: Pressure.Cell, salt: Salt.Cell, tendency: fw.Tendency[Pressure, fw.CellK]
+) -> None:
     wrong_quantity: Pressure.Cell = salt  # type: ignore[assignment]
     wrong_place: Pressure.CellK = column  # type: ignore[assignment]
+    not_a_tendency: fw.Tendency[Pressure, fw.CellK] = pressure  # type: ignore[assignment]
+    other_tendency: fw.Tendency[Salt, fw.CellK] = tendency  # type: ignore[assignment]
     Halve.Input(pressure=column)  # type: ignore[arg-type]
     Halve.Input(pressure=pressure)
-    del wrong_quantity, wrong_place
+    del wrong_quantity, wrong_place, not_a_tendency, other_tendency

@@ -58,9 +58,10 @@ class PhysicsDriver(fw.Component):
         # the recipes the processes declare for their derived inputs, run once
         # per step before them
         self.resolution = fw.resolve([process.component for process in self.processes], sizes)
-        # one accumulator per tendency the processes emit, by output name, made
-        # when first seen (TendencyAccumulators in icon4py)
-        self.accumulators: dict[str, fw.Field[Any, Any]] = {}
+        # one accumulator per tendency the processes emit, keyed by what it is a
+        # tendency of and where, made when first seen (TendencyAccumulators in
+        # icon4py keys them by output name)
+        self.accumulators: dict[tuple[type[fw.Quantity], type[fw.Dims]], fw.Field[Any, Any]] = {}
         # the last output of each process, reused on the steps it is not active
         self.outputs: dict[str, fw.State] = {}
         self._new_te = fw.zeros(qty.Temperature, fw.CellK, sizes)
@@ -85,14 +86,15 @@ class PhysicsDriver(fw.Component):
         for acc in self.accumulators.values():
             ops.arr(acc.data)[...] = 0.0
 
-    # every Tendency leaf of a process's output into the accumulator of its
-    # name (TendencyAccumulators.accumulate)
+    # every tendency leaf of a process's output into the accumulator of its
+    # parent at its place (TendencyAccumulators.accumulate)
     def _accumulate(self, output: fw.State) -> None:
         for d, value in output.leaves():
-            if issubclass(d.quantity, qty.Tendency):
-                if d.name not in self.accumulators:
-                    self.accumulators[d.name] = fw.zeros(d.quantity, d.dims, self.sizes)
-                ops.arr(self.accumulators[d.name].data)[...] += ops.arr(value.data)
+            if issubclass(d.quantity, fw.TendencyOf):
+                key = (d.quantity.parent, d.dims)
+                if key not in self.accumulators:
+                    self.accumulators[key] = fw.zeros(d.quantity, d.dims, self.sizes)
+                ops.arr(self.accumulators[key].data)[...] += ops.arr(value.data)
 
     # the summed tendencies into the prognostics, once (ApplyToPrognostic);
     # `out` may alias `input`
@@ -100,13 +102,13 @@ class PhysicsDriver(fw.Component):
         acc, dt = self.accumulators, input.dtime
         _carry(input.vn, out.vn)
         _carry(input.qv, out.qv)
-        if "tend_qv" in acc:
-            ops.arr(out.qv.data)[...] = ops.arr(input.qv.data) + dt * ops.arr(acc["tend_qv"].data)
-        if "tend_temperature" in acc:
+        if (qty.Qv, fw.CellK) in acc:
+            ops.arr(out.qv.data)[...] = ops.arr(input.qv.data) + dt * ops.arr(acc[qty.Qv, fw.CellK].data)
+        if (qty.Temperature, fw.CellK) in acc:
             # the EOS reads the temperature the recipes derived, incremented
             eos_input = fw.collect(recipes.ExnerThetaFromTemperature.Input, input, *produced)
             ops.arr(self._new_te.data)[...] = ops.arr(eos_input.temperature.data) + dt * ops.arr(
-                acc["tend_temperature"].data
+                acc[qty.Temperature, fw.CellK].data
             )
             self.exner_theta_from_temperature.run(
                 dataclasses.replace(eos_input, temperature=self._new_te),
@@ -115,8 +117,8 @@ class PhysicsDriver(fw.Component):
         else:
             _carry(input.exner, out.exner)
             _carry(input.theta_v, out.theta_v)
-        if "tend_u" in acc:
+        if (qty.U, fw.CellK) in acc:
             ddt_vn = self.vn_tendency_from_u_tendency.run(
-                recipes.VnTendencyFromUTendency.Input(tend_u=acc["tend_u"])
+                recipes.VnTendencyFromUTendency.Input(tend_u=acc[qty.U, fw.CellK])
             ).ddt_vn
             ops.arr(out.vn.data)[...] = ops.arr(input.vn.data) + dt * ops.arr(ddt_vn.data)
