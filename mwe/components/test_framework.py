@@ -130,24 +130,116 @@ def test_collect_picks_leaves_by_quantity_and_place() -> None:
 
 
 def test_recipe_is_a_component_that_owns_its_result() -> None:
-    class DensityFromPressure(fw.Recipe):
-        class Input(fw.State):
-            pressure: Pressure.CellK
-
-        class Output(fw.State):
-            density: Density.CellK
-
-        def run(self, input: Input, out: Output | None = None) -> Output:
-            out = self.buffers(out)
-            np.asarray(out.density.data.ndarray)[...] = 2.0 * np.asarray(input.pressure.data.ndarray)
-            return out
-
     pressure = fw.zeros(Pressure, fw.CellK, SIZES)
     np.asarray(pressure.data.ndarray)[...] = 3.0
     recipe = DensityFromPressure(SIZES)
     density = recipe.run(DensityFromPressure.Input(pressure=pressure)).density
     assert density is recipe.output.density and density.quantity is Density
     assert np.all(np.asarray(density.data.ndarray) == 6.0)
+
+
+class DensityFromPressure(fw.Recipe):
+    class Input(fw.State):
+        pressure: Pressure.CellK
+
+    class Output(fw.State):
+        density: Density.CellK
+
+    def run(self, input: Input, out: Output | None = None) -> Output:
+        out = self.buffers(out)
+        np.asarray(out.density.data.ndarray)[...] = 2.0 * np.asarray(input.pressure.data.ndarray)
+        return out
+
+
+class SaltFromDensity(fw.Recipe):
+    class Input(fw.State):
+        density: Density.CellK = fw.derived_by(DensityFromPressure)
+
+    class Output(fw.State):
+        salt: Salt.Cell
+
+    def run(self, input: Input, out: Output | None = None) -> Output:
+        out = self.buffers(out)
+        np.asarray(out.salt.data.ndarray)[...] = np.asarray(input.density.data.ndarray).sum(axis=1)
+        return out
+
+
+class Consumer(fw.Component):
+    class Input(fw.State):
+        salt: Salt.Cell = fw.derived_by(SaltFromDensity)
+        pressure: Pressure.CellK
+
+    Output = fw.Empty
+
+    def run(self, input: Input, out: fw.Empty | None = None) -> fw.Empty:
+        return self.buffers(out)
+
+
+def test_derived_by_is_a_source_on_the_declaration_only() -> None:
+    (salt, pressure) = Consumer.Input.declarations()
+    assert salt.source == fw.Derived(SaltFromDensity) and pressure.source is None
+    with pytest.raises(fw.UnresolvedInput, match="Consumer.Input.salt"):
+        Consumer.Input(salt=fw.derived_by(SaltFromDensity), pressure=fw.zeros(Pressure, fw.CellK, SIZES))
+
+
+def test_resolve_orders_the_providers_and_provide_runs_them() -> None:
+    resolution = fw.resolve([Consumer], SIZES)
+    assert [type(r) for r in resolution.providers] == [DensityFromPressure, SaltFromDensity]
+    fields = fw.allocate(Halve.Input, SIZES, fill=lambda name, shape: 1.0)
+    produced = resolution.provide(fields)
+    view = fw.collect(Consumer.Input, fields, *produced)
+    assert np.all(np.asarray(view.salt.data.ndarray) == 4.0)
+    assert view.salt is resolution.providers[1].output.salt
+    assert fw.resolve([Halve], SIZES).providers == ()
+
+
+def test_resolve_refuses_an_inconsistent_derivation() -> None:
+    class Other(fw.Component):
+        class Input(fw.State):
+            salt: Salt.Cell = fw.derived_by(DensityFromPressure)
+
+        Output = fw.Empty
+
+    with pytest.raises(fw.InconsistentDerivation, match="does not produce Salt"):
+        fw.resolve([Other], SIZES)
+
+    class Twice(fw.Recipe):
+        Input = Halve.Input
+        Output = SaltFromDensity.Output
+
+    class Second(fw.Component):
+        class Input(fw.State):
+            salt: Salt.Cell = fw.derived_by(Twice)
+
+        Output = fw.Empty
+
+    with pytest.raises(fw.InconsistentDerivation, match="Salt: SaltFromDensity vs Twice"):
+        fw.resolve([Consumer, Second], SIZES)
+
+
+def test_resolve_refuses_a_cycle() -> None:
+    class A(fw.Recipe):
+        class Output(fw.State):
+            density: Density.CellK
+
+    class B(fw.Recipe):
+        class Input(fw.State):
+            density: Density.CellK = fw.derived_by(A)
+
+        class Output(fw.State):
+            salt: Salt.Cell
+
+    class SaltFromB(fw.State):
+        salt: Salt.Cell = fw.derived_by(B)
+
+    A.Input = SaltFromB
+
+    class Needs(fw.Component):
+        Input = SaltFromB
+        Output = fw.Empty
+
+    with pytest.raises(fw.InconsistentDerivation, match="cycle: "):
+        fw.resolve([Needs], SIZES)
 
 
 # what mypy and pyright check: a quantity or a place mismatch is a type error.
