@@ -1,4 +1,5 @@
 import dataclasses
+from collections.abc import Iterator
 
 import numpy as np
 import pytest
@@ -7,6 +8,18 @@ from icon4py.model.common import dimension as dims
 from model_proposed.common import framework as fw
 
 SIZES = {dims.CellDim: 3, dims.KDim: 2}
+
+
+@pytest.fixture(autouse=True)
+def _fresh_registries() -> Iterator[None]:
+    saved = dict(fw.DERIVATIONS), dict(fw.RELOCATIONS)
+    fw.DERIVATIONS.clear()
+    fw.RELOCATIONS.clear()
+    yield
+    fw.DERIVATIONS.clear()
+    fw.DERIVATIONS.update(saved[0])
+    fw.RELOCATIONS.clear()
+    fw.RELOCATIONS.update(saved[1])
 
 
 class Pressure(fw.Quantity, standard_name="air_pressure", units="Pa"):
@@ -401,6 +414,97 @@ def test_updates_refuses_inconsistent_declarations() -> None:
 
     with pytest.raises(fw.UnappliedIncrement, match="neither an input nor provided"):
         fw.updates([Lost(SIZES)], SIZES, input=fw.Empty, output=Pressures)
+
+
+class Counting(fw.Recipe):
+    Input = DensityFromPressure.Input
+    Output = DensityFromPressure.Output
+    calls = 0
+
+    def run(self, input: DensityFromPressure.Input, out: DensityFromPressure.Output | None = None) -> DensityFromPressure.Output:
+        out = self.buffers(out)
+        Counting.calls += 1
+        np.asarray(out.density.data.ndarray)[...] = np.asarray(input.pressure.data.ndarray)
+        return out
+
+
+def test_composition_runs_a_provider_once_per_plan_and_only_when_needed() -> None:
+    class Needs(fw.Component):
+        class Input(fw.State):
+            density: Density.CellK = fw.derived_by(Counting)
+
+        Output = fw.Empty
+
+        def run(self, input: Input, out: fw.Empty | None = None) -> fw.Empty:
+            return self.buffers(out)
+
+    needs, other = Needs(SIZES), Halve(SIZES)
+    composition = fw.composition([needs, other], SIZES, input=fw.Empty, output=fw.Empty)
+    assert [type(r) for r in composition.providers] == [Counting]
+    assert composition.needs[needs] == composition.providers and composition.needs[other] == ()
+    fields = fw.allocate(Halve.Input, SIZES)
+    Counting.calls = 0
+    plan = composition.begin()
+    plan.run(other, inputs=(fields,))
+    assert Counting.calls == 0
+    plan.run(needs, inputs=(fields,))
+    plan.run(needs, inputs=(fields,))
+    assert Counting.calls == 1
+    composition.begin().run(needs, inputs=(fields,))
+    assert Counting.calls == 2
+    supplied = fw.allocate(DensityFromPressure.Output, SIZES)
+    composition.begin().run(needs, inputs=(fields, supplied))
+    assert Counting.calls == 2
+    plan = composition.begin()
+    plan.run(needs, inputs=(fields,))
+    assert plan.run(needs, inputs=(fields, supplied)).__class__ is fw.Empty and Counting.calls == 3
+
+
+def test_plan_run_refuses_an_undeclared_alias() -> None:
+    halve = Halve(SIZES)
+    composition = fw.composition([halve], SIZES, input=fw.Empty, output=fw.Empty)
+    fields = fw.allocate(Halve.Input, SIZES)
+    with pytest.raises(fw.AliasedOutput, match="Halve.pressure"):
+        composition.begin().run(halve, inputs=(fields,), outputs=(fields,))
+
+    class InPlace(Halve):
+        in_place = frozenset({"pressure"})
+
+    inplace = InPlace(SIZES)
+    fw.composition([inplace], SIZES, input=fw.Empty, output=fw.Empty).begin().run(inplace, inputs=(fields,), outputs=(fields,))
+
+
+def test_relocation_registers_one_recipe_per_edge() -> None:
+    class Flatten(fw.Recipe):
+        class Input(fw.State):
+            pressure: Pressure.CellK
+
+        class Output(fw.State):
+            column: Pressure.Cell
+
+    assert fw.relocation(Flatten) is Flatten and fw.RELOCATIONS == {(Pressure, fw.CellK, fw.Cell): Flatten}
+
+    class Again(Flatten):
+        pass
+
+    with pytest.raises(fw.InconsistentRelocation, match="Pressure: Flatten vs Again"):
+        fw.relocation(Again)
+    with pytest.raises(fw.InconsistentRelocation, match="another place expected"):
+        fw.relocation(DensityFromPressure)
+
+
+def test_derivations_are_checked_across_composites() -> None:
+    fw.composition([Consumer(SIZES)], SIZES, input=fw.Empty, output=fw.Empty)
+
+    class OtherSalt(SaltFromDensity):
+        pass
+
+    class Second(fw.Component):
+        Input = fw.state_type("Input", {"salt": Salt.Cell}, {"salt": fw.derived_by(OtherSalt)})
+        Output = fw.Empty
+
+    with pytest.raises(fw.InconsistentDerivation, match="another composite"):
+        fw.composition([Second(SIZES)], SIZES, input=fw.Empty, output=fw.Empty)
 
 
 # what mypy and pyright check: a quantity or a place mismatch is a type error.

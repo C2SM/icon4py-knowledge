@@ -32,6 +32,9 @@ class SolveNonhydro(fw.Component):
         theta_v: qty.ThetaV.CellK
         mass_flx_me: qty.MassFlux.EdgeK
 
+    # the running sum of mass_flx_me continues in the buffer it came from
+    in_place = frozenset({"mass_flx_me"})
+
     def __init__(self, sizes: Mapping[gtx.Dimension, int]) -> None:
         super().__init__(sizes)
         self.normal_wind_advective_tendency = fw.PredictorCorrectorPair(
