@@ -267,3 +267,14 @@ class Component:
 
     def run(self, input: Any, out: Any = None) -> Any:
         raise NotImplementedError
+
+
+# A derivation: quantities computed from other quantities, declared like any
+# component and kept in one shared module so every consumer picks a recipe
+# rather than writing a stencil call and a buffer of its own. No Output leaf
+# of a recipe is among its Input leaves, quantity and place (a relocation
+# reads a quantity at one place and writes it at another); a component that
+# writes back what it reads is an update, not a recipe. The empty subclass is
+# the name, nothing reads it yet; the composer decides when to run it.
+class Recipe(Component):
+    pass

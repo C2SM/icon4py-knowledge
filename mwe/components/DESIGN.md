@@ -272,3 +272,40 @@ unchanged, 8/8/8. `places()` reads the class body; nothing else is automated.
 `test_collect_picks_leaves_by_quantity_and_place`, the last now picking by
 place too), plus `test_a_place_the_quantity_does_not_declare_is_refused` and
 the place mismatch line in `static_checks`.
+
+## 04 Recipes
+
+**Problem.** A derived quantity is computed wherever someone needs it:
+`temperature` and `u` in `PhysicsDriver._diagnose` for physics and again in
+`Icon4pyDriver._store_output` for output (`EntryState.diagnose_from` and
+`DiagnosticsComputer` in icon4py), `theta_v_ic` inside the dycore, `ddt_vn`
+from `tend_u` inside `_apply`. Each site allocates its own buffer and names
+the stencil; what is derived from what is in the argument order of an `ops`
+call. A new consumer of `u` has to know the stencil's name and allocate.
+
+**Adds.** `Recipe`, an empty subclass of `Component`: a derivation declared
+like any component, `Input`, `Output`, `run`, owning its result. `recipes.py`
+(56 lines): `TemperatureFromThetaExner`, `UFromVn`, `ThetaVToHalfLevels`,
+`VnTendencyFromUTendency`, and `ExnerThetaFromTemperature`, a plain
+`Component`: its outputs are among its inputs, it updates rather than derives.
+`Recipe` is a name only, nothing reads it until a later layer. One module for
+the whole model: a consumer picks a recipe, runs it on a collected view and
+reads `.temperature` off the result instead of writing a stencil call and a
+buffer. The drivers still decide when. `PhysicsDriver._diagnose` runs the two
+diagnostics recipes and returns their outputs, the processes collect from
+those and the driver's `Input`; `_apply` collects the EOS input the same way
+and swaps in the incremented temperature. `Icon4pyDriver` runs
+`ThetaVToHalfLevels` before each dycore substep and the two diagnostics before
+each output; the dycore's `Input` names `theta_v_ic` instead of computing it.
+The `Diagnostics` state of 02 is gone, the recipes own the buffers.
+
+**Costs.** Framework 219 lines (+9), the `Recipe` base. `model_proposed` 669
+(+70): `recipes.py` 56, and a recipe call is longer than the `ops` call it
+replaces. Two views over bare fields are built by keyword in `_apply`:
+`dataclasses.replace(eos_input, temperature=self._new_te)` and
+`VnTendencyFromUTendency.Input(tend_u=...)` on the accumulator. `temperature`
+is still computed twice per step, since physics reads it before its update and
+output after; counts unchanged, 8/8/8. Nothing checks that two consumers
+derive a quantity the same way; later layer.
+
+**Checks.** As 03, plus `test_recipe_is_a_component_that_owns_its_result`.
