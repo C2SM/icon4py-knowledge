@@ -7,35 +7,35 @@ import ops
 
 
 class AdvectiveTendencies(fw.State):
-    normal_wind: fw.Field[qty.TendencyOfVnOnEdgeK]
+    normal_wind: qty.TendencyOfVn.EdgeK
 
 
 class SolveNonhydro(fw.Component):
     class Input(fw.State):
-        vn: fw.Field[qty.VnOnEdgeK]
-        w: fw.Field[qty.WOnCellK]
-        rho: fw.Field[qty.RhoOnCellK]
-        exner: fw.Field[qty.ExnerOnCellK]
-        theta_v: fw.Field[qty.ThetaVOnCellK]
-        mass_flx_me: fw.Field[qty.MassFluxOnEdgeK]
+        vn: qty.Vn.EdgeK
+        w: qty.W.CellK
+        rho: qty.Rho.CellK
+        exner: qty.Exner.CellK
+        theta_v: qty.ThetaV.CellK
+        mass_flx_me: qty.MassFlux.EdgeK
         substep_dtime: float
         ndyn_substeps: int
         at_first_substep: bool
 
     class Output(fw.State):
-        vn: fw.Field[qty.VnOnEdgeK]
-        w: fw.Field[qty.WOnCellK]
-        rho: fw.Field[qty.RhoOnCellK]
-        exner: fw.Field[qty.ExnerOnCellK]
-        theta_v: fw.Field[qty.ThetaVOnCellK]
-        mass_flx_me: fw.Field[qty.MassFluxOnEdgeK]
+        vn: qty.Vn.EdgeK
+        w: qty.W.CellK
+        rho: qty.Rho.CellK
+        exner: qty.Exner.CellK
+        theta_v: qty.ThetaV.CellK
+        mass_flx_me: qty.MassFlux.EdgeK
 
     def __init__(self, sizes: Mapping[gtx.Dimension, int]) -> None:
         super().__init__(sizes)
         self.normal_wind_advective_tendency = fw.PredictorCorrectorPair(
             fw.allocate(AdvectiveTendencies, sizes), fw.allocate(AdvectiveTendencies, sizes)
         )
-        self.theta_v_ic = fw.zeros(qty.ThetaVOnCellKHalf, sizes)
+        self.theta_v_ic = fw.zeros(qty.ThetaV, fw.CellKHalf, sizes)
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)
