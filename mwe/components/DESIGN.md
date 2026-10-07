@@ -89,7 +89,7 @@ returns one. Which keys it needs and produces is in a side table of
 agrees with it. A field is a `gtx.Field` to mypy: passing `theta_v` where `vn`
 is expected is not a type error.
 
-**Adds.** `model_proposed/common/framework.py`, 139 lines, four things and a
+**Adds.** `model_proposed/common/framework.py`, 146 lines, four things and a
 pair:
 
 - `Quantity`: a type-level tag, one subclass per quantity, never instantiated.
@@ -170,8 +170,8 @@ every stencil call reads `.data`. Calls through the `fw.Component` base are
 untyped (`run(input: Any, out: Any)`); only calls on a concrete class are
 checked. `_apply` is a method, not a `Component`: which tendencies it reads
 depends on the configured processes, and a `State` has no optional leaf.
-`model_proposed` is 576 non-blank lines against 674 for
-`model_current`, the physics driver 132 against 133. Call counts are those of
+`model_proposed` is 584 non-blank lines against 674 for
+`model_current`, the physics driver 133 against 133. Call counts are those of
 `model_current`: `temperature` and `u` computed twice per step (physics and
 IO), `theta_v` on half levels once per substep, 8/8/8 in every row of
 `run.py`.
