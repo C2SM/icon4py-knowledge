@@ -63,6 +63,10 @@ def zeros[T: Quantity](quantity: type[T], sizes: Mapping[gtx.Dimension, int]) ->
 # State: a frozen dataclass of typed leaves
 # ------------------------------------------------------------------------------
 # one Field leaf read back from a State class: its name and its quantity
+# fw.Field[qty.VnOnEdgeK] lives in annotations. mypy/pyright read it, Python at
+# runtime does not, unless someone inspects hints. Decl is that inspection,
+# done once, so every generic operation over "a state" asks the class instead
+# of hard-coding leaf names.
 @dataclasses.dataclass(frozen=True)
 class Decl:
     name: str
@@ -75,12 +79,15 @@ class State:
         super().__init_subclass__()
         dataclasses.dataclass(frozen=True, eq=False, kw_only=True)(cls)
 
-    # the Field leaves, in declaration order; plain leaves (floats, ints,
-    # datetimes) are ordinary dataclass fields and not listed
+    # declarations() is class-level. Needs no values. So later layers can
+    # reason about a component before anything is allocated (resolve, plan,
+    # dataflow report).
     @classmethod
     def declarations(cls) -> tuple[Decl, ...]:
         return _declarations(cls)
 
+    # leaves() is instance-level. Decl plus the actual Field. For things that
+    # move data.
     def leaves(self) -> Iterator[tuple[Decl, Field[Any]]]:
         for d in self.declarations():
             yield d, getattr(self, d.name)
