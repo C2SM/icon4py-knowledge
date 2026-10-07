@@ -20,6 +20,14 @@ class PrepAdvection(fw.State):
     mass_flx_me: fw.Field[qty.MassFluxOnEdgeK]
 
 
+# the diagnostics derived from the prognostics, for the physics and for
+# output; each driver owns one and fills it before use (the part of icon4py's
+# DiagnosticState this model computes)
+class Diagnostics(fw.State):
+    temperature: fw.Field[qty.TemperatureOnCellK]
+    u: fw.Field[qty.UOnCellK]
+
+
 # the driver's time variables for one step; plain values, not quantities
 @dataclasses.dataclass(frozen=True)
 class StepInfo:

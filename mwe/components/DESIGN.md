@@ -182,3 +182,51 @@ matrix as pytest, with the call counts); `test_framework.py` (6 unit tests and
 both checkers must flag: mypy strict reports an unused ignore, pyright with
 `reportUnnecessaryTypeIgnoreComment` likewise); `mypy --strict` on 61 files;
 pyright 0 errors; `ruff check`.
+
+## 02 Collect
+
+**Problem.** Every view is spelled out by keyword at the call site: nine lines
+for the dycore's `Input` in the driver, a `collect_input` function per physics
+process plus `bind` to pair it with the right component, and an `EntryState`
+whose only job is to hold the pool the processes pick from. A leaf renamed in
+a `State` means editing every call site, and the same wiring is written once
+per consumer.
+
+**Adds.** `collect(cls, *states, **plain)`: one leaf per `Field` declaration
+of `cls`, picked from the given states by quantity; plain leaves by keyword,
+and a field given by keyword wins over the pool. Pointer selection only, never
+computes. `MissingInput` names the leaf and the quantity; `AmbiguousSource`
+fires when two different buffers of one quantity are in the pool (the same
+buffer twice is fine). Composers now pass states, not leaves:
+
+```python
+self.solve_nonhydro.run(
+    fw.collect(SolveNonhydro.Input, now, self.prep_advection, substep_dtime=..., ...),
+    out=fw.collect(SolveNonhydro.Output, next, self.prep_advection),
+)
+```
+
+and the physics driver runs each process on `fw.collect(component.Input,
+input, diagnostics)`, `diagnostics` being the `Diagnostics` state `_diagnose`
+fills and returns. `EntryState`, `collect_input` and `bind` are gone; the
+process/collect pairing they had to check by hand no longer exists.
+`Diagnostics` moves next to `PrognosticState` in `common/states.py`, and the
+driver allocates one too, for output, in place of two bare fields. This is the
+first mechanism that builds a component's view by quantity identity: a
+quantity is found wherever it is, by what it is, not by the name of the
+attribute that holds it.
+
+**Costs.** Framework 175 lines (+29). `model_proposed` 554 (-30): `driver.py`
+73 (was 104), `physics_driver.py` 105 (was 116), `physics_state.py` gone. A
+pool with two buffers of one quantity cannot be collected from, by design: the
+driver keeps `now` and `next` in separate calls, and a view over a bare field
+is still built by keyword (`Halve.Input(pressure=...)` in the tests; the
+composers have none left). Wiring errors at a composer call site move from
+mypy to runtime (`MissingInput`, the dataclass's `TypeError` for a plain
+leaf). Scalars stay plain leaves, passed by keyword, rather than tagged
+quantities; the aliasing guard once planned for this layer comes with the
+composer verb in 09. Counts unchanged, 8/8/8.
+
+**Checks.** As 01, plus `test_collect_picks_leaves_by_quantity` (pick from two
+states, the same buffer twice, keyword wins, `MissingInput`,
+`AmbiguousSource`).

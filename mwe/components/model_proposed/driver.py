@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from model_proposed import diffusion, io, physics_driver, solve_nonhydro, tracer_advection
-from model_proposed.common import framework as fw, quantities as qty, states
+from model_proposed.common import framework as fw, states
 import config
 import ops
 
@@ -22,8 +22,7 @@ class Icon4pyDriver:
         self.physics = physics_driver.PhysicsDriver(sizes, run_config.physics)
         self.io_monitor = io.IOMonitor(sizes, run_config.output_variables)
         # the diagnostics for output, derived here before each store
-        self.temperature = fw.zeros(qty.TemperatureOnCellK, sizes)
-        self.u = fw.zeros(qty.UOnCellK, sizes)
+        self.diagnostics = fw.allocate(states.Diagnostics, sizes)
 
     def time_integration(self, n_time_steps: int) -> None:
         for time_step in range(n_time_steps):
@@ -38,47 +37,27 @@ class Icon4pyDriver:
             self._store_output(info)
 
     def _store_output(self, info: states.StepInfo) -> None:
-        now = self.prognostic_states.now
-        ops.compute_temperature(now.theta_v.data, now.exner.data, self.temperature.data)
-        ops.edge_2_cell_vector_rbf_interpolation(now.vn.data, self.u.data)
-        self.io_monitor.run(
-            io.IOMonitor.Input(
-                rho=now.rho,
-                w=now.w,
-                vn=now.vn,
-                exner=now.exner,
-                theta_v=now.theta_v,
-                temperature=self.temperature,
-                u=self.u,
-                simulation_time=info.simulation_time,
-            )
-        )
+        now, diagnostics = self.prognostic_states.now, self.diagnostics
+        ops.compute_temperature(now.theta_v.data, now.exner.data, diagnostics.temperature.data)
+        ops.edge_2_cell_vector_rbf_interpolation(now.vn.data, diagnostics.u.data)
+        self.io_monitor.run(fw.collect(io.IOMonitor.Input, now, diagnostics, simulation_time=info.simulation_time))
 
     def _integrate_one_time_step(self, info: states.StepInfo) -> None:
         self._do_dyn_substepping(info)
         next, tracers_next = self.prognostic_states.next, self.tracers.next
         self.diffusion.run(
-            diffusion.Diffusion.Input(vn=next.vn, theta_v=next.theta_v, dtime=info.dtime),
-            out=diffusion.Diffusion.Output(vn=next.vn, theta_v=next.theta_v),
+            fw.collect(diffusion.Diffusion.Input, next, dtime=info.dtime),
+            out=fw.collect(diffusion.Diffusion.Output, next),
         )
         self.tracer_advection.run(
-            tracer_advection.Advection.Input(
-                qv=self.tracers.now.qv, mass_flx_me=self.prep_advection.mass_flx_me, dtime=info.dtime
-            ),
-            out=tracer_advection.Advection.Output(qv=tracers_next.qv),
+            fw.collect(tracer_advection.Advection.Input, self.tracers.now, self.prep_advection, dtime=info.dtime),
+            out=fw.collect(tracer_advection.Advection.Output, tracers_next),
         )
         self.physics.run(
-            physics_driver.PhysicsDriver.Input(
-                vn=next.vn,
-                exner=next.exner,
-                theta_v=next.theta_v,
-                qv=tracers_next.qv,
-                dtime=info.dtime,
-                step_index=info.step_index,
+            fw.collect(
+                physics_driver.PhysicsDriver.Input, next, tracers_next, dtime=info.dtime, step_index=info.step_index
             ),
-            out=physics_driver.PhysicsDriver.Output(
-                vn=next.vn, exner=next.exner, theta_v=next.theta_v, qv=tracers_next.qv
-            ),
+            out=fw.collect(physics_driver.PhysicsDriver.Output, next, tracers_next),
         )
         self.prognostic_states.swap()
         self.tracers.swap()
@@ -87,25 +66,15 @@ class Icon4pyDriver:
         for dyn_substep in range(info.ndyn_substeps):
             now, next = self.prognostic_states.now, self.prognostic_states.next
             self.solve_nonhydro.run(
-                solve_nonhydro.SolveNonhydro.Input(
-                    vn=now.vn,
-                    w=now.w,
-                    rho=now.rho,
-                    exner=now.exner,
-                    theta_v=now.theta_v,
-                    mass_flx_me=self.prep_advection.mass_flx_me,
+                fw.collect(
+                    solve_nonhydro.SolveNonhydro.Input,
+                    now,
+                    self.prep_advection,
                     substep_dtime=info.substep_dtime,
                     ndyn_substeps=info.ndyn_substeps,
                     at_first_substep=dyn_substep == 0,
                 ),
-                out=solve_nonhydro.SolveNonhydro.Output(
-                    vn=next.vn,
-                    w=next.w,
-                    rho=next.rho,
-                    exner=next.exner,
-                    theta_v=next.theta_v,
-                    mass_flx_me=self.prep_advection.mass_flx_me,
-                ),
+                out=fw.collect(solve_nonhydro.SolveNonhydro.Output, next, self.prep_advection),
             )
             if dyn_substep != info.ndyn_substeps - 1:
                 self.prognostic_states.swap()
