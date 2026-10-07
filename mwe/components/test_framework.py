@@ -125,6 +125,15 @@ def test_pairs_swap() -> None:
     assert pair.now is b and pair.next is a
 
 
+def test_recipe_is_a_component_that_owns_its_result() -> None:
+    pressure = fw.zeros(Pressure, fw.CellK, SIZES)
+    np.asarray(pressure.data.ndarray)[...] = 3.0
+    recipe = DensityFromPressure(SIZES)
+    density = recipe.run(DensityFromPressure.Input(pressure=pressure)).density
+    assert density is recipe.output.density and density.quantity is Density
+    assert np.all(np.asarray(density.data.ndarray) == 6.0)
+
+
 def test_collect_picks_leaves_by_quantity_and_place() -> None:
     class Fields(fw.State):
         pressure: Pressure.CellK
@@ -145,15 +154,6 @@ def test_collect_picks_leaves_by_quantity_and_place() -> None:
         fw.collect(View, fields, dtime=2.0)
     with pytest.raises(fw.AmbiguousSource, match="Pressure@CellK"):
         fw.collect(View, fields, salted, fw.allocate(Halve.Input, SIZES), dtime=2.0)
-
-
-def test_recipe_is_a_component_that_owns_its_result() -> None:
-    pressure = fw.zeros(Pressure, fw.CellK, SIZES)
-    np.asarray(pressure.data.ndarray)[...] = 3.0
-    recipe = DensityFromPressure(SIZES)
-    density = recipe.run(DensityFromPressure.Input(pressure=pressure)).density
-    assert density is recipe.output.density and density.quantity is Density
-    assert np.all(np.asarray(density.data.ndarray) == 6.0)
 
 
 def test_lookup_by_standard_name_or_class_name() -> None:
@@ -281,6 +281,126 @@ def test_resolve_refuses_a_cycle() -> None:
 
     with pytest.raises(fw.InconsistentDerivation, match="cycle: "):
         fw.resolve([Needs], SIZES)
+
+
+class SaltFromPressureHook(fw.Component):
+    class Input(fw.State):
+        pressure: Pressure.CellK
+
+    class Output(fw.State):
+        salt: Salt.Cell
+
+    def run(self, input: Input, out: Output | None = None) -> Output:
+        out = self.buffers(out)
+        np.asarray(out.salt.data.ndarray)[...] = np.asarray(input.pressure.data.ndarray).sum(axis=1)
+        return out
+
+
+class Heater(fw.Process):
+    class Input(fw.State):
+        pressure: Pressure.CellK
+
+    class Output(fw.State):
+        tend_pressure: fw.Tendency[Pressure, fw.CellK]
+
+    class Update(fw.State):
+        pressure: Pressure.CellK = fw.from_tendency()
+        salt: Salt.Cell = fw.after_increments(SaltFromPressureHook)
+
+    def run(self, input: Input, out: Output | None = None) -> Output:
+        out = self.buffers(out)
+        np.asarray(out.tend_pressure.data.ndarray)[...] = 1.0
+        return out
+
+
+class SaltTendencyFromPressureTendency(fw.Recipe):
+    class Input(fw.State):
+        tend_pressure: fw.Tendency[Pressure, fw.CellK]
+
+    class Output(fw.State):
+        tend_salt: fw.Tendency[Salt, fw.Cell]
+
+    def run(self, input: Input, out: Output | None = None) -> Output:
+        out = self.buffers(out)
+        np.asarray(out.tend_salt.data.ndarray)[...] = np.asarray(input.tend_pressure.data.ndarray).sum(axis=1)
+        return out
+
+
+class Salter(fw.Process):
+    Input = Heater.Input
+    Output = Heater.Output
+
+    class Update(fw.State):
+        salt: Salt.Cell = fw.from_tendency(SaltTendencyFromPressureTendency)
+
+    def run(self, input: Heater.Input, out: Heater.Output | None = None) -> Heater.Output:
+        out = self.buffers(out)
+        np.asarray(out.tend_pressure.data.ndarray)[...] = 1.0
+        return out
+
+
+class Box(fw.State):
+    pressure: Pressure.CellK
+    salt: Salt.Cell
+
+
+def test_updates_reads_the_processes_update_blocks() -> None:
+    heater, salter = Heater(SIZES), Salter(SIZES)
+    u = fw.updates([heater, salter], SIZES, input=Box, output=Box)
+    assert [(d.name, d.quantity, d.dims) for d in u.tendencies.declarations()] == [
+        ("Pressure__CellK", fw.tendency_of(Pressure), fw.CellK),
+        ("Salt__Cell", fw.tendency_of(Salt), fw.Cell),
+    ]
+    assert u.tendency_recipes[heater] == () and [type(r) for r in u.tendency_recipes[salter]] == [
+        SaltTendencyFromPressureTendency
+    ]
+    assert [type(h) for h in u.hooks] == [SaltFromPressureHook] and u.hook_written == {(Salt, fw.Cell)}
+
+
+def test_accumulate_then_update_applies_dt_once_and_runs_the_hooks_once() -> None:
+    heater = Heater(SIZES)
+    u = fw.updates([heater], SIZES, input=Box, output=Box)
+    box, out = fw.allocate(Box, SIZES, fill=lambda name, shape: 3.0), fw.allocate(Box, SIZES)
+    u.begin()
+    output = heater.run(fw.collect(heater.Input, box))
+    heater.accumulate(u.tendencies, output)
+    heater.accumulate(u.tendencies, output)
+    assert np.all(np.asarray(u.tendencies.leaves().__next__()[1].data.ndarray) == 2.0)
+    u.update(box, out, 2.0)
+    assert np.all(np.asarray(out.pressure.data.ndarray) == 7.0)
+    assert np.all(np.asarray(out.salt.data.ndarray) == 14.0)
+    assert np.all(np.asarray(box.pressure.data.ndarray) == 3.0)
+
+
+def test_updates_refuses_inconsistent_declarations() -> None:
+    class Silent(fw.Process):
+        Input = Heater.Input
+        Output = Heater.Output
+
+    with pytest.raises(fw.UnappliedTendency, match="Silent.tend_pressure"):
+        fw.updates([Silent(SIZES)], SIZES, input=Box, output=Box)
+
+    class Elsewhere(fw.Process):
+        Input = Heater.Input
+        Output = Heater.Output
+        Update = fw.state_type("Update", {"density": Density.CellK}, {"density": fw.from_tendency()})
+
+    with pytest.raises(fw.InconsistentUpdate, match="no tendency of Density"):
+        fw.updates([Elsewhere(SIZES)], SIZES, input=Box, output=Box)
+
+    class Pressures(fw.State):
+        pressure: Pressure.CellK
+
+    with pytest.raises(fw.InconsistentUpdate, match="Salt is not an output"):
+        fw.updates([Heater(SIZES)], SIZES, input=Pressures, output=Pressures)
+
+    class Lost(fw.Process):
+        Input = Heater.Input
+        Output = Heater.Output
+        Update = fw.state_type("Update", {"pressure": Pressure.CellK}, {"pressure": fw.from_tendency()})
+
+    with pytest.raises(fw.UnappliedIncrement, match="neither an input nor provided"):
+        fw.updates([Lost(SIZES)], SIZES, input=fw.Empty, output=Pressures)
 
 
 # what mypy and pyright check: a quantity or a place mismatch is a type error.
