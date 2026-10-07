@@ -309,3 +309,45 @@ output after; counts unchanged, 8/8/8. Nothing checks that two consumers
 derive a quantity the same way; later layer.
 
 **Checks.** As 03, plus `test_recipe_is_a_component_that_owns_its_result`.
+
+## 05 Derived inputs
+
+**Problem.** The composer knows which recipes its children need and calls them
+by hand: the physics driver instantiates `TemperatureFromThetaExner` and
+`UFromVn` whether or not a configured process reads them, the driver does the
+same for IO and runs `ThetaVToHalfLevels` for the dycore by hand, and a
+process that starts reading a new diagnostic needs a matching line in its
+composer. Who needs what is written in two places.
+
+**Adds.** `Source`, a leaf default that says where a value comes from when the
+composer does not put it in the pool, and `derived_by(Recipe)`: `temperature:
+qty.Temperature.CellK = fw.derived_by(recipes.TemperatureFromThetaExner)` on
+muphys, tmx and IO, `u` on tmx and IO, `theta_v_ic` on the dycore.
+`Decl.source`; a hand-built `State` cannot carry a source (`UnresolvedInput`).
+`resolve(children, sizes) -> Resolution`: the recipes the children name, one
+instance each, dependency-ordered, one recipe per quantity at a place
+(`InconsistentDerivation` for two recipes on one key, a recipe named on a leaf
+it does not produce, or a cycle). `Resolution.provide(*supplied)` runs them
+all once, eagerly, and the composer collects its children from the supplied
+and the produced states. Three resolutions: dycore, physics, IO.
+`PhysicsDriver._diagnose` is gone, the resolution provides what it derived. In
+this layer a derived leaf is always derived: a supplied state carrying it as
+well is `AmbiguousSource`, and a keyword wins in `collect` while the provider
+still runs; "supplied wins" comes with the plan in 09.
+
+**Costs.** Framework 291 lines (+72). The composers lose their diagnostic
+recipe instances, `_apply` keeps the two it runs itself (`physics_driver.py`
+104, was 112; `driver.py` 75, was 78). Providers run once per pass whatever
+the children's cadence: `u` is derived for tmx on every physics step, active
+or not. Counts now follow the config, since a quantity is derived on a pass
+only when a component in it declares it: 8/8/8 for the example and tmx-only,
+4/4/8 without physics, 8/4/8 for the prognostics config (muphys alone never
+asks for `u`). IO still declares all seven leaves whatever the config asks, so
+without output it stays 8/8/8; 06 fixes that. `model_current` computes 8/8/8
+in every row.
+
+**Checks.** As 04, plus `test_derived_by_is_a_source_on_the_declaration_only`,
+`test_resolve_orders_the_providers_and_provide_runs_them`,
+`test_resolve_refuses_an_inconsistent_derivation`,
+`test_resolve_refuses_a_cycle`, and the per-config counts in
+`test_equivalence.py`.

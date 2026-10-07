@@ -1,10 +1,11 @@
+from model_proposed import recipes
 from model_proposed.common import framework as fw, quantities as qty
 import ops
 
 
 class MuphysComponent(fw.Component):
     class Input(fw.State):
-        temperature: qty.Temperature.CellK
+        temperature: qty.Temperature.CellK = fw.derived_by(recipes.TemperatureFromThetaExner)
         qv: qty.Qv.CellK
 
     class Output(fw.State):
