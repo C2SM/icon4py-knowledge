@@ -29,6 +29,7 @@ class UFromVn(fw.Recipe):
         return out
 
 
+@fw.relocation
 class ThetaVToHalfLevels(fw.Recipe):
     class Input(fw.State):
         theta_v: qty.ThetaV.CellK
@@ -67,6 +68,8 @@ class ExnerThetaFromTemperature(fw.Component):
     class Output(fw.State):
         exner: qty.Exner.CellK
         theta_v: qty.ThetaV.CellK
+
+    in_place = frozenset({"exner", "theta_v"})
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)

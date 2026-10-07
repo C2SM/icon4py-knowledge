@@ -42,39 +42,30 @@ class PhysicsDriver(fw.Component):
         theta_v: qty.ThetaV.CellK
         qv: qty.Qv.CellK
 
+    in_place = frozenset({"vn", "exner", "theta_v", "qv"})
+
     def __init__(self, sizes: Mapping[gtx.Dimension, int], process_intervals: Mapping[str, int]) -> None:
         super().__init__(sizes)
         self.processes = [
             PhysicsProcess(name, PROCESSES[name](sizes), ProcessTimeControl(interval))
             for name, interval in process_intervals.items()
         ]
-        components = [process.component for process in self.processes]
-        # the recipes the processes declare for their derived inputs, run once
-        # per step before them
-        self.resolution = fw.resolve(components, sizes)
-        # what the processes declare they update: the increments to sum, the
-        # tendency recipes to run on their outputs, the hooks to run once after
-        self.updates = fw.updates(
-            components, sizes, input=PhysicsDriver.Input, output=PhysicsDriver.Output, provided=self.resolution.providers
+        # the wiring: providers, what each process needs of them, updates
+        self.composition = fw.composition(
+            [process.component for process in self.processes],
+            sizes,
+            input=PhysicsDriver.Input,
+            output=PhysicsDriver.Output,
         )
-        # the last output of each process and the tendencies derived from it,
-        # reused on the steps it is not active
-        self.outputs: dict[str, tuple[fw.State, tuple[fw.State, ...]]] = {}
+        # the last output of each process, reused on the steps it is not active
+        self.outputs: dict[str, fw.State] = {}
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)
-        produced = self.resolution.provide(input)
-        self.updates.begin()
+        plan = self.composition.begin()
         for process in self.processes:
-            component = process.component
             if process.time_control.is_active(input.step_index) or process.name not in self.outputs:
-                output = component.run(fw.collect(component.Input, input, *produced))
-                computed = tuple(
-                    recipe.run(fw.collect(recipe.Input, output, input, *produced))
-                    for recipe in self.updates.tendency_recipes[component]
-                )
-                self.outputs[process.name] = (output, computed)
-            output, computed = self.outputs[process.name]
-            component.accumulate(self.updates.tendencies, output, *computed)
-        self.updates.update(input, out, input.dtime, *produced)
+                self.outputs[process.name] = plan.run(process.component, inputs=(input,))
+            plan.accumulate(process.component, self.outputs[process.name], input)
+        plan.update(input, out, input.dtime)
         return out
