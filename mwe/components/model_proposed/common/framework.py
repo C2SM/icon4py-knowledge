@@ -199,9 +199,9 @@ class State:
             if isinstance(value, Source):
                 raise UnresolvedInput(f"{type(self).__qualname__}.{d.name}")
 
-    # declarations() is class-level. Needs no values. So `resolve` and `plan`
-    # (and the dataflow report of the last layer) can reason about a component
-    # before anything is allocated.
+    # declarations() is class-level. Needs no values. So `resolve`, `plan` and
+    # the dataflow report can reason about a component before anything is
+    # allocated.
     @classmethod
     def declarations(cls) -> tuple[Decl, ...]:
         return _declarations(cls)
@@ -802,3 +802,34 @@ def composition(
         needs={c: needs_of(c.Input) for c in (*children, *updates_.hooks, *resolution.providers, *recipes)},
         updates=updates_,
     )
+
+
+# ------------------------------------------------------------------------------
+# Reports
+# ------------------------------------------------------------------------------
+# what each component reads and produces, from its declarations alone, with
+# `<- Recipe` on a derived leaf, and what a process updates (`+=` by its own
+# tendency, `+= Recipe` by a derived one, `<- Hook` a rewritten leaf); an
+# instance for a component whose Input is built per instance
+def dataflow(*components: type[Component] | Component) -> str:
+    def text(d: Decl) -> str:
+        if isinstance(d.source, Derived):
+            return f"{d.label} <- {d.source.recipe.__name__}"
+        if isinstance(d.source, AfterIncrements):
+            return f"{d.label} <- {d.source.hook.__name__}"
+        if isinstance(d.source, FromTendency):
+            return f"{d.label} +=" + (f" {d.source.recipe.__name__}" if d.source.recipe else "")
+        return d.label
+
+    def names(decls: tuple[Decl, ...]) -> str:
+        return ", ".join(text(d) for d in decls) or "-"
+
+    def name(c: type[Component] | Component) -> str:
+        return c.__name__ if isinstance(c, type) else type(c).__name__
+
+    def line(c: type[Component] | Component) -> str:
+        cls = c if isinstance(c, type) else type(c)
+        updates = f" | updates: {names(cls.Update.declarations())}" if issubclass(cls, Process) else ""
+        return f"{name(c)} | reads: {names(c.Input.declarations())} | produces: {names(c.Output.declarations())}{updates}"
+
+    return "\n".join(line(c) for c in components)

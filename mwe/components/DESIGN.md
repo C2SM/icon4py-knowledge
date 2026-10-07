@@ -525,3 +525,33 @@ with fixed inputs, which is why `begin()` exists.
 `test_derivations_are_checked_across_composites`, the lazy counts in
 `test_equivalence.py`; an autouse fixture snapshots and restores the two
 registries around each test.
+
+## 10 Dataflow
+
+**Problem.** What a component reads, produces and updates is in its
+declarations, and nothing prints them together: icon4py's physics processes
+carry `inputs_properties`/`outputs_properties` dicts, the dycore, diffusion,
+advection and IO carry nothing, and no view lists them side by side with the
+wiring the compositions built.
+
+**Adds.** `dataflow(*components) -> str`, one line per component from its
+declarations alone: `reads`, `produces`, `<- Recipe` on a derived leaf, and
+`updates:` for a process; an instance for a component whose `Input` is built
+per instance (IO). `run.py` prints it for `example.yaml` before the table, in
+the order the drivers run it, the providers read off the compositions:
+
+```
+ThetaVToHalfLevels | reads: ThetaV@CellK | produces: ThetaV@CellKHalf
+SolveNonhydro | reads: Vn, W, Rho, Exner, ThetaV@CellK, ThetaV@CellKHalf <- ThetaVToHalfLevels, MassFlux | produces: Vn, W, Rho, Exner, ThetaV@CellK, MassFlux
+...
+PhysicsDriver | reads: Vn, Exner, ThetaV@CellK, Qv | produces: Vn, Exner, ThetaV@CellK, Qv
+TemperatureFromThetaExner | reads: ThetaV@CellK, Exner | produces: Temperature
+UFromVn | reads: Vn | produces: U
+IOMonitor | reads: Temperature <- TemperatureFromThetaExner, U <- UFromVn | produces: -
+```
+
+**Costs.** Framework 678 lines (+25). Nothing else changes: a report, not a
+mechanism, and last in the stack because it reads everything the earlier
+layers declare. Counts unchanged from 09.
+
+**Checks.** As 09, plus `test_dataflow_lists_reads_and_produces_by_label`.
