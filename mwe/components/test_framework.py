@@ -138,6 +138,29 @@ def test_recipe_is_a_component_that_owns_its_result() -> None:
     assert np.all(np.asarray(density.data.ndarray) == 6.0)
 
 
+def test_lookup_by_standard_name_or_class_name() -> None:
+    assert fw.lookup("air_pressure") is Pressure and fw.lookup("Pressure") is Pressure
+    assert fw.lookup("Salt") is Salt
+    with pytest.raises(fw.UnknownQuantity, match="pepper"):
+        fw.lookup("pepper")
+    with pytest.raises(fw.UnknownQuantity, match="Tendency"):
+        fw.lookup("Tendency")
+    with pytest.raises(fw.DuplicateQuantity, match="Salt"):
+        type("Salt", (fw.Quantity,), {}, units="1")
+    with pytest.raises(fw.DuplicateQuantity, match="air_pressure is taken"):
+        type("Pressure2", (fw.Quantity,), {}, standard_name="air_pressure", units="Pa")
+
+
+def test_state_type_builds_a_collectable_state() -> None:
+    View = fw.state_type("View", {"air_pressure": Pressure.CellK, "when": float})
+    fields = fw.allocate(Halve.Input, SIZES)
+    view = fw.collect(View, fields, when=1.0)
+    assert [d.label for d in View.declarations()] == ["Pressure@CellK"]
+    assert getattr(view, "air_pressure") is fields.pressure and getattr(view, "when") == 1.0
+    Sourced = fw.state_type("Sourced", {"density": Density.CellK}, {"density": fw.derived_by(DensityFromPressure)})
+    assert Sourced.declarations()[0].source == fw.Derived(DensityFromPressure)
+
+
 class DensityFromPressure(fw.Recipe):
     class Input(fw.State):
         pressure: Pressure.CellK

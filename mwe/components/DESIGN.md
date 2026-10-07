@@ -351,3 +351,36 @@ in every row.
 `test_resolve_refuses_an_inconsistent_derivation`,
 `test_resolve_refuses_a_cycle`, and the per-config counts in
 `test_equivalence.py`.
+
+## 06 IO from the config
+
+**Problem.** IO declares a fixed `Input` of everything it could write and the
+config filters it: adding an output variable means editing IO's `Input`, IO
+reads seven leaves to write two, and since 05 it has `temperature` and `u`
+derived at every output step whether or not the config asks. The config
+vocabulary (CF names, class names) is resolved by scanning that `Input`.
+
+**Adds.** `REGISTRY`: every quantity tag registers when defined; a repeated
+class name or a repeated CF `standard_name` is `DuplicateQuantity`.
+`lookup(key)` by either name, among the quantities that live somewhere
+(`UnknownQuantity` at init for a typo in the config). `state_type(name,
+leaves, sources)` builds a `State` class at runtime, with a `Source` per leaf
+where given. IO's `Input` is built per instance from the config, one leaf per
+requested variable at the quantity's first declared place, plus the time; its
+derived leaves come through a `DERIVED` table (quantity to source), since a
+leaf built from the config cannot carry a default. The driver resolves and
+collects it like any other view.
+
+**Costs.** Framework 317 lines (+26). `model_proposed` 767 (+32), `io.py` 38
+(was 32). A per-instance `Input` is opaque to mypy: the driver passes
+`self.io_monitor.Input` and IO reads its leaves with `getattr`; the
+class-level `IOMonitor.Input` is `Empty`. A configured variable that `lookup`
+knows but no state the driver passes carries (`specific_humidity`) fails at
+the first output step with `MissingInput`, as `model_current` fails late too;
+05 failed at init. Counts: IO now derives only what the config asks, 4/0/8
+without physics (IO's temperature only), 4/4/8 without output, 4/0/8 for the
+prognostics config, 8/8/8 for the example and tmx-only.
+
+**Checks.** As 05, plus `test_lookup_by_standard_name_or_class_name` (with
+`DuplicateQuantity`), `test_state_type_builds_a_collectable_state` (with a
+source too), and the new per-config counts in `test_equivalence.py`.
