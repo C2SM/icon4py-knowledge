@@ -9,8 +9,8 @@ class TmxComponent(fw.Component):
         u: qty.U.CellK = fw.derived_by(recipes.UFromVn)
 
     class Output(fw.State):
-        tend_temperature: qty.TendencyOfTemperature.CellK
-        tend_u: qty.TendencyOfU.CellK
+        tend_temperature: fw.Tendency[qty.Temperature, fw.CellK]
+        tend_u: fw.Tendency[qty.U, fw.CellK]
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)
