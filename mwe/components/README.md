@@ -9,8 +9,8 @@ the same model written against the `State`/`Component` design, with module and
 class names chosen so the two trees can be read side by side. Same `ops.py`, same
 `example.yaml`, same numbers, different declarations.
 
-The design is built as a stack of branches, one layer per PR, each a readable
-diff on the previous one. `DESIGN.md` has one section per layer: the problem it
+The design is built as a stack of branches, one part per PR, each a readable
+diff on the previous one. `DESIGN.md` has one section per part: the problem it
 solves, what it adds, what it costs. The tip of the stack is the full design.
 
     cd mwe/components
