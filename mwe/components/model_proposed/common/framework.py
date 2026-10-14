@@ -199,7 +199,7 @@ class State:
                 raise UnresolvedInput(f"{type(self).__qualname__}.{d.name}")
 
     # declarations() is class-level. Needs no values. So `resolve` (and the
-    # plan and dataflow report of later layers) can reason about a component
+    # plan and dataflow report of later parts) can reason about a component
     # before anything is allocated.
     @classmethod
     def declarations(cls) -> tuple[Decl, ...]:
@@ -350,7 +350,7 @@ def collect[S: State](cls: type[S], *states: State, **plain: Any) -> S:
 # `component.run(input, out=view)` writes where the caller says, numpy `out=`
 # style. Either way `run` returns the output. Whether the view may alias the
 # input is the component's business (diffusion and the physics update tolerate
-# it, the dycore needs distinct now/next); nothing checks it in this layer.
+# it, the dycore needs distinct now/next); nothing checks it in this part.
 class Component:
     Input: type[State]
     Output: type[State]
