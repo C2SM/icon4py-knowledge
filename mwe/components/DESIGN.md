@@ -331,7 +331,7 @@ it does not produce, or a cycle). `Resolution.provide(*supplied)` runs them
 all once, eagerly, and the composer collects its children from the supplied
 and the produced states. Three resolutions: dycore, physics, IO.
 `PhysicsDriver._diagnose` is gone, the resolution provides what it derived. In
-this layer a derived leaf is always derived: a supplied state carrying it as
+this part a derived leaf is always derived: a supplied state carrying it as
 well is `AmbiguousSource`, and a keyword wins in `collect` while the provider
 still runs; "supplied wins" comes with the plan in 09.
 
