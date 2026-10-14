@@ -1,9 +1,9 @@
-# Components MWE: design, one section per layer
+# Components MWE: design, one section per part
 
 Minimal working example comparing today's component and state shape in icon4py
 (`model_current`) with the `State`/`Component` design (`model_proposed`). The
-design is built as a stack: each layer is one branch and one PR on top of the
-previous one, each section below is that PR's body. Every layer keeps both
+design is built as a stack: each part is one branch and one PR on top of the
+previous one, each section below is that PR's body. Every part keeps both
 models bit-exact on the config matrix of `run.py`.
 
 ## Goal
@@ -113,7 +113,7 @@ pair:
   out=view)` writes where the caller says, numpy `out=` style. Either way
   `run` returns the output. Whether `out` may alias the input is the
   component's business (diffusion and the physics update tolerate it, the
-  dycore needs distinct now/next); nothing checks it in this layer.
+  dycore needs distinct now/next); nothing checks it in this part.
 - `TimeStepPair` / `PredictorCorrectorPair`: icon4py's pairs typed
   (`common_utils.PredictorCorrectorPair[...].predictor` is `Any` to mypy),
   `current` renamed `now`.
@@ -130,7 +130,7 @@ output by output name into driver-owned accumulators; `_apply` is
 the `EntryState` with a hand-written `collect_input`, the typed
 `as_component_input`; `bind` ties a component's `run` to its `collect_input`
 in one expression, so pairing tmx's with muphys's is a type error. The later
-layers take these methods apart: 02 drops the `EntryState`, 04 rewrites the
+parts take these methods apart: 02 drops the `EntryState`, 04 rewrites the
 body of `_diagnose` with recipes, 05 removes `_diagnose`, 07 rekeys
 `_accumulate` and `_apply` by quantity, 08 removes the other three.
 `Icon4pyDriver` constructs every `Input` and `Output` view by keyword and
@@ -139,7 +139,7 @@ config selects by CF `standard_name`, or by class name where there is none
 (`VnOnEdgeK`). No collection by identity, no registry, no derived-quantity
 recipes, no tendency links, no checks beyond what mypy does.
 
-Where this layer departs from `model_current`: process cadence counts steps
+Where this part departs from `model_current`: process cadence counts steps
 instead of datetimes; `pflx` is owned by muphys, there is no
 `DiagnosticsStore`; muphys's input `te` is `temperature`; the dycore owns
 `theta_v_ic` and the `ddt_vn_apc` pair and swaps it in `run` from
@@ -224,7 +224,7 @@ is still built by keyword (`Halve.Input(pressure=...)` in the tests; the
 composers have none left). Wiring errors at a composer call site move from
 mypy to runtime (`MissingInput`, the dataclass's `TypeError` for a plain
 leaf). Scalars stay plain leaves, passed by keyword, rather than tagged
-quantities; the aliasing guard once planned for this layer comes with the
+quantities; the aliasing guard once planned for this part comes with the
 composer verb in 09. Counts unchanged, 8/8/8.
 
 **Checks.** As 01, plus `test_collect_picks_leaves_by_quantity` (pick from two
@@ -288,7 +288,7 @@ like any component, `Input`, `Output`, `run`, owning its result. `recipes.py`
 (56 lines): `TemperatureFromThetaExner`, `UFromVn`, `ThetaVToHalfLevels`,
 `VnTendencyFromUTendency`, and `ExnerThetaFromTemperature`, a plain
 `Component`: its outputs are among its inputs, it updates rather than derives.
-`Recipe` is a name only, nothing reads it until a later layer. One module for
+`Recipe` is a name only, nothing reads it until a later part. One module for
 the whole model: a consumer picks a recipe, runs it on a collected view and
 reads `.temperature` off the result instead of writing a stencil call and a
 buffer. The drivers still decide when. `PhysicsDriver._diagnose` runs the two
@@ -306,7 +306,7 @@ replaces. Two views over bare fields are built by keyword in `_apply`:
 `VnTendencyFromUTendency.Input(tend_u=...)` on the accumulator. `temperature`
 is still computed twice per step, since physics reads it before its update and
 output after; counts unchanged, 8/8/8. Nothing checks that two consumers
-derive a quantity the same way; later layer.
+derive a quantity the same way; later part.
 
 **Checks.** As 03, plus `test_recipe_is_a_component_that_owns_its_result`.
 
@@ -331,7 +331,7 @@ it does not produce, or a cycle). `Resolution.provide(*supplied)` runs them
 all once, eagerly, and the composer collects its children from the supplied
 and the produced states. Three resolutions: dycore, physics, IO.
 `PhysicsDriver._diagnose` is gone, the resolution provides what it derived. In
-this layer a derived leaf is always derived: a supplied state carrying it as
+this part a derived leaf is always derived: a supplied state carrying it as
 well is `AmbiguousSource`, and a keyword wins in `collect` while the provider
 still runs; "supplied wins" comes with the plan in 09.
 
