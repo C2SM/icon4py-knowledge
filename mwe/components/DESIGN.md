@@ -288,7 +288,7 @@ like any component, `Input`, `Output`, `run`, owning its result. `recipes.py`
 (56 lines): `TemperatureFromThetaExner`, `UFromVn`, `ThetaVToHalfLevels`,
 `VnTendencyFromUTendency`, and `ExnerThetaFromTemperature`, a plain
 `Component`: its outputs are among its inputs, it updates rather than derives.
-`Recipe` is a name only, nothing reads it until a later layer. One module for
+`Recipe` is a name only, nothing reads it until a later part. One module for
 the whole model: a consumer picks a recipe, runs it on a collected view and
 reads `.temperature` off the result instead of writing a stencil call and a
 buffer. The drivers still decide when. `PhysicsDriver._diagnose` runs the two
@@ -306,6 +306,6 @@ replaces. Two views over bare fields are built by keyword in `_apply`:
 `VnTendencyFromUTendency.Input(tend_u=...)` on the accumulator. `temperature`
 is still computed twice per step, since physics reads it before its update and
 output after; counts unchanged, 8/8/8. Nothing checks that two consumers
-derive a quantity the same way; later layer.
+derive a quantity the same way; later part.
 
 **Checks.** As 03, plus `test_recipe_is_a_component_that_owns_its_result`.
