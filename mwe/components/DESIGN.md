@@ -224,7 +224,7 @@ is still built by keyword (`Halve.Input(pressure=...)` in the tests; the
 composers have none left). Wiring errors at a composer call site move from
 mypy to runtime (`MissingInput`, the dataclass's `TypeError` for a plain
 leaf). Scalars stay plain leaves, passed by keyword, rather than tagged
-quantities; the aliasing guard once planned for this layer comes with the
+quantities; the aliasing guard once planned for this part comes with the
 composer verb in 09. Counts unchanged, 8/8/8.
 
 **Checks.** As 01, plus `test_collect_picks_leaves_by_quantity` (pick from two
