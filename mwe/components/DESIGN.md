@@ -1,9 +1,9 @@
-# Components MWE: design, one section per layer
+# Components MWE: design, one section per part
 
 Minimal working example comparing today's component and state shape in icon4py
 (`model_current`) with the `State`/`Component` design (`model_proposed`). The
-design is built as a stack: each layer is one branch and one PR on top of the
-previous one, each section below is that PR's body. Every layer keeps both
+design is built as a stack: each part is one branch and one PR on top of the
+previous one, each section below is that PR's body. Every part keeps both
 models bit-exact on the config matrix of `run.py`.
 
 ## Goal
@@ -113,7 +113,7 @@ pair:
   out=view)` writes where the caller says, numpy `out=` style. Either way
   `run` returns the output. Whether `out` may alias the input is the
   component's business (diffusion and the physics update tolerate it, the
-  dycore needs distinct now/next); nothing checks it in this layer.
+  dycore needs distinct now/next); nothing checks it in this part.
 - `TimeStepPair` / `PredictorCorrectorPair`: icon4py's pairs typed
   (`common_utils.PredictorCorrectorPair[...].predictor` is `Any` to mypy),
   `current` renamed `now`.
@@ -130,7 +130,7 @@ output by output name into driver-owned accumulators; `_apply` is
 the `EntryState` with a hand-written `collect_input`, the typed
 `as_component_input`; `bind` ties a component's `run` to its `collect_input`
 in one expression, so pairing tmx's with muphys's is a type error. The later
-layers take these methods apart: 02 drops the `EntryState`, 04 rewrites the
+parts take these methods apart: 02 drops the `EntryState`, 04 rewrites the
 body of `_diagnose` with recipes, 05 removes `_diagnose`, 07 rekeys
 `_accumulate` and `_apply` by quantity, 08 removes the other three.
 `Icon4pyDriver` constructs every `Input` and `Output` view by keyword and
@@ -139,7 +139,7 @@ config selects by CF `standard_name`, or by class name where there is none
 (`VnOnEdgeK`). No collection by identity, no registry, no derived-quantity
 recipes, no tendency links, no checks beyond what mypy does.
 
-Where this layer departs from `model_current`: process cadence counts steps
+Where this part departs from `model_current`: process cadence counts steps
 instead of datetimes; `pflx` is owned by muphys, there is no
 `DiagnosticsStore`; muphys's input `te` is `temperature`; the dycore owns
 `theta_v_ic` and the `ddt_vn_apc` pair and swaps it in `run` from

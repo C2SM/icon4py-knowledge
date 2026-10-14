@@ -79,7 +79,7 @@ class State:
         super().__init_subclass__()
         dataclasses.dataclass(frozen=True, eq=False, kw_only=True)(cls)
 
-    # declarations() is class-level. Needs no values. So later layers can
+    # declarations() is class-level. Needs no values. So later parts can
     # reason about a component before anything is allocated (resolve, plan,
     # dataflow report).
     @classmethod
@@ -203,7 +203,7 @@ def collect[S: State](cls: type[S], *states: State, **plain: Any) -> S:
 # `component.run(input, out=view)` writes where the caller says, numpy `out=`
 # style. Either way `run` returns the output. Whether the view may alias the
 # input is the component's business (diffusion and the physics update tolerate
-# it, the dycore needs distinct now/next); nothing checks it in this layer.
+# it, the dycore needs distinct now/next); nothing checks it in this part.
 class Component:
     Input: type[State]
     Output: type[State]
