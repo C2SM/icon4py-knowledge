@@ -3,7 +3,7 @@ import pytest
 import run
 
 # the current side computes temperature and u twice per step, for physics and
-# for output, and theta_v on half levels once per substep; so does this layer
+# for output, and theta_v on half levels once per substep; so does this part
 EXPECTED_CALLS = {"compute_temperature": 8, "edge_2_cell_vector_rbf_interpolation": 8, "interpolate_to_half_levels": 8}
 EXPECTED_PROPOSED_CALLS = {label: EXPECTED_CALLS for label in run.CONFIGS}
 
