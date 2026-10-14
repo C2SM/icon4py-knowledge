@@ -552,6 +552,6 @@ IOMonitor | reads: Temperature <- TemperatureFromThetaExner, U <- UFromVn | prod
 
 **Costs.** Framework 678 lines (+25). Nothing else changes: a report, not a
 mechanism, and last in the stack because it reads everything the earlier
-layers declare. Counts unchanged from 09.
+parts declare. Counts unchanged from 09.
 
 **Checks.** As 09, plus `test_dataflow_lists_reads_and_produces_by_label`.
