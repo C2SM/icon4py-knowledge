@@ -459,7 +459,7 @@ same declarations; not built. For vn the sum is of the derived tendencies, `dt
 sum(P(tend_u))`, where `ApplyToPrognostic` computes `dt P(sum(tend_u))`: the
 same for one process, equal up to rounding for more, since `P` is linear.
 
-**Costs.** Framework 508 lines (+155), the largest layer: the checks are most
+**Costs.** Framework 508 lines (+155), the largest part: the checks are most
 of it. `model_proposed` 921 (+129): `physics_driver.py` 67 (was 106; the three
 methods, the accumulators dict and the driver's own recipe instances are
 gone), muphys and tmx each gain a five-line `Update` block. Counts unchanged
