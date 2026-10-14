@@ -200,7 +200,7 @@ class State:
                 raise UnresolvedInput(f"{type(self).__qualname__}.{d.name}")
 
     # declarations() is class-level. Needs no values. So `resolve` and `plan`
-    # (and the dataflow report of the last layer) can reason about a component
+    # (and the dataflow report of the last part) can reason about a component
     # before anything is allocated.
     @classmethod
     def declarations(cls) -> tuple[Decl, ...]:
