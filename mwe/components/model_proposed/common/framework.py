@@ -300,8 +300,9 @@ def collect[S: State](cls: type[S], *states: State, **plain: Any) -> S:
 # ------------------------------------------------------------------------------
 # Component: Input, Output, run
 # ------------------------------------------------------------------------------
-# `run` is the only method a component implements. `out = component.run(inputs)`
-# writes into the component's own buffers, allocated once on first use;
+# `run` is the only method a component implements.
+# `output = component.run(inputs)` writes into the component's own buffers,
+# allocated once on first use;
 # `component.run(inputs, outputs=view)` writes where the caller says, numpy `out=`
 # style. Either way `run` returns the output. Whether the view may alias the
 # input is the component's business (diffusion and the physics update tolerate
