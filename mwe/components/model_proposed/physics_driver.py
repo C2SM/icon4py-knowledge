@@ -24,7 +24,6 @@ class ProcessTimeControl:
 
 @dataclasses.dataclass(frozen=True)
 class PhysicsProcess:
-    name: str
     component: fw.Component
     time_control: ProcessTimeControl
 
@@ -52,7 +51,7 @@ class PhysicsDriver(fw.Component):
     def __init__(self, sizes: Mapping[gtx.Dimension, int], process_intervals: Mapping[str, int]) -> None:
         super().__init__(sizes)
         self.processes = [
-            PhysicsProcess(name, PROCESSES[name](sizes), ProcessTimeControl(interval))
+            PhysicsProcess(PROCESSES[name](sizes), ProcessTimeControl(interval))
             for name, interval in process_intervals.items()
         ]
         # the recipes the processes declare for their derived inputs, run once
@@ -61,8 +60,9 @@ class PhysicsDriver(fw.Component):
         # one accumulator per tendency the processes emit, by output name, made
         # when first seen (TendencyAccumulators in icon4py)
         self.accumulators: dict[str, fw.Field[Any, Any]] = {}
-        # the last output of each process, reused on the steps it is not active
-        self.outputs: dict[str, fw.State] = {}
+        # the last output of each process, by its component, reused on the steps
+        # it is not active
+        self.outputs: dict[fw.Component, fw.State] = {}
         self._new_te = fw.zeros(qty.Temperature, fw.CellK, sizes)
         self.vn_tendency_from_u_tendency = recipes.VnTendencyFromUTendency(sizes)
         self.exner_theta_from_temperature = recipes.ExnerThetaFromTemperature(sizes)
@@ -74,10 +74,10 @@ class PhysicsDriver(fw.Component):
         produced = self.resolution.provide(input)
         self._zero_accumulators()
         for process in self.processes:
-            if process.time_control.is_active(input.step_index) or process.name not in self.outputs:
-                component = process.component
-                self.outputs[process.name] = component.run(fw.collect(component.Input, input, *produced))
-            self._accumulate(self.outputs[process.name])
+            component = process.component
+            if process.time_control.is_active(input.step_index) or component not in self.outputs:
+                self.outputs[component] = component.run(fw.collect(component.Input, input, *produced))
+            self._accumulate(self.outputs[component])
         self._apply(input, produced, out)
         return out
 
