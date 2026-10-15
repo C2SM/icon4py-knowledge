@@ -5,7 +5,7 @@ import ops
 class Advection(fw.Component):
     class Input(fw.State):
         qv: qty.Qv.CellK
-        mass_flx_me: qty.MassFlux.EdgeK
+        mass_flx_me: qty.HorizontalMassFlux.EdgeK
         dtime: float
 
     class Output(fw.State):
