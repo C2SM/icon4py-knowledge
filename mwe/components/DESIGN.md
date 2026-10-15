@@ -544,7 +544,7 @@ the order the drivers run it, the providers read off the compositions:
 
 ```
 ThetaVToHalfLevels | reads: ThetaV@CellK | produces: ThetaV@CellKHalf
-SolveNonhydro | reads: Vn, W, Rho, Exner, ThetaV@CellK, ThetaV@CellKHalf <- ThetaVToHalfLevels, MassFlux | produces: Vn, W, Rho, Exner, ThetaV@CellK, MassFlux
+SolveNonhydro | reads: Vn, W, Rho, Exner, ThetaV@CellK, ThetaV@CellKHalf <- ThetaVToHalfLevels, HorizontalMassFlux | produces: Vn, W, Rho, Exner, ThetaV@CellK, HorizontalMassFlux
 ...
 PhysicsDriver | reads: Vn, Exner, ThetaV@CellK, Qv | produces: Vn, Exner, ThetaV@CellK, Qv
 TemperatureFromThetaExner | reads: ThetaV@CellK, Exner | produces: Temperature
