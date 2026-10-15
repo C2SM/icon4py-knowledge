@@ -37,9 +37,9 @@ class IOMonitor(fw.Component):
         self.Input = fw.state_type("Input", leaves | {"simulation_time": datetime}, sources)
         self.dataset: list[tuple[datetime, str, ops.Array]] = []
 
-    def run(self, input: fw.State, out: fw.Empty | None = None) -> fw.Empty:
-        time: datetime = getattr(input, "simulation_time")
+    def run(self, inputs: fw.State, outputs: fw.Empty | None = None) -> fw.Empty:
+        time: datetime = getattr(inputs, "simulation_time")
         for key in self.variables:
-            field: fw.Field[Any, Any] = getattr(input, key)
+            field: fw.Field[Any, Any] = getattr(inputs, key)
             self.dataset.append((time, key, ops.arr(field.data).copy()))
-        return self.buffers(out)
+        return self.buffers(outputs)

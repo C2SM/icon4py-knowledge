@@ -10,9 +10,9 @@ class TemperatureFromThetaExner(fw.Recipe):
     class Output(fw.State):
         temperature: qty.Temperature.CellK
 
-    def run(self, input: Input, out: Output | None = None) -> Output:
-        out = self.buffers(out)
-        ops.compute_temperature(input.theta_v.data, input.exner.data, out.temperature.data)
+    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
+        out = self.buffers(outputs)
+        ops.compute_temperature(inputs.theta_v.data, inputs.exner.data, out.temperature.data)
         return out
 
 
@@ -23,9 +23,9 @@ class UFromVn(fw.Recipe):
     class Output(fw.State):
         u: qty.U.CellK
 
-    def run(self, input: Input, out: Output | None = None) -> Output:
-        out = self.buffers(out)
-        ops.edge_2_cell_vector_rbf_interpolation(input.vn.data, out.u.data)
+    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
+        out = self.buffers(outputs)
+        ops.edge_2_cell_vector_rbf_interpolation(inputs.vn.data, out.u.data)
         return out
 
 
@@ -37,9 +37,9 @@ class ThetaVToHalfLevels(fw.Recipe):
     class Output(fw.State):
         theta_v_ic: qty.ThetaV.CellKHalf
 
-    def run(self, input: Input, out: Output | None = None) -> Output:
-        out = self.buffers(out)
-        ops.interpolate_to_half_levels(input.theta_v.data, out.theta_v_ic.data)
+    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
+        out = self.buffers(outputs)
+        ops.interpolate_to_half_levels(inputs.theta_v.data, out.theta_v_ic.data)
         return out
 
 
@@ -50,9 +50,9 @@ class VnTendencyFromUTendency(fw.Recipe):
     class Output(fw.State):
         ddt_vn: fw.Tendency[qty.Vn, fw.EdgeK]
 
-    def run(self, input: Input, out: Output | None = None) -> Output:
-        out = self.buffers(out)
-        ops.compute_vn_from_uv(input.tend_u.data, out.ddt_vn.data)
+    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
+        out = self.buffers(outputs)
+        ops.compute_vn_from_uv(inputs.tend_u.data, out.ddt_vn.data)
         return out
 
 
@@ -71,9 +71,9 @@ class ExnerThetaFromTemperature(fw.Component):
 
     in_place = frozenset({"exner", "theta_v"})
 
-    def run(self, input: Input, out: Output | None = None) -> Output:
-        out = self.buffers(out)
+    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
+        out = self.buffers(outputs)
         ops.update_exner_and_theta_v(
-            input.temperature.data, input.exner.data, input.theta_v.data, out.exner.data, out.theta_v.data
+            inputs.temperature.data, inputs.exner.data, inputs.theta_v.data, out.exner.data, out.theta_v.data
         )
         return out

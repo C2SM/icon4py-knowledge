@@ -58,14 +58,14 @@ class PhysicsDriver(fw.Component):
         )
         # the last output of each process, by its component, reused on the steps
         # it is not active
-        self.outputs: dict[fw.Process, fw.State] = {}
+        self.process_outputs: dict[fw.Process, fw.State] = {}
 
-    def run(self, input: Input, out: Output | None = None) -> Output:
-        out = self.buffers(out)
+    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
+        out = self.buffers(outputs)
         plan = self.composition.begin()
         for process in self.processes:
-            if process.time_control.is_active(input.step_index) or process.component not in self.outputs:
-                self.outputs[process.component] = plan.run(process.component, inputs=(input,))
-            plan.accumulate(process.component, self.outputs[process.component], input)
-        plan.update(input, out, input.dtime)
+            if process.time_control.is_active(inputs.step_index) or process.component not in self.process_outputs:
+                self.process_outputs[process.component] = plan.run(process.component, inputs=(inputs,))
+            plan.accumulate(process.component, self.process_outputs[process.component], inputs)
+        plan.update(inputs, out, inputs.dtime)
         return out
