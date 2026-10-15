@@ -35,9 +35,9 @@ class Halve(fw.Component):
     class Output(fw.State):
         pressure: Pressure.CellK
 
-    def run(self, input: Input, out: Output | None = None) -> Output:
-        out = self.buffers(out)
-        np.asarray(out.pressure.data.ndarray)[...] = 0.5 * np.asarray(input.pressure.data.ndarray)
+    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
+        out = self.buffers(outputs)
+        np.asarray(out.pressure.data.ndarray)[...] = 0.5 * np.asarray(inputs.pressure.data.ndarray)
         return out
 
 
@@ -93,10 +93,10 @@ def test_component_writes_its_own_buffers_or_the_callers() -> None:
     pressure = fw.zeros(Pressure, fw.CellK, SIZES)
     np.asarray(pressure.data.ndarray)[...] = 8.0
     own = halve.run(Halve.Input(pressure=pressure))
-    assert own is halve.output and own is halve.run(Halve.Input(pressure=pressure))
+    assert own is halve.cached_output and own is halve.run(Halve.Input(pressure=pressure))
     assert np.all(np.asarray(own.pressure.data.ndarray) == 4.0)
     given = Halve.Output(pressure=pressure)
-    assert halve.run(Halve.Input(pressure=pressure), out=given) is given
+    assert halve.run(Halve.Input(pressure=pressure), outputs=given) is given
     assert np.all(np.asarray(pressure.data.ndarray) == 4.0)
 
 
@@ -152,7 +152,7 @@ def test_recipe_is_a_component_that_owns_its_result() -> None:
     np.asarray(pressure.data.ndarray)[...] = 3.0
     recipe = DensityFromPressure(SIZES)
     density = recipe.run(DensityFromPressure.Input(pressure=pressure)).density
-    assert density is recipe.output.density and density.quantity is Density
+    assert density is recipe.cached_output.density and density.quantity is Density
     assert np.all(np.asarray(density.data.ndarray) == 6.0)
 
 
@@ -186,9 +186,9 @@ class DensityFromPressure(fw.Recipe):
     class Output(fw.State):
         density: Density.CellK
 
-    def run(self, input: Input, out: Output | None = None) -> Output:
-        out = self.buffers(out)
-        np.asarray(out.density.data.ndarray)[...] = 2.0 * np.asarray(input.pressure.data.ndarray)
+    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
+        out = self.buffers(outputs)
+        np.asarray(out.density.data.ndarray)[...] = 2.0 * np.asarray(inputs.pressure.data.ndarray)
         return out
 
 
@@ -199,9 +199,9 @@ class SaltFromDensity(fw.Recipe):
     class Output(fw.State):
         salt: Salt.Cell
 
-    def run(self, input: Input, out: Output | None = None) -> Output:
-        out = self.buffers(out)
-        np.asarray(out.salt.data.ndarray)[...] = np.asarray(input.density.data.ndarray).sum(axis=1)
+    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
+        out = self.buffers(outputs)
+        np.asarray(out.salt.data.ndarray)[...] = np.asarray(inputs.density.data.ndarray).sum(axis=1)
         return out
 
 
@@ -212,8 +212,8 @@ class Consumer(fw.Component):
 
     Output = fw.Empty
 
-    def run(self, input: Input, out: fw.Empty | None = None) -> fw.Empty:
-        return self.buffers(out)
+    def run(self, inputs: Input, outputs: fw.Empty | None = None) -> fw.Empty:
+        return self.buffers(outputs)
 
 
 def test_derived_by_is_a_source_on_the_declaration_only() -> None:
@@ -230,7 +230,7 @@ def test_resolve_orders_the_providers_and_provide_runs_them() -> None:
     produced = resolution.provide(fields)
     view = fw.collect(Consumer.Input, fields, *produced)
     assert np.all(np.asarray(view.salt.data.ndarray) == 4.0)
-    assert view.salt is resolution.providers[1].output.salt
+    assert view.salt is resolution.providers[1].cached_output.salt
     assert fw.resolve([Halve], SIZES).providers == ()
 
 

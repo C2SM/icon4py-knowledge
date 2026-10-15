@@ -13,7 +13,7 @@ class MuphysComponent(fw.Component):
         tend_qv: fw.Tendency[qty.Qv, fw.CellK]
         pflx: qty.PrecipitationFlux.Cell
 
-    def run(self, input: Input, out: Output | None = None) -> Output:
-        out = self.buffers(out)
-        ops.muphys(input.temperature.data, input.qv.data, out.tend_temperature.data, out.tend_qv.data, out.pflx.data)
+    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
+        out = self.buffers(outputs)
+        ops.muphys(inputs.temperature.data, inputs.qv.data, out.tend_temperature.data, out.tend_qv.data, out.pflx.data)
         return out

@@ -107,12 +107,12 @@ pair:
   `declarations()` reads the `Field` leaves back (name, quantity). Plain leaves
   (`dtime: float`) are ordinary fields. `allocate(State, sizes)` makes the
   buffers from the declarations.
-- `Component`: `Input`, `Output`, and `run(input, out=None) -> Output`, the
-  only method a component implements. `out = c.run(input)` writes into the
-  component's own buffers, allocated once on first use; `c.run(input,
-  out=view)` writes where the caller says, numpy `out=` style. Either way
-  `run` returns the output. Whether `out` may alias the input is the
-  component's business (diffusion and the physics update tolerate it, the
+- `Component`: `Input`, `Output`, and `run(inputs, outputs=None) -> Output`,
+  the only method a component implements. `out = c.run(inputs)` writes into
+  the component's own buffers (`cached_output`), allocated once on first use;
+  `c.run(inputs, outputs=view)` writes where the caller says, numpy `out=`
+  style. Either way `run` returns the output. Whether `outputs` may alias the
+  inputs is the component's business (diffusion and the physics update tolerate it, the
   dycore needs distinct now/next); nothing checks it in this part.
 - `TimeStepPair` / `PredictorCorrectorPair`: icon4py's pairs typed
   (`common_utils.PredictorCorrectorPair[...].predictor` is `Any` to mypy),
@@ -160,14 +160,15 @@ class. The cost is that the component instance is hidden in the closure, so
 the accumulators are allocated lazily by output name rather than from the
 processes' declarations. `PhysicsProcess` is icon4py's minus `state`: a name,
 the step and its cadence; the cadence belongs to the composer, since the same
-component may run at another interval elsewhere. `self.outputs` is icon4py's
-`_recycle_cache`: a process runs when it is active or has never run, otherwise
-its last output, a reference to its own buffers, is accumulated again.
+component may run at another interval elsewhere. `self.process_outputs` is
+icon4py's `_recycle_cache`: a process runs when it is active or has never run,
+otherwise its last output, a reference to its own buffers, is accumulated
+again.
 
 **Costs.** Every `Input`/`Output` view is spelled out by keyword at the call
 site (`driver.py` is 104 lines against 258 in `model_current/driver/`), and
 every stencil call reads `.data`. Calls through the `fw.Component` base are
-untyped (`run(input: Any, out: Any)`); only calls on a concrete class are
+untyped (`run(inputs: Any, outputs: Any)`); only calls on a concrete class are
 checked. `_apply` is a method, not a `Component`: which tendencies it reads
 depends on the configured processes, and a `State` has no optional leaf.
 `model_proposed` is 584 non-blank lines against 674 for
@@ -202,7 +203,7 @@ buffer twice is fine). Composers now pass states, not leaves:
 ```python
 self.solve_nonhydro.run(
     fw.collect(SolveNonhydro.Input, now, self.prep_advection, substep_dtime=..., ...),
-    out=fw.collect(SolveNonhydro.Output, next, self.prep_advection),
+    outputs=fw.collect(SolveNonhydro.Output, next, self.prep_advection),
 )
 ```
 
@@ -210,7 +211,7 @@ and the physics driver runs each process on `fw.collect(component.Input,
 input, diagnostics)`, `diagnostics` being the `Diagnostics` state `_diagnose`
 fills and returns. `EntryState`, `collect_input` and `bind` are gone; the
 process/collect pairing they had to check by hand no longer exists.
-`PhysicsProcess` holds the component in place of the step, and `self.outputs`
+`PhysicsProcess` holds the component in place of the step, and `self.process_outputs`
 is keyed by it, so the process name, whose only use was that key, goes too.
 `Diagnostics` moves next to `PrognosticState` in `common/states.py`, and the
 driver allocates one too, for output, in place of two bare fields. This is the
