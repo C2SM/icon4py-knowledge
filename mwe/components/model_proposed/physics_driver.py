@@ -61,31 +61,31 @@ class PhysicsDriver(fw.Component):
         self.accumulators: dict[str, fw.Field[Any, Any]] = {}
         # the last output of each process, by its component, reused on the steps
         # it is not active
-        self.outputs: dict[fw.Component, fw.State] = {}
+        self.process_outputs: dict[fw.Component, fw.State] = {}
         self._new_te = fw.zeros(qty.Temperature, fw.CellK, sizes)
         self._ddt_vn = fw.zeros(qty.TendencyOfVn, fw.EdgeK, sizes)
 
     # icon4py's PhysicsDriver.run: four of its five steps as methods, the
     # process loop inline
-    def run(self, input: Input, out: Output | None = None) -> Output:
-        out = self.buffers(out)
-        diagnostics = self._diagnose(input)
+    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
+        out = self.buffers(outputs)
+        diagnostics = self._diagnose(inputs)
         self._zero_accumulators()
         for process in self.processes:
             component = process.component
-            if process.time_control.is_active(input.step_index) or component not in self.outputs:
-                self.outputs[component] = component.run(fw.collect(component.Input, input, diagnostics))
-            self._accumulate(self.outputs[component])
-        self._apply(input, diagnostics, out)
+            if process.time_control.is_active(inputs.step_index) or component not in self.process_outputs:
+                self.process_outputs[component] = component.run(fw.collect(component.Input, inputs, diagnostics))
+            self._accumulate(self.process_outputs[component])
+        self._apply(inputs, diagnostics, out)
         return out
 
     # the diagnostics derived from the prognostics into the driver's buffers; a
     # process collects its Input from them and the driver's Input
     # (EntryState.diagnose_from, without the EntryState)
-    def _diagnose(self, input: Input) -> states.Diagnostics:
+    def _diagnose(self, inputs: Input) -> states.Diagnostics:
         diagnostics = self.diagnostics
-        ops.compute_temperature(input.theta_v.data, input.exner.data, diagnostics.temperature.data)
-        ops.edge_2_cell_vector_rbf_interpolation(input.vn.data, diagnostics.u.data)
+        ops.compute_temperature(inputs.theta_v.data, inputs.exner.data, diagnostics.temperature.data)
+        ops.edge_2_cell_vector_rbf_interpolation(inputs.vn.data, diagnostics.u.data)
         return diagnostics
 
     def _zero_accumulators(self) -> None:
@@ -103,22 +103,22 @@ class PhysicsDriver(fw.Component):
 
     # the summed tendencies into the prognostics, once (ApplyToPrognostic);
     # `out` may alias `input`
-    def _apply(self, input: Input, diagnostics: states.Diagnostics, out: Output) -> None:
-        acc, dt = self.accumulators, input.dtime
-        _carry(input.vn, out.vn)
-        _carry(input.qv, out.qv)
+    def _apply(self, inputs: Input, diagnostics: states.Diagnostics, out: Output) -> None:
+        acc, dt = self.accumulators, inputs.dtime
+        _carry(inputs.vn, out.vn)
+        _carry(inputs.qv, out.qv)
         if "tend_qv" in acc:
-            ops.arr(out.qv.data)[...] = ops.arr(input.qv.data) + dt * ops.arr(acc["tend_qv"].data)
+            ops.arr(out.qv.data)[...] = ops.arr(inputs.qv.data) + dt * ops.arr(acc["tend_qv"].data)
         if "tend_temperature" in acc:
             ops.arr(self._new_te.data)[...] = ops.arr(diagnostics.temperature.data) + dt * ops.arr(
                 acc["tend_temperature"].data
             )
             ops.update_exner_and_theta_v(
-                self._new_te.data, input.exner.data, input.theta_v.data, out.exner.data, out.theta_v.data
+                self._new_te.data, inputs.exner.data, inputs.theta_v.data, out.exner.data, out.theta_v.data
             )
         else:
-            _carry(input.exner, out.exner)
-            _carry(input.theta_v, out.theta_v)
+            _carry(inputs.exner, out.exner)
+            _carry(inputs.theta_v, out.theta_v)
         if "tend_u" in acc:
             ops.compute_vn_from_uv(acc["tend_u"].data, self._ddt_vn.data)
-            ops.arr(out.vn.data)[...] = ops.arr(input.vn.data) + dt * ops.arr(self._ddt_vn.data)
+            ops.arr(out.vn.data)[...] = ops.arr(inputs.vn.data) + dt * ops.arr(self._ddt_vn.data)
