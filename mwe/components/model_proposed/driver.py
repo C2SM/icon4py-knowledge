@@ -50,17 +50,17 @@ class Icon4pyDriver:
         next, tracers_next = self.prognostic_states.next, self.tracers.next
         self.diffusion.run(
             fw.collect(diffusion.Diffusion.Input, next, dtime=info.dtime),
-            out=fw.collect(diffusion.Diffusion.Output, next),
+            outputs=fw.collect(diffusion.Diffusion.Output, next),
         )
         self.tracer_advection.run(
             fw.collect(tracer_advection.Advection.Input, self.tracers.now, self.prep_advection, dtime=info.dtime),
-            out=fw.collect(tracer_advection.Advection.Output, tracers_next),
+            outputs=fw.collect(tracer_advection.Advection.Output, tracers_next),
         )
         self.physics.run(
             fw.collect(
                 physics_driver.PhysicsDriver.Input, next, tracers_next, dtime=info.dtime, step_index=info.step_index
             ),
-            out=fw.collect(physics_driver.PhysicsDriver.Output, next, tracers_next),
+            outputs=fw.collect(physics_driver.PhysicsDriver.Output, next, tracers_next),
         )
         self.prognostic_states.swap()
         self.tracers.swap()
@@ -79,7 +79,7 @@ class Icon4pyDriver:
                     ndyn_substeps=info.ndyn_substeps,
                     at_first_substep=dyn_substep == 0,
                 ),
-                out=fw.collect(solve_nonhydro.SolveNonhydro.Output, next, self.prep_advection),
+                outputs=fw.collect(solve_nonhydro.SolveNonhydro.Output, next, self.prep_advection),
             )
             if dyn_substep != info.ndyn_substeps - 1:
                 self.prognostic_states.swap()
