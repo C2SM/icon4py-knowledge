@@ -12,9 +12,9 @@ class TmxComponent(fw.Component):
         tend_temperature: fw.Field[qty.TendencyOfTemperatureOnCellK]
         tend_u: fw.Field[qty.TendencyOfUOnCellK]
 
-    def run(self, input: Input, out: Output | None = None) -> Output:
-        out = self.buffers(out)
-        ops.tmx(input.temperature.data, input.u.data, out.tend_temperature.data, out.tend_u.data)
+    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
+        out = self.buffers(outputs)
+        ops.tmx(inputs.temperature.data, inputs.u.data, out.tend_temperature.data, out.tend_u.data)
         return out
 
 

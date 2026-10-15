@@ -59,13 +59,13 @@ class Icon4pyDriver:
         next, tracers_next = self.prognostic_states.next, self.tracers.next
         self.diffusion.run(
             diffusion.Diffusion.Input(vn=next.vn, theta_v=next.theta_v, dtime=info.dtime),
-            out=diffusion.Diffusion.Output(vn=next.vn, theta_v=next.theta_v),
+            outputs=diffusion.Diffusion.Output(vn=next.vn, theta_v=next.theta_v),
         )
         self.tracer_advection.run(
             tracer_advection.Advection.Input(
                 qv=self.tracers.now.qv, mass_flx_me=self.prep_advection.mass_flx_me, dtime=info.dtime
             ),
-            out=tracer_advection.Advection.Output(qv=tracers_next.qv),
+            outputs=tracer_advection.Advection.Output(qv=tracers_next.qv),
         )
         self.physics.run(
             physics_driver.PhysicsDriver.Input(
@@ -76,7 +76,7 @@ class Icon4pyDriver:
                 dtime=info.dtime,
                 step_index=info.step_index,
             ),
-            out=physics_driver.PhysicsDriver.Output(
+            outputs=physics_driver.PhysicsDriver.Output(
                 vn=next.vn, exner=next.exner, theta_v=next.theta_v, qv=tracers_next.qv
             ),
         )
@@ -98,7 +98,7 @@ class Icon4pyDriver:
                     ndyn_substeps=info.ndyn_substeps,
                     at_first_substep=dyn_substep == 0,
                 ),
-                out=solve_nonhydro.SolveNonhydro.Output(
+                outputs=solve_nonhydro.SolveNonhydro.Output(
                     vn=next.vn,
                     w=next.w,
                     rho=next.rho,

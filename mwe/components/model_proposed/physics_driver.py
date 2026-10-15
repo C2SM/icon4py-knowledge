@@ -73,34 +73,34 @@ class PhysicsDriver(fw.Component):
         # when first seen (TendencyAccumulators in icon4py)
         self.accumulators: dict[str, fw.Field[Any]] = {}
         # the last output of each process, reused on the steps it is not active
-        self.outputs: dict[str, fw.State] = {}
+        self.process_outputs: dict[str, fw.State] = {}
         self._new_te = fw.zeros(qty.TemperatureOnCellK, sizes)
         self._ddt_vn = fw.zeros(qty.TendencyOfVnOnEdgeK, sizes)
 
     # icon4py's PhysicsDriver.run: four of its five steps as methods, the
     # process loop inline
-    def run(self, input: Input, out: Output | None = None) -> Output:
-        out = self.buffers(out)
-        entry = self._diagnose(input)
+    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
+        out = self.buffers(outputs)
+        entry = self._diagnose(inputs)
         self._zero_accumulators()
         for process in self.processes:
-            if process.time_control.is_active(input.step_index) or process.name not in self.outputs:
-                self.outputs[process.name] = process.step(entry)
-            self._accumulate(self.outputs[process.name])
-        self._apply(entry, input.dtime, out)
+            if process.time_control.is_active(inputs.step_index) or process.name not in self.process_outputs:
+                self.process_outputs[process.name] = process.step(entry)
+            self._accumulate(self.process_outputs[process.name])
+        self._apply(entry, inputs.dtime, out)
         return out
 
     # one EntryState over the prognostics as given and the diagnostics derived
     # from them into the driver's buffers (EntryState.diagnose_from)
-    def _diagnose(self, input: Input) -> physics_state.EntryState:
+    def _diagnose(self, inputs: Input) -> physics_state.EntryState:
         diagnostics = self.diagnostics
-        ops.compute_temperature(input.theta_v.data, input.exner.data, diagnostics.temperature.data)
-        ops.edge_2_cell_vector_rbf_interpolation(input.vn.data, diagnostics.u.data)
+        ops.compute_temperature(inputs.theta_v.data, inputs.exner.data, diagnostics.temperature.data)
+        ops.edge_2_cell_vector_rbf_interpolation(inputs.vn.data, diagnostics.u.data)
         return physics_state.EntryState(
-            vn=input.vn,
-            exner=input.exner,
-            theta_v=input.theta_v,
-            qv=input.qv,
+            vn=inputs.vn,
+            exner=inputs.exner,
+            theta_v=inputs.theta_v,
+            qv=inputs.qv,
             temperature=diagnostics.temperature,
             u=diagnostics.u,
         )

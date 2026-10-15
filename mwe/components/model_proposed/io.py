@@ -29,8 +29,8 @@ class IOMonitor(fw.Component):
         self.selected = {name: keys[name] for name in variables}
         self.dataset: list[tuple[datetime, str, ops.Array]] = []
 
-    def run(self, input: Input, out: fw.Empty | None = None) -> fw.Empty:
+    def run(self, inputs: Input, outputs: fw.Empty | None = None) -> fw.Empty:
         for name, leaf in self.selected.items():
-            field: fw.Field[fw.Quantity] = getattr(input, leaf)
-            self.dataset.append((input.simulation_time, name, ops.arr(field.data).copy()))
-        return self.buffers(out)
+            field: fw.Field[fw.Quantity] = getattr(inputs, leaf)
+            self.dataset.append((inputs.simulation_time, name, ops.arr(field.data).copy()))
+        return self.buffers(outputs)
