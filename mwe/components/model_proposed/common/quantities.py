@@ -3,7 +3,7 @@ from model_proposed.common import framework as fw
 
 # One tag per quantity; the places it lives at are its nested aliases, so a
 # component declares `theta_v: qty.ThetaV.CellK` or `qty.ThetaV.CellKHalf`.
-# `standard_name` where the CF table has one (Vn, ThetaV, MassFlux have none).
+# `standard_name` where the CF table has one (Vn, ThetaV, HorizontalMassFlux have none).
 class Vn(fw.Quantity, units="m s-1"):
     type EdgeK = fw.Field[Vn, fw.EdgeK]
 
@@ -29,8 +29,8 @@ class Qv(fw.Quantity, standard_name="specific_humidity", units="1"):
     type CellK = fw.Field[Qv, fw.CellK]
 
 
-class MassFlux(fw.Quantity, units="kg m-2 s-1"):
-    type EdgeK = fw.Field[MassFlux, fw.EdgeK]
+class HorizontalMassFlux(fw.Quantity, units="kg m-2 s-1"):
+    type EdgeK = fw.Field[HorizontalMassFlux, fw.EdgeK]
 
 
 class Temperature(fw.Quantity, standard_name="air_temperature", units="K"):
