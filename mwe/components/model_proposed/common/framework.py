@@ -346,9 +346,9 @@ def collect[S: State](cls: type[S], *states: State, **plain: Any) -> S:
 # ------------------------------------------------------------------------------
 # Component: Input, Output, run
 # ------------------------------------------------------------------------------
-# `run` is the only method a component implements. `out = component.run(input)`
+# `run` is the only method a component implements. `out = component.run(inputs)`
 # writes into the component's own buffers, allocated once on first use;
-# `component.run(input, out=view)` writes where the caller says, numpy `out=`
+# `component.run(inputs, outputs=view)` writes where the caller says, numpy `out=`
 # style. Either way `run` returns the output. The aliasing a component
 # tolerates is declared in `in_place`; `Plan.run` refuses any other.
 class Component:
@@ -362,14 +362,14 @@ class Component:
         self.sizes = sizes
 
     @functools.cached_property
-    def output(self) -> Any:
+    def cached_output(self) -> Any:
         return allocate(type(self).Output, self.sizes)
 
     # the caller's buffers when given, else this component's own
-    def buffers[T: State](self, out: T | None) -> T:
-        return self.output if out is None else out
+    def buffers[T: State](self, outputs: T | None) -> T:
+        return self.cached_output if outputs is None else outputs
 
-    def run(self, input: Any, out: Any = None) -> Any:
+    def run(self, inputs: Any, outputs: Any = None) -> Any:
         raise NotImplementedError
 
 
@@ -594,7 +594,7 @@ class Updates:
             hook_input, hook_out = collect(hook.Input, output, *produced), collect(hook.Output, output, *produced)
             if guard is not None:
                 guard(hook, hook_input, hook_out)
-            hook.run(hook_input, out=hook_out)
+            hook.run(hook_input, outputs=hook_out)
 
 
 # Reads the processes' Update blocks once, at composite init: every tendency a
@@ -717,7 +717,7 @@ def _check_alias(component: Component, input: State, out: State) -> None:
 # most once per plan, at the first child that needs it, and not at all when
 # the composer supplied its output or no child that needs it runs: a new plan
 # per substep, step or physics call is what makes "once" mean once. A child
-# that writes into a supplied state through `out=` drops the providers that
+# that writes into a supplied state through `outputs=` drops the providers that
 # read it from the plan's cache.
 class Plan:
     def __init__(self, composition: Composition) -> None:
