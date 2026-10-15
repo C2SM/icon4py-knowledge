@@ -22,7 +22,6 @@ class ProcessTimeControl:
 
 @dataclasses.dataclass(frozen=True)
 class PhysicsProcess:
-    name: str
     component: fw.Process
     time_control: ProcessTimeControl
 
@@ -45,7 +44,7 @@ class PhysicsDriver(fw.Component):
     def __init__(self, sizes: Mapping[gtx.Dimension, int], process_intervals: Mapping[str, int]) -> None:
         super().__init__(sizes)
         self.processes = [
-            PhysicsProcess(name, PROCESSES[name](sizes), ProcessTimeControl(interval))
+            PhysicsProcess(PROCESSES[name](sizes), ProcessTimeControl(interval))
             for name, interval in process_intervals.items()
         ]
         components = [process.component for process in self.processes]
@@ -57,9 +56,9 @@ class PhysicsDriver(fw.Component):
         self.updates = fw.updates(
             components, sizes, input=PhysicsDriver.Input, output=PhysicsDriver.Output, provided=self.resolution.providers
         )
-        # the last output of each process and the tendencies derived from it,
-        # reused on the steps it is not active
-        self.outputs: dict[str, tuple[fw.State, tuple[fw.State, ...]]] = {}
+        # the last output of each process and the tendencies derived from it, by
+        # its component, reused on the steps it is not active
+        self.outputs: dict[fw.Process, tuple[fw.State, tuple[fw.State, ...]]] = {}
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)
@@ -67,14 +66,14 @@ class PhysicsDriver(fw.Component):
         self.updates.begin()
         for process in self.processes:
             component = process.component
-            if process.time_control.is_active(input.step_index) or process.name not in self.outputs:
+            if process.time_control.is_active(input.step_index) or component not in self.outputs:
                 output = component.run(fw.collect(component.Input, input, *produced))
                 computed = tuple(
                     recipe.run(fw.collect(recipe.Input, output, input, *produced))
                     for recipe in self.updates.tendency_recipes[component]
                 )
-                self.outputs[process.name] = (output, computed)
-            output, computed = self.outputs[process.name]
+                self.outputs[component] = (output, computed)
+            output, computed = self.outputs[component]
             component.accumulate(self.updates.tendencies, output, *computed)
         self.updates.update(input, out, input.dtime, *produced)
         return out
