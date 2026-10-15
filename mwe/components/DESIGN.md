@@ -210,6 +210,8 @@ and the physics driver runs each process on `fw.collect(component.Input,
 input, diagnostics)`, `diagnostics` being the `Diagnostics` state `_diagnose`
 fills and returns. `EntryState`, `collect_input` and `bind` are gone; the
 process/collect pairing they had to check by hand no longer exists.
+`PhysicsProcess` holds the component in place of the step, and `self.outputs`
+is keyed by it, so the process name, whose only use was that key, goes too.
 `Diagnostics` moves next to `PrognosticState` in `common/states.py`, and the
 driver allocates one too, for output, in place of two bare fields. This is the
 first mechanism that builds a component's view by quantity identity: a
@@ -460,7 +462,7 @@ sum(P(tend_u))`, where `ApplyToPrognostic` computes `dt P(sum(tend_u))`: the
 same for one process, equal up to rounding for more, since `P` is linear.
 
 **Costs.** Framework 508 lines (+155), the largest part: the checks are most
-of it. `model_proposed` 921 (+129): `physics_driver.py` 67 (was 106; the three
+of it. `model_proposed` 920 (+128): `physics_driver.py` 66 (was 106; the three
 methods, the accumulators dict and the driver's own recipe instances are
 gone), muphys and tmx each gain a five-line `Update` block. Counts unchanged
 from 07. A sixth row of the matrix, the example at dt = 0.3, guards the order
@@ -510,8 +512,8 @@ The drivers now read as a schedule: `plan.run(self.diffusion, inputs=(next,),
 outputs=(next,), dtime=info.dtime)`; one `composition` over the five children
 in `Icon4pyDriver`, one over the processes in `PhysicsDriver`.
 
-**Costs.** Framework 653 lines (+145). `model_proposed` 1061 (+140):
-`physics_driver.py` 57 (was 67), `driver.py` 74 (was 75). Counts: `u` is now
+**Costs.** Framework 653 lines (+145). `model_proposed` 1061 (+141):
+`physics_driver.py` 57 (was 66), `driver.py` 74 (was 75). Counts: `u` is now
 derived only on the two steps tmx runs, 8/6/8 for the example and tmx-only,
 4/2/8 without output, the rest unchanged; `temperature` stays at 8 because the
 EOS hook reads it on every physics pass. The memo scope is the plan, not the

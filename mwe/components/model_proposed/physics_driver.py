@@ -22,7 +22,6 @@ class ProcessTimeControl:
 
 @dataclasses.dataclass(frozen=True)
 class PhysicsProcess:
-    name: str
     component: fw.Process
     time_control: ProcessTimeControl
 
@@ -47,7 +46,7 @@ class PhysicsDriver(fw.Component):
     def __init__(self, sizes: Mapping[gtx.Dimension, int], process_intervals: Mapping[str, int]) -> None:
         super().__init__(sizes)
         self.processes = [
-            PhysicsProcess(name, PROCESSES[name](sizes), ProcessTimeControl(interval))
+            PhysicsProcess(PROCESSES[name](sizes), ProcessTimeControl(interval))
             for name, interval in process_intervals.items()
         ]
         # the wiring: providers, what each process needs of them, updates
@@ -57,15 +56,16 @@ class PhysicsDriver(fw.Component):
             input=PhysicsDriver.Input,
             output=PhysicsDriver.Output,
         )
-        # the last output of each process, reused on the steps it is not active
-        self.outputs: dict[str, fw.State] = {}
+        # the last output of each process, by its component, reused on the steps
+        # it is not active
+        self.outputs: dict[fw.Process, fw.State] = {}
 
     def run(self, input: Input, out: Output | None = None) -> Output:
         out = self.buffers(out)
         plan = self.composition.begin()
         for process in self.processes:
-            if process.time_control.is_active(input.step_index) or process.name not in self.outputs:
-                self.outputs[process.name] = plan.run(process.component, inputs=(input,))
-            plan.accumulate(process.component, self.outputs[process.name], input)
+            if process.time_control.is_active(input.step_index) or process.component not in self.outputs:
+                self.outputs[process.component] = plan.run(process.component, inputs=(input,))
+            plan.accumulate(process.component, self.outputs[process.component], input)
         plan.update(input, out, input.dtime)
         return out

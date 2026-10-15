@@ -9,6 +9,7 @@ from model_current.driver import driver as current
 from model_proposed import (
     diffusion,
     driver as proposed,
+    muphys,
     physics_driver,
     solve_nonhydro,
     tracer_advection,
@@ -97,7 +98,9 @@ def run_proposed(run_config: config.Config, dtime: float = 1.0) -> dict[str, Any
         "calls": _calls(),
     }
     if "muphys" in run_config.physics:
-        result["pflx"] = ops.arr(getattr(icon4py_driver.physics.outputs["muphys"], "pflx").data)
+        outputs = icon4py_driver.physics.outputs
+        muphys_output = next(o for c, o in outputs.items() if isinstance(c, muphys.MuphysComponent))
+        result["pflx"] = ops.arr(getattr(muphys_output, "pflx").data)
     return result
 
 
