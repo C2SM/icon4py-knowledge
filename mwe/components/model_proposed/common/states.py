@@ -17,7 +17,7 @@ class TracerState(fw.State):
 
 
 class PrepAdvection(fw.State):
-    mass_flx_me: fw.Field[qty.MassFluxOnEdgeK]
+    mass_flx_me: fw.Field[qty.HorizontalMassFluxOnEdgeK]
 
 
 # the diagnostics derived from the prognostics, for the physics and for
