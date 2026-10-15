@@ -17,7 +17,7 @@ class SolveNonhydro(fw.Component):
         rho: fw.Field[qty.RhoOnCellK]
         exner: fw.Field[qty.ExnerOnCellK]
         theta_v: fw.Field[qty.ThetaVOnCellK]
-        mass_flx_me: fw.Field[qty.MassFluxOnEdgeK]
+        mass_flx_me: fw.Field[qty.HorizontalMassFluxOnEdgeK]
         substep_dtime: float
         ndyn_substeps: int
         at_first_substep: bool
@@ -28,7 +28,7 @@ class SolveNonhydro(fw.Component):
         rho: fw.Field[qty.RhoOnCellK]
         exner: fw.Field[qty.ExnerOnCellK]
         theta_v: fw.Field[qty.ThetaVOnCellK]
-        mass_flx_me: fw.Field[qty.MassFluxOnEdgeK]
+        mass_flx_me: fw.Field[qty.HorizontalMassFluxOnEdgeK]
 
     def __init__(self, sizes: Mapping[gtx.Dimension, int]) -> None:
         super().__init__(sizes)

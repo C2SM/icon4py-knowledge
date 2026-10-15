@@ -17,7 +17,7 @@ class TracerState(fw.State):
 
 
 class PrepAdvection(fw.State):
-    mass_flx_me: fw.Field[qty.MassFluxOnEdgeK]
+    mass_flx_me: fw.Field[qty.HorizontalMassFluxOnEdgeK]
 
 
 # the driver's time variables for one step; plain values, not quantities
