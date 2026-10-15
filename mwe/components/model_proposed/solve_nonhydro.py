@@ -17,7 +17,7 @@ class SolveNonhydro(fw.Component):
         rho: qty.Rho.CellK
         exner: qty.Exner.CellK
         theta_v: qty.ThetaV.CellK
-        mass_flx_me: qty.MassFlux.EdgeK
+        mass_flx_me: qty.HorizontalMassFlux.EdgeK
         substep_dtime: float
         ndyn_substeps: int
         at_first_substep: bool
@@ -28,7 +28,7 @@ class SolveNonhydro(fw.Component):
         rho: qty.Rho.CellK
         exner: qty.Exner.CellK
         theta_v: qty.ThetaV.CellK
-        mass_flx_me: qty.MassFlux.EdgeK
+        mass_flx_me: qty.HorizontalMassFlux.EdgeK
 
     def __init__(self, sizes: Mapping[gtx.Dimension, int]) -> None:
         super().__init__(sizes)
