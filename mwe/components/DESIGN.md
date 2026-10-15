@@ -210,6 +210,8 @@ and the physics driver runs each process on `fw.collect(component.Input,
 input, diagnostics)`, `diagnostics` being the `Diagnostics` state `_diagnose`
 fills and returns. `EntryState`, `collect_input` and `bind` are gone; the
 process/collect pairing they had to check by hand no longer exists.
+`PhysicsProcess` holds the component in place of the step, and `self.outputs`
+is keyed by it, so the process name, whose only use was that key, goes too.
 `Diagnostics` moves next to `PrognosticState` in `common/states.py`, and the
 driver allocates one too, for output, in place of two bare fields. This is the
 first mechanism that builds a component's view by quantity identity: a
