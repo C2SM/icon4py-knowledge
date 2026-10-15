@@ -21,7 +21,7 @@ class MuphysComponent(fw.Process):
         theta_v: qty.ThetaV.CellK = fw.after_increments(recipes.ExnerThetaFromTemperature)
         exner: qty.Exner.CellK = fw.after_increments(recipes.ExnerThetaFromTemperature)
 
-    def run(self, input: Input, out: Output | None = None) -> Output:
-        out = self.buffers(out)
-        ops.muphys(input.temperature.data, input.qv.data, out.tend_temperature.data, out.tend_qv.data, out.pflx.data)
+    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
+        out = self.buffers(outputs)
+        ops.muphys(inputs.temperature.data, inputs.qv.data, out.tend_temperature.data, out.tend_qv.data, out.pflx.data)
         return out

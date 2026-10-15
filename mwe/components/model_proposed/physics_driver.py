@@ -58,22 +58,22 @@ class PhysicsDriver(fw.Component):
         )
         # the last output of each process and the tendencies derived from it, by
         # its component, reused on the steps it is not active
-        self.outputs: dict[fw.Process, tuple[fw.State, tuple[fw.State, ...]]] = {}
+        self.process_outputs: dict[fw.Process, tuple[fw.State, tuple[fw.State, ...]]] = {}
 
-    def run(self, input: Input, out: Output | None = None) -> Output:
-        out = self.buffers(out)
-        produced = self.resolution.provide(input)
+    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
+        out = self.buffers(outputs)
+        produced = self.resolution.provide(inputs)
         self.updates.begin()
         for process in self.processes:
             component = process.component
-            if process.time_control.is_active(input.step_index) or component not in self.outputs:
-                output = component.run(fw.collect(component.Input, input, *produced))
+            if process.time_control.is_active(inputs.step_index) or component not in self.process_outputs:
+                output = component.run(fw.collect(component.Input, inputs, *produced))
                 computed = tuple(
-                    recipe.run(fw.collect(recipe.Input, output, input, *produced))
+                    recipe.run(fw.collect(recipe.Input, output, inputs, *produced))
                     for recipe in self.updates.tendency_recipes[component]
                 )
-                self.outputs[component] = (output, computed)
-            output, computed = self.outputs[component]
+                self.process_outputs[component] = (output, computed)
+            output, computed = self.process_outputs[component]
             component.accumulate(self.updates.tendencies, output, *computed)
-        self.updates.update(input, out, input.dtime, *produced)
+        self.updates.update(inputs, out, inputs.dtime, *produced)
         return out

@@ -346,9 +346,9 @@ def collect[S: State](cls: type[S], *states: State, **plain: Any) -> S:
 # ------------------------------------------------------------------------------
 # Component: Input, Output, run
 # ------------------------------------------------------------------------------
-# `run` is the only method a component implements. `out = component.run(input)`
+# `run` is the only method a component implements. `out = component.run(inputs)`
 # writes into the component's own buffers, allocated once on first use;
-# `component.run(input, out=view)` writes where the caller says, numpy `out=`
+# `component.run(inputs, outputs=view)` writes where the caller says, numpy `out=`
 # style. Either way `run` returns the output. Whether the view may alias the
 # input is the component's business (diffusion and the physics update tolerate
 # it, the dycore needs distinct now/next); nothing checks it in this part.
@@ -360,14 +360,14 @@ class Component:
         self.sizes = sizes
 
     @functools.cached_property
-    def output(self) -> Any:
+    def cached_output(self) -> Any:
         return allocate(type(self).Output, self.sizes)
 
     # the caller's buffers when given, else this component's own
-    def buffers[T: State](self, out: T | None) -> T:
-        return self.output if out is None else out
+    def buffers[T: State](self, outputs: T | None) -> T:
+        return self.cached_output if outputs is None else outputs
 
-    def run(self, input: Any, out: Any = None) -> Any:
+    def run(self, inputs: Any, outputs: Any = None) -> Any:
         raise NotImplementedError
 
 
@@ -543,7 +543,7 @@ class Updates:
                 value.data.ndarray
             )
         for hook in self.hooks:
-            hook.run(collect(hook.Input, output, *produced), out=collect(hook.Output, output, *produced))
+            hook.run(collect(hook.Input, output, *produced), outputs=collect(hook.Output, output, *produced))
 
 
 # Reads the processes' Update blocks once, at composite init: every tendency a
