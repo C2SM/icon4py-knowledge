@@ -265,8 +265,8 @@ def test_resolve_refuses_a_cycle() -> None:
         fw.resolve([Needs], SIZES)
 
 
-# what mypy and pyright check: a quantity or a place mismatch is a type error.
-# Each ignore below is required (both checkers report an unused one), so the
+# what mypy checks: a quantity or a place mismatch is a type error.
+# Each ignore below is required (strict mode reports an unused one), so the
 # suite type-checking is the test.
 def static_checks(pressure: Pressure.CellK, column: Pressure.Cell, salt: Salt.Cell) -> None:
     wrong_quantity: Pressure.Cell = salt  # type: ignore[assignment]
