@@ -108,8 +108,8 @@ pair:
   (`dtime: float`) are ordinary fields. `allocate(State, sizes)` makes the
   buffers from the declarations.
 - `Component`: `Input`, `Output`, and `run(inputs, outputs=None) -> Output`,
-  the only method a component implements. `out = c.run(inputs)` writes into
-  the component's own buffers (`cached_output`), allocated once on first use;
+  the only method a component implements. `output = c.run(inputs)` writes
+  into the component's own buffers (`cached_output`), allocated once on first use;
   `c.run(inputs, outputs=view)` writes where the caller says, numpy `out=`
   style. Either way `run` returns the output. Whether `outputs` may alias the
   inputs is the component's business (diffusion and the physics update tolerate it, the
