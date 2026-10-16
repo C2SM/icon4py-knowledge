@@ -99,7 +99,7 @@ class UnresolvedInput(ValueError):
 
 # one Field leaf read back from a State class: its name, quantity, place and
 # source
-# qty.ThetaV.CellK lives in annotations. mypy/pyright read it, Python at
+# qty.ThetaV.CellK lives in annotations. mypy reads it, Python at
 # runtime does not, unless someone inspects hints. Decl is that inspection,
 # done once, so every generic operation over "a state" asks the class instead
 # of hard-coding leaf names.
