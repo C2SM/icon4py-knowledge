@@ -1,5 +1,0 @@
-{
-    "include": ["model_proposed", "run.py", "test_framework.py", "test_equivalence.py"],
-    "venv": ".venv",
-    "reportUnnecessaryTypeIgnoreComment": "error"
-}
