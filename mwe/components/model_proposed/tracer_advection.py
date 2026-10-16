@@ -4,12 +4,12 @@ import ops
 
 class Advection(fw.Component):
     class Input(fw.State):
-        qv: fw.Field[qty.QvOnCellK]
-        mass_flx_me: fw.Field[qty.HorizontalMassFluxOnEdgeK]
+        qv: qty.Qv.CellK
+        mass_flx_me: qty.HorizontalMassFlux.EdgeK
         dtime: float
 
     class Output(fw.State):
-        qv: fw.Field[qty.QvOnCellK]
+        qv: qty.Qv.CellK
 
     def run(self, inputs: Input, outputs: Output | None = None) -> Output:
         out = self.buffers(outputs)
