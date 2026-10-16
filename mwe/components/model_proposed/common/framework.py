@@ -40,8 +40,8 @@ class Quantity:
 
 
 # A gt4py field tagged by its quantity. The tag is a phantom type parameter:
-# `Field[VnOnEdgeK]` and `Field[ThetaVOnCellK]` are different types to mypy and
-# pyright, the same array to gt4py. Stencils get `.data`. Invariant: a
+# `Field[VnOnEdgeK]` and `Field[ThetaVOnCellK]` are different types to mypy,
+# the same array to gt4py. Stencils get `.data`. Invariant: a
 # `Field[VnOnEdgeK]` is not a `Field[Quantity]`, so a signature `(Field[Q],
 # Field[Q])` means the same quantity twice.
 class Field[Q: Quantity]:
@@ -63,7 +63,7 @@ def zeros[T: Quantity](quantity: type[T], sizes: Mapping[gtx.Dimension, int]) ->
 # State: a frozen dataclass of typed leaves
 # ------------------------------------------------------------------------------
 # one Field leaf read back from a State class: its name and its quantity
-# fw.Field[qty.VnOnEdgeK] lives in annotations. mypy/pyright read it, Python at
+# fw.Field[qty.VnOnEdgeK] lives in annotations. mypy reads it, Python at
 # runtime does not, unless someone inspects hints. Decl is that inspection,
 # done once, so every generic operation over "a state" asks the class instead
 # of hard-coding leaf names.

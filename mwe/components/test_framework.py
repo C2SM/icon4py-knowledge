@@ -87,7 +87,7 @@ def test_pairs_swap() -> None:
     assert pair.now is b and pair.next is a
 
 
-# what mypy and pyright check: a quantity mismatch is a type error. Each
+# what mypy checks: a quantity mismatch is a type error. Each
 # ignore below is required (strict mode reports an unused one), so the suite
 # type-checking is the test.
 def static_checks(pressure: fw.Field[Pressure], salt: fw.Field[Salt]) -> None:
