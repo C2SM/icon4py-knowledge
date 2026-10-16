@@ -125,8 +125,8 @@ def test_collect_picks_leaves_by_quantity_and_place() -> None:
         fw.collect(View, fields, salted, fw.allocate(Halve.Input, SIZES), dtime=2.0)
 
 
-# what mypy and pyright check: a quantity or a place mismatch is a type error.
-# Each ignore below is required (both checkers report an unused one), so the
+# what mypy checks: a quantity or a place mismatch is a type error.
+# Each ignore below is required (strict mode reports an unused one), so the
 # suite type-checking is the test.
 def static_checks(pressure: Pressure.CellK, column: Pressure.Cell, salt: Salt.Cell) -> None:
     wrong_quantity: Pressure.Cell = salt  # type: ignore[assignment]
