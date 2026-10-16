@@ -15,7 +15,7 @@ models bit-exact on the config matrix of `run.py`.
 - both models read `example.yaml`; `run.py` asserts equality over a config
   matrix and counts how often each side computes `temperature`, `u` and
   `theta_v` on half levels;
-- both models pass `mypy --strict` and pyright.
+- both models pass `mypy --strict`.
 
 Out of scope: real physics, real grids, halo exchange, restart, IO cadence
 beyond "every step", sequential physics coupling, py2fgen, pint units, the
@@ -101,7 +101,7 @@ pair:
   hand.
 - `Field[Q]`: a two-slot wrapper, the tag and the gt4py field. The tag is a
   phantom type parameter: `Field[VnOnEdgeK]` and `Field[ThetaVOnCellK]` are
-  different types to mypy and pyright, the same array to gt4py. Invariant, so
+  different types to mypy, the same array to gt4py. Invariant, so
   `(Field[Q], Field[Q])` means the same quantity twice. Stencils get `.data`.
 - `State`: a frozen, keyword-only dataclass of typed leaves;
   `declarations()` reads the `Field` leaves back (name, quantity). Plain leaves
