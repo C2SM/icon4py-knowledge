@@ -15,7 +15,7 @@ models bit-exact on the config matrix of `run.py`.
 - both models read `example.yaml`; `run.py` asserts equality over a config
   matrix and counts how often each side computes `temperature`, `u` and
   `theta_v` on half levels;
-- both models pass `mypy --strict` and pyright.
+- both models pass `mypy --strict`.
 
 Out of scope: real physics, real grids, halo exchange, restart, IO cadence
 beyond "every step", sequential physics coupling, py2fgen, pint units, the
@@ -101,7 +101,7 @@ pair:
   hand.
 - `Field[Q]`: a two-slot wrapper, the tag and the gt4py field. The tag is a
   phantom type parameter: `Field[VnOnEdgeK]` and `Field[ThetaVOnCellK]` are
-  different types to mypy and pyright, the same array to gt4py. Invariant, so
+  different types to mypy, the same array to gt4py. Invariant, so
   `(Field[Q], Field[Q])` means the same quantity twice. Stencils get `.data`.
 - `State`: a frozen, keyword-only dataclass of typed leaves;
   `declarations()` reads the `Field` leaves back (name, quantity). Plain leaves
@@ -180,9 +180,8 @@ IO), `theta_v` on half levels once per substep, 8/8/8 in every row of
 **Checks.** `run.py` (five configs, bit-exact); `test_equivalence.py` (the same
 matrix as pytest, with the call counts); `test_framework.py` (6 unit tests and
 `static_checks`, a block of quantity mismatches under `# type: ignore` that
-both checkers must flag: mypy strict reports an unused ignore, pyright with
-`reportUnnecessaryTypeIgnoreComment` likewise); `mypy --strict` on 61 files;
-pyright 0 errors; `ruff check`.
+mypy must flag: strict mode reports an unused ignore); `mypy --strict` on 61
+files; `ruff check`.
 
 ## 02 Collect
 
@@ -240,7 +239,7 @@ states, the same buffer twice, keyword wins, `MissingInput`,
 `ThetaVOnCellKHalf` are two unrelated quantities: a CF name is written twice
 or left off one, a tendency would exist per place, the config names the place
 in the name (`VnOnEdgeK`), and the place is checked nowhere: gt4py's
-`CellKField` and `CellKHalfField` are one type to mypy and pyright, because
+`CellKField` and `CellKHalfField` are one type to mypy, because
 dims are runtime objects.
 
 **Adds.** `Dims`, a second kind of tag: a place on the grid with its gt4py
@@ -256,7 +255,7 @@ class ThetaV(fw.Quantity, units="K"):
 
 and a component writes `theta_v: qty.ThetaV.CellK`. `Decl` carries `dims`. A
 place the quantity does not declare is refused where the `State` class is
-defined (`InvalidDims`; to the checkers `fw.Field[ThetaV, fw.EdgeK]` is a
+defined (`InvalidDims`; to mypy `fw.Field[ThetaV, fw.EdgeK]` is a
 valid type). `zeros(quantity, dims, sizes)`. A place mismatch between two
 declared places is a type error (`static_checks`), which gt4py cannot give
 today. The config says `Vn`, not `VnOnEdgeK`. `collect` keys its pool by
