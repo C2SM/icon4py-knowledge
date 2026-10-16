@@ -6,14 +6,14 @@ import run
 # for output, and theta_v on half levels once per substep, whatever the config
 EXPECTED_CALLS = {"compute_temperature": 8, "edge_2_cell_vector_rbf_interpolation": 8, "interpolate_to_half_levels": 8}
 # the proposed side derives a quantity on a pass only when a component in it
-# declares it: no physics drops that pass's temperature and u, muphys alone
-# never asks for u; IO declares both diagnostics whatever the config asks
+# declares it: no physics or no output drops a temperature per step, u is
+# derived for tmx and for the eastward_wind output only
 EXPECTED_PROPOSED_CALLS = {
     "example": {"compute_temperature": 8, "edge_2_cell_vector_rbf_interpolation": 8, "interpolate_to_half_levels": 8},
     "no_muphys": {"compute_temperature": 8, "edge_2_cell_vector_rbf_interpolation": 8, "interpolate_to_half_levels": 8},
-    "no_physics": {"compute_temperature": 4, "edge_2_cell_vector_rbf_interpolation": 4, "interpolate_to_half_levels": 8},
-    "no_output": {"compute_temperature": 8, "edge_2_cell_vector_rbf_interpolation": 8, "interpolate_to_half_levels": 8},
-    "prognostics": {"compute_temperature": 8, "edge_2_cell_vector_rbf_interpolation": 4, "interpolate_to_half_levels": 8},
+    "no_physics": {"compute_temperature": 4, "edge_2_cell_vector_rbf_interpolation": 0, "interpolate_to_half_levels": 8},
+    "no_output": {"compute_temperature": 4, "edge_2_cell_vector_rbf_interpolation": 4, "interpolate_to_half_levels": 8},
+    "prognostics": {"compute_temperature": 4, "edge_2_cell_vector_rbf_interpolation": 0, "interpolate_to_half_levels": 8},
 }
 
 

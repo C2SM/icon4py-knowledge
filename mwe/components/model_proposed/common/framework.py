@@ -1,5 +1,6 @@
 import dataclasses
 import functools
+import types
 import typing
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from typing import Any, ClassVar, dataclass_transform
@@ -47,6 +48,11 @@ class Quantity:
         for name, value in (("standard_name", standard_name), ("units", units), ("long_name", long_name)):
             if value is not None:
                 setattr(cls, name, value)
+        if cls.__name__ in REGISTRY:
+            raise DuplicateQuantity(cls.__name__)
+        if cls.standard_name and any(q.standard_name == cls.standard_name for q in REGISTRY.values()):
+            raise DuplicateQuantity(f"{cls.__name__}: standard_name {cls.standard_name} is taken")
+        REGISTRY[cls.__name__] = cls
 
     def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         raise TypeError(f"{cls.__name__} is a type-level tag, not a value")
@@ -82,6 +88,27 @@ def zeros[Q: Quantity, D: Dims](
     quantity: type[Q], dims: type[D], sizes: Mapping[gtx.Dimension, int]
 ) -> Field[Q, D]:
     return Field(quantity, dims, gtx.zeros({dim: sizes[dim] for dim in dims.dims}, dtype=ta.wpfloat))
+
+
+class DuplicateQuantity(ValueError):
+    pass
+
+
+class UnknownQuantity(KeyError):
+    pass
+
+
+# every quantity tag by class name, class names and CF standard_names both
+# unique; the output config names a quantity by either
+REGISTRY: dict[str, type[Quantity]] = {}
+
+
+# a quantity that lives somewhere (a marker base like Tendency is not one)
+def lookup(key: str) -> type[Quantity]:
+    for quantity in REGISTRY.values():
+        if key in (quantity.standard_name, quantity.__name__) and quantity.places():
+            return quantity
+    raise UnknownQuantity(key)
 
 
 # ------------------------------------------------------------------------------
@@ -176,6 +203,16 @@ def _declarations(cls: type[State]) -> tuple[Decl, ...]:
 
 class Empty(State):
     pass
+
+
+# builds a State class at runtime, one leaf per (name, type), with a source
+# where given; for a view whose leaves come from the config, like IO's
+def state_type(name: str, leaves: Mapping[str, Any], sources: Mapping[str, Source] = {}) -> type[State]:
+    def body(namespace: dict[str, Any]) -> None:
+        namespace["__annotations__"] = dict(leaves)
+        namespace.update(sources)
+
+    return typing.cast(type[State], types.new_class(name, (State,), exec_body=body))
 
 
 def allocate[S: State](

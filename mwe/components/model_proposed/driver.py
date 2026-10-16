@@ -40,7 +40,7 @@ class Icon4pyDriver:
     def _store_output(self, info: states.StepInfo) -> None:
         now = self.prognostic_states.now
         produced = self.io_resolution.provide(now)
-        self.io_monitor.run(fw.collect(io.IOMonitor.Input, now, *produced, simulation_time=info.simulation_time))
+        self.io_monitor.run(fw.collect(self.io_monitor.Input, now, *produced, simulation_time=info.simulation_time))
 
     def _integrate_one_time_step(self, info: states.StepInfo) -> None:
         self._do_dyn_substepping(info)
