@@ -109,7 +109,7 @@ def test_collect_picks_leaves_by_quantity() -> None:
         fw.collect(View, fields, fw.allocate(Halve.Input, SIZES), dtime=2.0)
 
 
-# what mypy and pyright check: a quantity mismatch is a type error. Each
+# what mypy checks: a quantity mismatch is a type error. Each
 # ignore below is required (strict mode reports an unused one), so the suite
 # type-checking is the test.
 def static_checks(pressure: fw.Field[Pressure], salt: fw.Field[Salt]) -> None:

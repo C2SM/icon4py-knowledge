@@ -180,9 +180,8 @@ IO), `theta_v` on half levels once per substep, 8/8/8 in every row of
 **Checks.** `run.py` (five configs, bit-exact); `test_equivalence.py` (the same
 matrix as pytest, with the call counts); `test_framework.py` (6 unit tests and
 `static_checks`, a block of quantity mismatches under `# type: ignore` that
-both checkers must flag: mypy strict reports an unused ignore, pyright with
-`reportUnnecessaryTypeIgnoreComment` likewise); `mypy --strict` on 61 files;
-pyright 0 errors; `ruff check`.
+mypy must flag: strict mode reports an unused ignore); `mypy --strict` on 61
+files; `ruff check`.
 
 ## 02 Collect
 
