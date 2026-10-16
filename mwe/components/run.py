@@ -91,7 +91,7 @@ def run_proposed(run_config: config.Config, dtime: float = 1.0) -> dict[str, Any
     }
     if "muphys" in run_config.physics:
         outputs = icon4py_driver.physics.process_outputs
-        muphys_output, _ = next(o for c, o in outputs.items() if isinstance(c, muphys.MuphysComponent))
+        muphys_output = next(o for c, o in outputs.items() if isinstance(c, muphys.MuphysComponent))
         result["pflx"] = ops.arr(getattr(muphys_output, "pflx").data)
     return result
 

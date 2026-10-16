@@ -12,6 +12,9 @@ class Diffusion(fw.Component):
         vn: qty.Vn.EdgeK
         theta_v: qty.ThetaV.CellK
 
+    # pointwise: the driver passes `next` on both sides
+    in_place = frozenset({"vn", "theta_v"})
+
     def run(self, inputs: Input, outputs: Output | None = None) -> Output:
         out = self.buffers(outputs)
         ops.diffuse(inputs.vn.data, inputs.theta_v.data, inputs.dtime, out.vn.data, out.theta_v.data)
