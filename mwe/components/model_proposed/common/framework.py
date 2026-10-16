@@ -63,8 +63,8 @@ class Quantity:
 
 # A gt4py field tagged by its quantity and its place. Both tags are phantom
 # type parameters: `Field[ThetaV, CellK]` and `Field[ThetaV, CellKHalf]` are
-# different types to mypy and pyright (gt4py's own `CellKField` and
-# `CellKHalfField` are not: dims are runtime objects to the checkers), the same
+# different types to mypy (gt4py's own `CellKField` and
+# `CellKHalfField` are not: dims are runtime objects to mypy), the same
 # array to gt4py. Stencils get `.data`. Invariant in both parameters.
 class Field[Q: Quantity, D: Dims]:
     __slots__ = ("quantity", "dims", "data")
