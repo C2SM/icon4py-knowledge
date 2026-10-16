@@ -6,7 +6,7 @@ import numpy as np
 
 from model_current.common.states import data as state_data
 from model_current.driver import driver as current
-from model_proposed import driver as proposed
+from model_proposed import driver as proposed, muphys
 import config
 import ops
 
@@ -81,7 +81,9 @@ def run_proposed(run_config: config.Config) -> dict[str, Any]:
         "calls": _calls(),
     }
     if "muphys" in run_config.physics:
-        result["pflx"] = ops.arr(getattr(icon4py_driver.physics.process_outputs["muphys"], "pflx").data)
+        outputs = icon4py_driver.physics.process_outputs
+        muphys_output = next(o for c, o in outputs.items() if isinstance(c, muphys.MuphysComponent))
+        result["pflx"] = ops.arr(getattr(muphys_output, "pflx").data)
     return result
 
 
