@@ -4,21 +4,23 @@ from typing import Any
 
 import gt4py.next as gtx
 
+from model_proposed import recipes
 from model_proposed.common import framework as fw, quantities as qty
 import ops
 
 
 class IOMonitor(fw.Component):
     # everything IO can write; the config picks by CF standard_name, or by the
-    # quantity's class name where the CF table has none
+    # quantity's class name where the CF table has none; the two diagnostics
+    # say which recipe derives them when nobody supplies them
     class Input(fw.State):
         rho: qty.Rho.CellK
         w: qty.W.CellK
         vn: qty.Vn.EdgeK
         exner: qty.Exner.CellK
         theta_v: qty.ThetaV.CellK
-        temperature: qty.Temperature.CellK
-        u: qty.U.CellK
+        temperature: qty.Temperature.CellK = fw.derived_by(recipes.TemperatureFromThetaExner)
+        u: qty.U.CellK = fw.derived_by(recipes.UFromVn)
         simulation_time: datetime
 
     Output = fw.Empty
