@@ -40,6 +40,7 @@ class Quantity:
     standard_name: ClassVar[str | None] = None
     units: ClassVar[str]
     long_name: ClassVar[str | None] = None
+    _places: ClassVar[tuple[type[Dims], ...]]
 
     def __init_subclass__(
         cls, *, standard_name: str | None = None, units: str | None = None, long_name: str | None = None
@@ -57,9 +58,12 @@ class Quantity:
     def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         raise TypeError(f"{cls.__name__} is a type-level tag, not a value")
 
-    # the places this quantity declares, read from its nested aliases
+    # the places this quantity declares, read from its nested aliases (a
+    # derived quantity has its parent's)
     @classmethod
     def places(cls) -> tuple[type[Dims], ...]:
+        if "_places" in vars(cls):
+            return cls._places
         return tuple(
             typing.get_args(alias.__value__)[1]
             for alias in vars(cls).values()
@@ -103,12 +107,41 @@ class UnknownQuantity(KeyError):
 REGISTRY: dict[str, type[Quantity]] = {}
 
 
-# a quantity that lives somewhere (a marker base like Tendency is not one)
+# a quantity that lives somewhere (a generic like TendencyOf is not one)
 def lookup(key: str) -> type[Quantity]:
     for quantity in REGISTRY.values():
         if key in (quantity.standard_name, quantity.__name__) and quantity.places():
             return quantity
     raise UnknownQuantity(key)
+
+
+# A tendency is a quantity derived from its parent. `TendencyOf[Temperature]`
+# names it in a type and `tendency_of(Temperature)` is the one class behind it
+# at runtime: the parent's places, its units per second, the CF `tendency_of_`
+# name, and `parent`, the link that says where the tendency lands.
+class TendencyOf[Q: Quantity](Quantity):
+    parent: ClassVar[type[Quantity]]
+
+
+type Tendency[Q: Quantity, D: Dims] = Field[TendencyOf[Q], D]
+
+_TENDENCIES: dict[type[Quantity], type[TendencyOf[Any]]] = {}
+
+
+def tendency_of(quantity: type[Quantity]) -> type[TendencyOf[Any]]:
+    if quantity not in _TENDENCIES:
+        units = "s-1" if quantity.units == "1" else f"{quantity.units} s-1"
+        standard_name = f"tendency_of_{quantity.standard_name}" if quantity.standard_name else None
+        cls = typing.cast(
+            type[TendencyOf[Any]],
+            types.new_class(
+                f"TendencyOf{quantity.__name__}", (TendencyOf,), {"units": units, "standard_name": standard_name}
+            ),
+        )
+        cls.parent = quantity
+        cls._places = quantity.places()
+        _TENDENCIES[quantity] = cls
+    return _TENDENCIES[quantity]
 
 
 # ------------------------------------------------------------------------------
@@ -182,17 +215,29 @@ class State:
 _DECLARATIONS: dict[type[State], tuple[Decl, ...]] = {}
 
 
+# walks `type` aliases, plain (`ThetaV.CellK`) and generic
+# (`Tendency[Temperature, CellK]`), down to the Field
+def _unwrap(hint: Any) -> Any:
+    while True:
+        if isinstance(hint, typing.TypeAliasType):
+            hint = hint.__value__
+        elif isinstance(hint, types.GenericAlias) and isinstance(hint.__origin__, typing.TypeAliasType):
+            hint = hint.__origin__.__value__[hint.__args__]
+        else:
+            return hint
+
+
 # refuses a place the quantity does not declare
 def _declarations(cls: type[State]) -> tuple[Decl, ...]:
     if cls not in _DECLARATIONS:
         hints = typing.get_type_hints(cls)
         found = []
         for field in dataclasses.fields(cls):  # type: ignore[arg-type]
-            hint = hints[field.name]
-            while isinstance(hint, typing.TypeAliasType):
-                hint = hint.__value__
+            hint = _unwrap(hints[field.name])
             if typing.get_origin(hint) is Field:
                 quantity, dims = typing.get_args(hint)
+                if typing.get_origin(quantity) is TendencyOf:
+                    quantity = tendency_of(typing.get_args(quantity)[0])
                 if dims not in quantity.places():
                     raise InvalidDims(f"{cls.__qualname__}.{field.name}: {quantity.__name__} at {dims.__name__}")
                 source = field.default if isinstance(field.default, Source) else None

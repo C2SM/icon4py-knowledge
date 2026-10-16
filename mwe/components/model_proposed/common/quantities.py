@@ -43,26 +43,3 @@ class U(fw.Quantity, standard_name="eastward_wind", units="m s-1", long_name="ea
 
 class PrecipitationFlux(fw.Quantity, standard_name="precipitation_flux", units="kg m-2 s-1"):
     type Cell = fw.Field[PrecipitationFlux, fw.Cell]
-
-
-# Tendencies are quantities of their own, declared by hand with their own
-# units, as icon4py's `tendency_of(...)` entries in states/data.py. The marker
-# base is what `FieldKind.TENDENCY` is there: the physics driver accumulates
-# every output leaf whose quantity is a Tendency.
-class Tendency(fw.Quantity): ...
-
-
-class TendencyOfTemperature(Tendency, standard_name="tendency_of_air_temperature", units="K s-1"):
-    type CellK = fw.Field[TendencyOfTemperature, fw.CellK]
-
-
-class TendencyOfQv(Tendency, standard_name="tendency_of_specific_humidity", units="s-1"):
-    type CellK = fw.Field[TendencyOfQv, fw.CellK]
-
-
-class TendencyOfU(Tendency, standard_name="tendency_of_eastward_wind", units="m s-2"):
-    type CellK = fw.Field[TendencyOfU, fw.CellK]
-
-
-class TendencyOfVn(Tendency, units="m s-2"):
-    type EdgeK = fw.Field[TendencyOfVn, fw.EdgeK]
