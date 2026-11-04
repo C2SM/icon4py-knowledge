@@ -28,9 +28,9 @@ class Halve(fw.Component):
     class Output(fw.State):
         pressure: fw.Field[Pressure]
 
-    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
-        out = self.buffers(outputs)
-        np.asarray(out.pressure.data.ndarray)[...] = 0.5 * np.asarray(inputs.pressure.data.ndarray)
+    def run(self, input: Input, output: Output | None = None) -> Output:
+        out = self.buffers(output)
+        np.asarray(out.pressure.data.ndarray)[...] = 0.5 * np.asarray(input.pressure.data.ndarray)
         return out
 
 
@@ -76,7 +76,7 @@ def test_component_writes_its_own_buffers_or_the_callers() -> None:
     assert own is halve.cached_output and own is halve.run(Halve.Input(pressure=pressure))
     assert np.all(np.asarray(own.pressure.data.ndarray) == 4.0)
     given = Halve.Output(pressure=pressure)
-    assert halve.run(Halve.Input(pressure=pressure), outputs=given) is given
+    assert halve.run(Halve.Input(pressure=pressure), output=given) is given
     assert np.all(np.asarray(pressure.data.ndarray) == 4.0)
 
 

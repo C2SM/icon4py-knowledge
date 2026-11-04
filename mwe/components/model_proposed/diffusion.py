@@ -12,7 +12,7 @@ class Diffusion(fw.Component):
         vn: fw.Field[qty.VnOnEdgeK]
         theta_v: fw.Field[qty.ThetaVOnCellK]
 
-    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
-        out = self.buffers(outputs)
-        ops.diffuse(inputs.vn.data, inputs.theta_v.data, inputs.dtime, out.vn.data, out.theta_v.data)
+    def run(self, input: Input, output: Output | None = None) -> Output:
+        out = self.buffers(output)
+        ops.diffuse(input.vn.data, input.theta_v.data, input.dtime, out.vn.data, out.theta_v.data)
         return out

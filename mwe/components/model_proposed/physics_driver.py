@@ -79,28 +79,28 @@ class PhysicsDriver(fw.Component):
 
     # icon4py's PhysicsDriver.run: four of its five steps as methods, the
     # process loop inline
-    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
-        out = self.buffers(outputs)
-        entry = self._diagnose(inputs)
+    def run(self, input: Input, output: Output | None = None) -> Output:
+        out = self.buffers(output)
+        entry = self._diagnose(input)
         self._zero_accumulators()
         for process in self.processes:
-            if process.time_control.is_active(inputs.step_index) or process.name not in self.process_outputs:
+            if process.time_control.is_active(input.step_index) or process.name not in self.process_outputs:
                 self.process_outputs[process.name] = process.step(entry)
             self._accumulate(self.process_outputs[process.name])
-        self._apply(entry, inputs.dtime, out)
+        self._apply(entry, input.dtime, out)
         return out
 
     # one EntryState over the prognostics as given and the diagnostics derived
     # from them into the driver's buffers (EntryState.diagnose_from)
-    def _diagnose(self, inputs: Input) -> physics_state.EntryState:
+    def _diagnose(self, input: Input) -> physics_state.EntryState:
         diagnostics = self.diagnostics
-        ops.compute_temperature(inputs.theta_v.data, inputs.exner.data, diagnostics.temperature.data)
-        ops.edge_2_cell_vector_rbf_interpolation(inputs.vn.data, diagnostics.u.data)
+        ops.compute_temperature(input.theta_v.data, input.exner.data, diagnostics.temperature.data)
+        ops.edge_2_cell_vector_rbf_interpolation(input.vn.data, diagnostics.u.data)
         return physics_state.EntryState(
-            vn=inputs.vn,
-            exner=inputs.exner,
-            theta_v=inputs.theta_v,
-            qv=inputs.qv,
+            vn=input.vn,
+            exner=input.exner,
+            theta_v=input.theta_v,
+            qv=input.qv,
             temperature=diagnostics.temperature,
             u=diagnostics.u,
         )

@@ -11,7 +11,7 @@ class Advection(fw.Component):
     class Output(fw.State):
         qv: fw.Field[qty.QvOnCellK]
 
-    def run(self, inputs: Input, outputs: Output | None = None) -> Output:
-        out = self.buffers(outputs)
-        ops.advect(inputs.qv.data, out.qv.data, inputs.mass_flx_me.data, inputs.dtime)
+    def run(self, input: Input, output: Output | None = None) -> Output:
+        out = self.buffers(output)
+        ops.advect(input.qv.data, out.qv.data, input.mass_flx_me.data, input.dtime)
         return out

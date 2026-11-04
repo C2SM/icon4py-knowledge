@@ -107,12 +107,12 @@ pair:
   `declarations()` reads the `Field` leaves back (name, quantity). Plain leaves
   (`dtime: float`) are ordinary fields. `allocate(State, sizes)` makes the
   buffers from the declarations.
-- `Component`: `Input`, `Output`, and `run(inputs, outputs=None) -> Output`,
-  the only method a component implements. `output = c.run(inputs)` writes
+- `Component`: `Input`, `Output`, and `run(input, output=None) -> Output`,
+  the only method a component implements. `output = c.run(input)` writes
   into the component's own buffers (`cached_output`), allocated once on first use;
-  `c.run(inputs, outputs=view)` writes where the caller says, numpy `out=`
-  style. Either way `run` returns the output. Whether `outputs` may alias the
-  inputs is the component's business (diffusion and the physics update tolerate it, the
+  `c.run(input, output=view)` writes where the caller says, numpy `out=`
+  style. Either way `run` returns the output. Whether `output` may alias
+  `input` is the component's business (diffusion and the physics update tolerate it, the
   dycore needs distinct now/next); nothing checks it in this part.
 - `TimeStepPair` / `PredictorCorrectorPair`: icon4py's pairs typed
   (`common_utils.PredictorCorrectorPair[...].predictor` is `Any` to mypy),
@@ -168,7 +168,7 @@ again.
 **Costs.** Every `Input`/`Output` view is spelled out by keyword at the call
 site (`driver.py` is 104 lines against 258 in `model_current/driver/`), and
 every stencil call reads `.data`. Calls through the `fw.Component` base are
-untyped (`run(inputs: Any, outputs: Any)`); only calls on a concrete class are
+untyped (`run(input: Any, output: Any)`); only calls on a concrete class are
 checked. `_apply` is a method, not a `Component`: which tendencies it reads
 depends on the configured processes, and a `State` has no optional leaf.
 `model_proposed` is 584 non-blank lines against 674 for
