@@ -7,9 +7,9 @@
       "apiKey": "$CSCS_INFERENCE_API_KEY",
       "models": [
         {
-          "id": "moonshotai/Kimi-K2.7-Code",
-          "name": "Kimi K2.7 Code",
-          "contextWindow": 262144,
+          "id": "zai-org/GLM-5.3-Flash",
+          "name": "GLM 5.3 Flash",
+          "contextWindow": 1048576,
           "maxTokens": 32768
         }
       ]
